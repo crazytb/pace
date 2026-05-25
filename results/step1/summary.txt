@@ -1,0 +1,17 @@
+============================================================
+Step 1 Simulation Summary
+============================================================
+  Slots         : 300
+  STAs          : 2
+  OBSS rate     : 0.05
+  OBSS duration : 30~80 slots
+  PPDU duration : 20 slots
+  NPCA enabled  : True
+  NPCA qsrc     : 0  (CW_init = 15)
+  Min threshold : 0 slots
+  Random seed   : 42
+
+ STA |  P_succ  P_fail  N_succ  N_fail  N_trans    PDR  Col_prob
+-----------------------------------------------------------------
+   0 |       4       0       2       1        2  1.000     0.143
+   1 |       5       0       1       1        2  1.000     0.143

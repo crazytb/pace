@@ -1,0 +1,351 @@
+"""
+Slot-based HARQ-NPCA simulator.
+
+TX 흐름 설계:
+  - 충돌(Collision) / AP-absence → simulator가 즉시 handle_tx_result(False) 호출
+  - 충돌 없는 정상 TX 시작    → simulator가 occupy_intra() 만 호출
+                               STA는 PRIMARY_TX / NPCA_TX 모드로 진입
+  - TX 완료(tx_remaining==0) → STA가 self-report handle_tx_result(True) 호출
+
+이 구조로 multi-slot PPDU 동안 채널 occupation이 slot 전반에 걸쳐 유지됨.
+
+Event loop (guidelines §16.1):
+  1. update_channels()     — expire old OBSS, refresh obss_remain
+  2. generate_obss()       — stochastic OBSS arrival
+  3. snapshot_state()      — CSV용 슬롯 시작 상태 기록
+  4. sta.step()            — each STA advances its state machine
+  5. collect_tx_requests() — 이번 슬롯에 TX를 시작하는 STA 목록
+  6. resolve_collisions()  — per-channel: 단독→occupy, 다수→collision
+  7. dispatch_failures()   — collision/AP-absence만 handle_tx_result(False)
+  8. commit_modes()        — sta.mode = sta.next_mode
+  9. log_slot()            — snapshot + 이번 슬롯 TX 결과 합쳐 기록
+"""
+
+from __future__ import annotations
+
+import csv
+import os
+from collections import defaultdict
+from dataclasses import asdict, dataclass, field
+from typing import Dict, List, Optional, Tuple
+
+from harq_sim.channel import Channel
+from harq_sim.enums import ChannelType, FailureReason
+from harq_sim.sta import STA, TxRequest
+
+SLOT_US = 9.0   # μs per slot
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Log entry: one row per (slot, sta)
+# ─────────────────────────────────────────────────────────────────────────────
+@dataclass
+class SlotLog:
+    # Time
+    slot:        int
+    time_us:     float
+
+    # STA identity
+    sta_id:      int
+
+    # Current mode (BEFORE commit — i.e., mode at start of step)
+    mode:        str
+
+    # Primary EDCA state
+    primary_cw:              int
+    primary_backoff_counter: int
+    primary_backoff_stage:   int
+    primary_retry_counter:   int
+
+    # NPCA EDCA state
+    npca_cw:              int
+    npca_backoff_counter: int
+    npca_backoff_stage:   int
+    npca_retry_counter:   int
+
+    # NPCA timer
+    npca_timer:  int
+
+    # Saved primary state (non-None while STA is in NPCA mode)
+    saved_primary_cw:              Optional[int]
+    saved_primary_backoff_counter: Optional[int]
+
+    # Channel occupancy
+    primary_obss_remain: int
+    npca_obss_remain:    int
+
+    # TX outcome this slot (None if no TX attempt resolved this slot)
+    tx_channel:     Optional[str]    # PRIMARY / NPCA
+    tx_type:        Optional[str]    # NEW / ARQ_RETX
+    tx_success:     Optional[bool]
+    failure_reason: Optional[str]
+    packet_id:      Optional[int]
+    retry_count:    Optional[int]
+
+    # Mode-change events (for quick filtering in the CSV)
+    npca_transition_start: bool   # STA just decided to switch to NPCA this slot
+    switch_back_start:     bool   # STA just decided to return to primary this slot
+
+
+class Simulator:
+    def __init__(
+        self,
+        num_slots:    int,
+        stas:         List[STA],
+        channels:     List[Channel],
+        enable_trace: bool = True,
+    ):
+        self.num_slots    = num_slots
+        self.stas         = stas
+        self.channels     = channels
+        self.enable_trace = enable_trace
+        self.log: List[SlotLog] = []
+
+        self._ch: Dict[int, Channel] = {ch.channel_id: ch for ch in channels}
+        self._primary_ch_id = 0
+        self._npca_ch_id    = 1
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Main run
+    # ─────────────────────────────────────────────────────────────────────────
+    def run(self) -> None:
+        for slot in range(self.num_slots):
+            self._step_slot(slot)
+
+    def _step_slot(self, slot: int) -> None:
+        # 1 & 2: Channel update + OBSS generation
+        for ch in self.channels:
+            ch.update(slot)
+            ch.generate_obss(slot)
+
+        # 3: Snapshot state BEFORE step() (for CSV — reflects "what the STA sees this slot")
+        pre_snap: Dict[int, dict] = {}
+        if self.enable_trace:
+            for sta in self.stas:
+                pre_snap[sta.sta_id] = _snap_sta(sta)
+
+        # 4: STA state machines advance
+        # Track mode before step to detect transition events
+        modes_before = {sta.sta_id: sta.mode for sta in self.stas}
+        npca_cw_before = {sta.sta_id: sta.npca_cw for sta in self.stas}
+
+        for sta in self.stas:
+            sta.step(slot)
+
+        # 5: Collect TX requests issued this slot
+        tx_reqs: List[Tuple[STA, TxRequest]] = [
+            (sta, sta.tx_request)
+            for sta in self.stas
+            if sta.tx_request is not None
+        ]
+
+        # 6 & 7: Per-channel collision resolution
+        per_channel: Dict[int, List[Tuple[STA, TxRequest]]] = defaultdict(list)
+        for sta, req in tx_reqs:
+            ch_id = (
+                self._primary_ch_id
+                if req.channel_type == ChannelType.PRIMARY
+                else self._npca_ch_id
+            )
+            per_channel[ch_id].append((sta, req))
+
+        # Results: only FAILURE events (collision / AP-absence)
+        # Successful TX → STA self-reports when tx_remaining==0
+        failure_results: List[Tuple[STA, FailureReason, ChannelType]] = []
+
+        for ch_id, reqs in per_channel.items():
+            ch     = self._ch.get(ch_id)
+            ch_type = (
+                ChannelType.PRIMARY if ch_id == self._primary_ch_id else ChannelType.NPCA
+            )
+            if ch is None:
+                continue
+
+            if len(reqs) == 1:
+                sta, req = reqs[0]
+                if ch_type == ChannelType.PRIMARY and not sta.ap_on_primary:
+                    # AP is on NPCA — uplink from primary fails (guidelines §7)
+                    failure_results.append((sta, FailureReason.AP_ABSENCE_DUE_TO_NPCA, ch_type))
+                else:
+                    # Success start: occupy channel; STA will self-report when done
+                    ch.occupy_intra(slot, req.duration)
+            else:
+                # Collision: immediate failure for all contestants
+                for sta, req in reqs:
+                    failure_results.append((sta, FailureReason.COLLISION, ch_type))
+
+        # Dispatch failures immediately
+        for sta, reason, ch_type in failure_results:
+            sta.handle_tx_result(False, reason, ch_type, slot)
+
+        # 8: Commit mode transitions
+        for sta in self.stas:
+            sta.commit_mode()
+
+        # 9: Log
+        if self.enable_trace:
+            # Build per-STA TX result map for this slot (only failures resolved here)
+            fail_map = {sta.sta_id: (reason, ch_type) for sta, reason, ch_type in failure_results}
+            # For successful TX completions: check if STA just finished (tx_remaining==0 AND was in TX mode)
+            # These were self-reported inside sta.step() via _handle_primary_tx / _handle_npca_tx
+            self._log_slot(slot, pre_snap, modes_before, fail_map, tx_reqs)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Per-slot logging
+    # ─────────────────────────────────────────────────────────────────────────
+    def _log_slot(
+        self,
+        slot: int,
+        pre_snap: Dict[int, dict],
+        modes_before: Dict[int, object],
+        fail_map: Dict[int, Tuple[FailureReason, ChannelType]],
+        tx_reqs: List[Tuple[STA, TxRequest]],
+    ) -> None:
+        tx_req_map = {sta.sta_id: req for sta, req in tx_reqs}
+
+        for sta in self.stas:
+            snap = pre_snap[sta.sta_id]
+            req  = tx_req_map.get(sta.sta_id)
+
+            # TX outcome fields
+            tx_channel     = None
+            tx_type_str    = None
+            tx_success     = None
+            fail_reason    = None
+            pkt_id         = None
+            retry_cnt      = None
+
+            if sta.sta_id in fail_map:
+                # Collision or AP-absence — immediate failure
+                reason, ch_type = fail_map[sta.sta_id]
+                tx_channel  = ch_type.value
+                tx_type_str = req.tx_type.value if req else None
+                tx_success  = False
+                fail_reason = reason.value
+                pkt_id      = req.packet.packet_id if req and req.packet else None
+                retry_cnt   = req.packet.retry_count if req and req.packet else None
+            elif sta._completed_tx is not None:
+                # TX completion — self-reported success (multi-slot TX finished)
+                c = sta._completed_tx
+                tx_channel  = c["channel_type"].value
+                tx_type_str = c["tx_type"].value
+                tx_success  = True
+                fail_reason = FailureReason.NONE.value
+                pkt_id      = c["packet_id"]
+                retry_cnt   = c["retry_count"]
+            elif req is not None:
+                # TX start — STA entering TX mode (outcome TBD)
+                tx_channel  = req.channel_type.value
+                tx_type_str = req.tx_type.value
+                tx_success  = None     # multi-slot TX: outcome logged when done
+                fail_reason = None
+                pkt_id      = req.packet.packet_id if req.packet else None
+                retry_cnt   = req.packet.retry_count if req.packet else None
+
+            # Detect transition events
+            from harq_sim.enums import STAMode, NPCA_MODES
+            mode_now   = sta.mode   # post-commit
+            mode_pre   = modes_before[sta.sta_id]
+            npca_trans = (mode_now == STAMode.NPCA_SWITCHING and mode_pre != STAMode.NPCA_SWITCHING)
+            swbk_start = (mode_now == STAMode.SWITCH_BACK   and mode_pre != STAMode.SWITCH_BACK)
+
+            saved = snap.get("saved_primary_state")
+            self.log.append(SlotLog(
+                slot=slot,
+                time_us=round(slot * SLOT_US, 1),
+                sta_id=sta.sta_id,
+                mode=snap["mode"],                      # mode at START of this slot
+                primary_cw=snap["primary_cw"],
+                primary_backoff_counter=snap["primary_backoff_counter"],
+                primary_backoff_stage=snap["primary_backoff_stage"],
+                primary_retry_counter=snap["primary_retry_counter"],
+                npca_cw=snap["npca_cw"],
+                npca_backoff_counter=snap["npca_backoff_counter"],
+                npca_backoff_stage=snap["npca_backoff_stage"],
+                npca_retry_counter=snap["npca_retry_counter"],
+                npca_timer=snap["npca_timer"],
+                saved_primary_cw=saved["cw"] if saved else None,
+                saved_primary_backoff_counter=saved["backoff_counter"] if saved else None,
+                primary_obss_remain=snap["primary_obss_remain"],
+                npca_obss_remain=snap["npca_obss_remain"],
+                tx_channel=tx_channel,
+                tx_type=tx_type_str,
+                tx_success=tx_success,
+                failure_reason=fail_reason,
+                packet_id=pkt_id,
+                retry_count=retry_cnt,
+                npca_transition_start=npca_trans,
+                switch_back_start=swbk_start,
+            ))
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # CSV export
+    # ─────────────────────────────────────────────────────────────────────────
+    def to_csv(self, path: str) -> None:
+        """Write per-slot log to CSV. Creates parent directories if needed."""
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        if not self.log:
+            print("Warning: log is empty (enable_trace=True required).")
+            return
+        with open(path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(asdict(self.log[0]).keys()))
+            writer.writeheader()
+            for row in self.log:
+                writer.writerow(asdict(row))
+        print(f"CSV saved → {path}  ({len(self.log)} rows)")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Aggregate metrics  (guidelines §26)
+    # ─────────────────────────────────────────────────────────────────────────
+    def compute_metrics(self) -> dict:
+        metrics: dict = {}
+        for sta in self.stas:
+            s = sta.stats
+            total_tx = (
+                s["primary_tx_success"] + s["primary_tx_fail"]
+                + s["npca_tx_success"]  + s["npca_tx_fail"]
+            )
+            delivered  = s["packets_delivered"]
+            dropped    = s["packets_dropped"]
+            total_pkts = delivered + dropped
+            collisions = sum(
+                1 for e in self.log
+                if e.sta_id == sta.sta_id and e.failure_reason == FailureReason.COLLISION.value
+            )
+            metrics[sta.sta_id] = {
+                "npca_transitions":    s["npca_transitions"],
+                "switch_backs":        s["switch_backs"],
+                "primary_tx_success":  s["primary_tx_success"],
+                "primary_tx_fail":     s["primary_tx_fail"],
+                "npca_tx_success":     s["npca_tx_success"],
+                "npca_tx_fail":        s["npca_tx_fail"],
+                "ap_absence_failures": s["ap_absence_failures"],
+                "packets_delivered":   delivered,
+                "packets_dropped":     dropped,
+                "pdr":                 delivered / total_pkts if total_pkts else 0.0,
+                "collision_count":     collisions,
+                "collision_prob":      collisions / total_tx if total_tx else 0.0,
+            }
+        return metrics
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: snapshot STA state (called BEFORE step())
+# ─────────────────────────────────────────────────────────────────────────────
+def _snap_sta(sta: STA) -> dict:
+    npca_ch = sta.npca_channel
+    return {
+        "mode":                      sta.mode.name,
+        "primary_cw":                sta.primary_cw,
+        "primary_backoff_counter":   sta.primary_backoff_counter,
+        "primary_backoff_stage":     sta.primary_backoff_stage,
+        "primary_retry_counter":     sta.primary_retry_counter,
+        "npca_cw":                   sta.npca_cw,
+        "npca_backoff_counter":      sta.npca_backoff_counter,
+        "npca_backoff_stage":        sta.npca_backoff_stage,
+        "npca_retry_counter":        sta.npca_retry_counter,
+        "npca_timer":                sta.npca_timer,
+        "saved_primary_state":       sta.saved_primary_state,   # reference (read-only)
+        "primary_obss_remain":       sta.primary_channel.obss_remain,
+        "npca_obss_remain":          npca_ch.obss_remain if npca_ch else 0,
+    }
