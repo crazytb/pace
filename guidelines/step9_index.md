@@ -11,7 +11,7 @@ Guidelines §30의 8개 연구 질문 → 8개 Figure 1대1 매핑.
 |---|---|---|---|---|
 | Fig 1 | NPCA-HARQ 조합 이득 (RQ1) | `harq_sim/run_step9_fig1.py` | [fig1.md](step9/fig1.md) | ✅ 완료 |
 | Fig 2 | Primary CW → NPCA delay 이득 (RQ2) | `harq_sim/run_step9_fig2.py` | [fig2.md](step9/fig2.md) | ✅ 완료 |
-| Fig 3 | Fixed qsrc → NPCA 충돌 (RQ3) | `harq_sim/run_step9_fig3.py` | [fig3.md](step9/fig3.md) | ⬜ 미구현 |
+| Fig 3 | Fixed qsrc → NPCA 충돌 (RQ3) | `harq_sim/run_step9_fig3.py` | [fig3.md](step9/fig3.md) | ✅ 완료 |
 | Fig 4 | Adaptive vs Fixed CW tradeoff (RQ4) | `harq_sim/run_step9_fig4.py` | [fig4.md](step9/fig4.md) | ⬜ 미구현 |
 | Fig 5 | NPCA HARQ vs Primary HARQ 조건 (RQ5) | `harq_sim/run_step9_fig5.py` | [fig5.md](step9/fig5.md) | ⬜ 미구현 |
 | Fig 6 | HARQ combining gain vs Higher MCS (RQ6) | `harq_sim/run_step9_fig6.py` | [fig6.md](step9/fig6.md) | ⬜ 미구현 |
