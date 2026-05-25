@@ -1369,16 +1369,25 @@ NPCA transition, HARQ retransmission, adaptive initial contention control, inten
 ```
 harq_sim/
 ├── __init__.py          ← 모듈 export
-├── enums.py             ← STAMode, ChannelType, TxType, FailureReason, TrafficClass, PacketStatus
+├── enums.py             ← STAMode, ChannelType, TxType, FailureReason, TrafficClass, PacketStatus, Action, NPCA_ACTIONS
 ├── channel.py           ← Channel 클래스 (OBSS/intra-BSS, obss_remain = NPCA_PPDU_REM_DUR)
 ├── packet.py            ← Packet, TransmissionAttempt 데이터 클래스
-├── sta.py               ← STA 상태 머신 (이중 EDCA state, NPCA_TIMER, state save/restore)
+├── phy.py               ← PHY layer: logistic PER 모델, MCS 선택, HARQ-CC SNR 변환 (Step 2+)
+├── harq_buffer.py       ← HARQBuffer 클래스 — Chase Combining soft buffer (Step 3+)
+├── policy.py            ← NPCAHARQPolicy — primary/NPCA delay 비교 기반 action 선택 (Step 4+)
+├── sta.py               ← STA 상태 머신 (이중 EDCA state, NPCA_TIMER, ARQ, HARQ-CC, policy)
 ├── simulator.py         ← Slot-based 이벤트 루프, 충돌 해결, CSV 출력
 ├── configs.py           ← CW, 슬롯 시간, OBSS, 에너지 상수
-└── run_step1.py         ← Step 1 실행 스크립트 (CLI)
+├── run_step1.py         ← Step 1 실행 스크립트 (CLI)
+├── run_step2.py         ← Step 2 실행 스크립트 (CLI, ARQ + PHY model)
+├── run_step3.py         ← Step 3 실행 스크립트 (CLI, HARQ-CC)
+└── run_step4.py         ← Step 4 실행 스크립트 (CLI, NPCA-HARQ policy)
 
 tests/
-└── test_step1_npca.py   ← Step 1 검증 테스트 (7개)
+├── test_step1_npca.py   ← Step 1 검증 테스트 (7개)
+├── test_step2_arq.py    ← Step 2 검증 테스트 (8개)
+├── test_step3_harq.py   ← Step 3 검증 테스트 (9개)
+└── test_step4_policy.py ← Step 4 검증 테스트 (8개)
 ```
 
 ### 32.2 객체 간 관계
@@ -1392,6 +1401,13 @@ Simulator
       ├── NPCA EDCA state         ← npca_cw, npca_backoff_counter, npca_initial_qsrc, ...
       ├── saved_primary_state     ← NPCA 전환 시 저장, switch-back 시 복원
       ├── npca_timer              ← D1.2 NPCA_TIMER = obss_remain − switch_back_delay
+      ├── snr_db_mean / snr_db_std ← 링크 SNR 파라미터 (Step 2+)
+      ├── _current_tx_snr_db      ← TX 시작 시 샘플링, TX 완료 시 PHY 판정에 사용
+      ├── _phy_failure_tx         ← PHY 실패 이벤트 dict (logger가 슬롯 종료 후 읽음)
+      ├── harq_buffer             ← HARQBuffer — Chase Combining soft buffer (Step 3+)
+      │    ├── active / packet_id / original_mcs
+      │    ├── combining_count / accumulated_snr_linear
+      │    └── first_tx_slot / validity_deadline
       ├── packet_queue            ← Deque[Packet]
       └── current_packet          ← 현재 전송 중인 패킷
 ```
@@ -1401,7 +1417,7 @@ Simulator
 충돌 감지와 TX 완료 보고를 분리하여 multi-slot PPDU를 정확히 모델링한다.
 
 ```text
-[Slot T] STA.step() → sta.tx_request 생성 (백오프 카운터 = 0)
+[Slot T] STA.step() → SNR 샘플링 → MCS 선택 → sta.tx_request 생성 (backoff == 0)
          Simulator → per-channel 충돌 판정
            - 충돌/AP-absence: handle_tx_result(False) 즉시 호출 → 다음 슬롯 PRIMARY_BACKOFF
            - 충돌 없음: channel.occupy_intra(T, ppdu_duration) → STA = PRIMARY_TX / NPCA_TX
@@ -1410,8 +1426,9 @@ Simulator
          tx_remaining 카운트다운 (채널은 occupied_remain으로 자동 busy 유지)
 
 [Slot T+D] tx_remaining == 0
-         STA.handle_tx_result(True) self-report → STA._completed_tx 기록
-         Simulator logger → CSV에 tx_success=True 기록
+         PHY 판정: phy.attempt_success(_current_tx_snr_db, mcs)
+           - PHY 성공: handle_tx_result(True)  → _completed_tx 기록, CSV tx_success=True
+           - PHY 실패: handle_tx_result(False, PHY_ERROR) → _phy_failure_tx 기록, ARQ 재시도
 ```
 
 ### 32.4 D1.2 §37.18 부합도 (Step 1 기준)
@@ -1493,12 +1510,80 @@ python -m pytest tests/test_step1_npca.py -v
 | T6 | `npca_initial_qsrc` → `npca_cw` 변환 (`2^q × 16 − 1`) |
 | T7 | NPCA enabled/disabled smoke test — transition/switch-back 카운터 검증 |
 
-### 33.4 출력 파일
+### 33.4 Step 2 시뮬레이션 실행 (ARQ + PHY model)
+
+```bash
+# 기본 실행 (STA 3개, 500 슬롯, SNR=25dB)
+python harq_sim/run_step2.py
+
+# 주요 옵션
+python harq_sim/run_step2.py \
+    --slots    500   \   # 총 슬롯 수
+    --stas     3     \   # STA 수
+    --obss-rate 0.05 \   # OBSS 발생 확률
+    --obss-min  30   \   # OBSS 최소 지속 슬롯
+    --obss-max  80   \   # OBSS 최대 지속 슬롯
+    --snr      25.0  \   # 평균 링크 SNR (dB); MCS는 자동 선택
+    --snr-std   0.0  \   # SNR 표준편차 (0=결정론적)
+    --qsrc     0     \   # NPCA initial CW exponent
+    --threshold 0    \   # NPCA min duration threshold (슬롯)
+    --ppdu     20    \   # PPDU 전송 슬롯 수
+    --seed     42    \   # random seed
+    --no-npca        \   # NPCA 비활성화 (비교용)
+    --out-dir results/step2
+
+# SNR 비교 실험 (고 SNR vs 저 SNR)
+python harq_sim/run_step2.py --snr 30.0 --out-dir results/step2_snr30
+python harq_sim/run_step2.py --snr 15.0 --out-dir results/step2_snr15
+
+# Stochastic 채널 (SNR 표준편차 추가)
+python harq_sim/run_step2.py --snr 20.0 --snr-std 5.0 --out-dir results/step2_fading
+```
+
+MCS 선택 기준 (SNR → MCS, `phy.select_mcs(snr_db)`):
+
+| SNR 범위 | MCS | 변조 |
+|---|---|---|
+| ≥ 26 dB | 7 | 64-QAM 5/6 |
+| 23–26 dB | 6 | 64-QAM 3/4 |
+| 20–23 dB | 5 | 64-QAM 2/3 |
+| 17–20 dB | 4 | 16-QAM 3/4 |
+| 14–17 dB | 3 | 16-QAM 1/2 |
+| 11–14 dB | 2 | QPSK 3/4 |
+| 8–11 dB | 1 | QPSK 1/2 |
+| < 8 dB | 0 | BPSK 1/2 |
+
+### 33.5 Step 2 검증 테스트 실행
+
+```bash
+python tests/test_step2_arq.py
+
+python -m pytest tests/test_step2_arq.py -v
+```
+
+검증 항목:
+
+| 테스트 | 내용 |
+|---|---|
+| T1 | 고 SNR (40 dB) → PHY 실패 0건, 패킷 정상 전달 |
+| T2 | 저 SNR (3 dB) → PHY 실패 발생, primary_cw 증가 |
+| T3 | ARQ_RETX 타입 — retry 이후 CSV에 `tx_type=ARQ_RETX`, `retry_count≥1` 기록 |
+| T4 | Retry limit — `retry_limit=2` + 극저 SNR → `packets_dropped > 0` |
+| T5 | PHY 실패 채널 독립성 — NPCA PHY 실패 시 `npca_cw` 증가, `primary_cw` 불변 |
+| T6 | 데드라인 만료 — XR 트래픽 클래스, slot > deadline → 패킷 drop |
+| T7 | Smoke test — NPCA + ARQ, 중간 SNR, PDR > 0, `snr_db` CSV 기록 |
+| T8 | PHY 모델 검증 — logistic 대칭점(threshold에서 p=0.5), 단조성, 경계값 |
+
+### 33.6 출력 파일
 
 ```
 results/step1/
 ├── sim_trace.csv    ← 슬롯별 전체 상태 로그 (num_slots × num_stas 행)
 └── summary.txt      ← 시뮬레이션 파라미터 + STA별 집계 통계
+
+results/step2/
+├── sim_trace.csv    ← Step 2 로그 (snr_db 컬럼 추가)
+└── summary.txt      ← PHY_err 컬럼 포함
 ```
 
 ---
@@ -1533,32 +1618,39 @@ results/step1/
 | `tx_success` | bool\|None | TX 결과: `True`(완료), `False`(실패), None(multi-slot TX 진행 중 시작 슬롯) |
 | `failure_reason` | str\|None | 실패 원인: `COLLISION` / `AP_ABSENCE_DUE_TO_NPCA` / `PHY_ERROR` / `NONE` |
 | `packet_id` | int\|None | 전송 중인 패킷 ID |
-| `retry_count` | int\|None | 해당 패킷의 누적 재전송 횟수 |
+| `retry_count` | int\|None | 해당 패킷의 누적 재전송 횟수 (TX 시도 시점 기준) |
+| `snr_db` | float\|None | TX 시도 시 샘플링된 SNR (dB); collision/AP-absence는 None (Step 2+) |
 | `npca_transition_start` | bool | 이 슬롯에서 NPCA 전환 시작 여부 |
 | `switch_back_start` | bool | 이 슬롯에서 Primary 복귀 시작 여부 |
 
 ### 34.2 TX 이벤트 해석
 
 ```text
-tx_success = None  → multi-slot TX 시작 슬롯 (결과 미정)
-tx_success = True  → TX 완료 슬롯 (ppdu_duration 슬롯 후 자동 기록)
-tx_success = False → 즉시 실패 슬롯 (충돌 또는 AP 부재)
+tx_success = None  → multi-slot TX 시작 슬롯 (결과 미정, snr_db 기록됨)
+tx_success = True  → TX 완료 슬롯 (ppdu_duration 슬롯 후, PHY 성공)
+tx_success = False + failure_reason=COLLISION        → 즉시 실패 (snr_db=None)
+tx_success = False + failure_reason=AP_ABSENCE_DUE_TO_NPCA → 즉시 실패 (snr_db=None)
+tx_success = False + failure_reason=PHY_ERROR        → TX 완료 후 PHY 실패 (snr_db 기록됨)
 ```
 
-multi-slot TX 예시 (ppdu_duration = 20):
+multi-slot TX 예시 (ppdu_duration = 20, SNR=20 dB, ARQ 포함):
 
 ```text
-slot 53: tx_channel=NPCA, tx_type=NEW, tx_success=None   ← TX 시작
-slot 54~72: mode=NPCA_TX (tx_channel 없음)               ← 카운트다운 중
-slot 73: tx_channel=NPCA, tx_type=NEW, tx_success=True   ← TX 완료
+slot  0: tx_type=NEW,      tx_success=None,  snr_db=20.0  ← TX 시작
+slot  1~19: mode=PRIMARY_TX (tx_channel 없음)              ← 카운트다운
+slot 20: tx_type=NEW,      tx_success=False, snr_db=20.0,
+         failure_reason=PHY_ERROR                          ← PHY 실패 → ARQ 재시도
+  ...backoff 후...
+slot 37: tx_type=ARQ_RETX, tx_success=None,  snr_db=20.0, retry_count=1  ← 재시도
+slot 57: tx_type=ARQ_RETX, tx_success=True,  snr_db=20.0, retry_count=1  ← 성공
 ```
 
-### 34.3 NPCA 관련 이벤트 필터링 예시
+### 34.3 이벤트 필터링 예시
 
 ```python
 import pandas as pd
 
-df = pd.read_csv("results/step1/sim_trace.csv")
+df = pd.read_csv("results/step2/sim_trace.csv")
 
 # NPCA 전환 이벤트
 transitions = df[df["npca_transition_start"] == True]
@@ -1566,14 +1658,28 @@ transitions = df[df["npca_transition_start"] == True]
 # 충돌 발생 슬롯
 collisions = df[df["failure_reason"] == "COLLISION"]
 
+# PHY 실패 슬롯 (Step 2+)
+phy_errors  = df[df["failure_reason"] == "PHY_ERROR"]
+
+# ARQ 재전송 슬롯 (Step 2+)
+arq_retx    = df[df["tx_type"] == "ARQ_RETX"]
+
 # TX 완료(성공) 슬롯만
-successes = df[df["tx_success"] == True]
+successes   = df[df["tx_success"] == True]
+
+# TX 이벤트별 SNR 분포 (Step 2+)
+tx_events   = df[df["snr_db"].notna()]
+tx_events["snr_db"].hist(bins=20)
 
 # NPCA 체류 중 구간 (saved_primary_cw 있음)
-in_npca = df[df["saved_primary_cw"].notna()]
+in_npca     = df[df["saved_primary_cw"].notna()]
 
-# STA별 primary CW 시계열
-df[df["sta_id"] == 0][["slot", "primary_cw", "npca_cw", "mode"]].plot(x="slot")
+# STA별 CW 시계열 + PHY 실패 오버레이
+sta0 = df[df["sta_id"] == 0]
+ax = sta0[["slot", "primary_cw", "npca_cw"]].plot(x="slot")
+phy_fail_slots = sta0[sta0["failure_reason"] == "PHY_ERROR"]["slot"]
+for s in phy_fail_slots:
+    ax.axvline(s, color="red", alpha=0.3)
 ```
 
 ---
@@ -1601,26 +1707,139 @@ Switch-back 시: primary_cw = saved_primary_state["cw"] (NPCA CW 반영 안 됨)
 재전환 시: npca_cw = 2^qsrc × 16 − 1 (이전 NPCA 실패 CW 리셋)
 ```
 
-### Step 2 ⬜ 미구현
+### Step 2 ✅ 완료
 
-ARQ-only retransmission:
-- PHY error model (SNR 기반 성공 확률)
-- retry counter, CW 증가, retry limit 초과 시 packet drop
-- `tx_type = ARQ_RETX` 로 재전송 구분
+**구현 내용:**
+- `harq_sim/phy.py` 신규 작성 — logistic PER 모델 (`success_prob`), MCS 선택 (`select_mcs`), HARQ-CC 준비용 SNR 변환
+- `STA` 파라미터 추가: `snr_db_mean`, `snr_db_std` (링크 품질 설정)
+- TX 시작 시 SNR 샘플링 + MCS 자동 선택 (`pkt.current_mcs` 갱신)
+- TX 완료 시 PHY 판정: `phy.attempt_success(_current_tx_snr_db, mcs)` → PHY_ERROR 또는 성공
+- `_phy_failure_tx` dict: PHY 실패 이벤트를 simulator logger가 슬롯 종료 후 수집
+- `phy_error_failures` 통계 추가 (`stats` dict + `compute_metrics()`)
+- `SlotLog.snr_db` 필드 추가 (PHY 성공/실패 이벤트에 기록, collision은 None)
+- `run_step2.py` CLI: `--snr`, `--snr-std` 옵션 포함
+- 검증 테스트 8개 (all pass)
 
-### Step 3 ⬜ 미구현
+**검증된 핵심 불변식:**
+```text
+PHY 실패 시: npca/primary CW 증가 방향은 Step 1과 동일 (채널 독립성 유지)
+ARQ 재시도:  tx_type = ARQ_RETX, retry_count ≥ 1, 새 SNR 샘플링 + MCS 재선택
+Retry limit: pkt.retry_count > retry_limit → DROPPED (deadline 체크보다 우선)
+Deadline:    current_slot > latency_deadline → DROPPED (XR: 1111슬롯, BEST_EFFORT: 없음)
+Collision:   PHY 판정 없음 — simulator가 즉시 handle_tx_result(False, COLLISION) 호출
+```
 
-HARQ buffer:
-- `HARQBuffer` 클래스 (`harq_sim/harq_buffer.py`)
-- PHY 실패 시 soft information 저장
-- Chase Combining: `accumulated_snr_linear += snr_linear`
-- `validity_deadline = first_tx_time + channel_coherence_time`
+**PHY 모델 파라미터:**
+```python
+# harq_sim/phy.py — MCS SNR thresholds (dB)
+MCS_SNR_THRESHOLDS = {
+    0:  5.0,   # BPSK  1/2  → p=0.5 at SNR=5dB
+    1:  8.0,   # QPSK  1/2
+    2: 11.0,   # QPSK  3/4
+    3: 14.0,   # 16-QAM 1/2
+    4: 17.0,   # 16-QAM 3/4
+    5: 20.0,   # 64-QAM 2/3
+    6: 23.0,   # 64-QAM 3/4
+    7: 26.0,   # 64-QAM 5/6
+}
+SIGMOID_STEEPNESS = 1.0  # logistic curve a parameter
+```
 
-### Step 4 ⬜ 미구현
+### Step 3 ✅ 완료
 
-NPCA-HARQ action:
-- `Action` enum (`HARQ_RETX_PRIMARY`, `HARQ_RETX_NPCA`, `FLUSH_HARQ` 등)
-- rule-based policy: HARQ 유효 시 NPCA에서 재전송 vs primary 대기 비교
+**구현 내용:**
+- `harq_sim/harq_buffer.py` 신규 작성 — `HARQBuffer` 클래스 (guidelines §9.1)
+  - `store(packet, snr_linear, slot)`: 첫 PHY 실패 시 초기화, 이후 누적 (Chase Combining §9.3)
+  - `effective_snr_db(new_snr_linear)`: `10·log10(accumulated + new)` 계산
+  - `is_valid(slot)`: `first_tx_slot + validity_horizon` 이내 여부 확인 (§14.2)
+  - `flush()`: 전달/drop 후 버퍼 초기화
+- `STA` 파라미터 추가: `harq_enabled`, `harq_validity_horizon` (기본 200 슬롯 ≈ 1.8 ms)
+- `STA.harq_buffer` 필드 추가 — 항상 초기화되며 `harq_enabled=True`일 때만 활성
+- `_is_harq_retx_applicable(pkt, slot)` 헬퍼: 버퍼 active + 동일 packet_id + 유효 확인; 만료 시 자동 flush
+- `_compute_effective_snr(pkt)` 헬퍼: 버퍼 활성 시 accumulated + current SNR → effective_snr_db
+- `_handle_primary_backoff()` / `_handle_npca_backoff()` TX 트리거 수정:
+  - 버퍼 유효 → `tx_type=HARQ_RETX`, `mcs=harq_buffer.original_mcs` (§9.4 MCS 제약)
+  - 버퍼 없음/만료 → `tx_type=NEW|ARQ_RETX`, 새 MCS 선택
+- `_handle_primary_tx()` / `_handle_npca_tx()` 수정: TX 완료 시 effective SNR 계산 후 PHY 판정
+- `handle_tx_result()` 수정:
+  - `effective_snr_db` 파라미터 추가
+  - PHY_ERROR 시 `harq_buffer.store()` 호출 + `pkt.harq_count += 1`
+  - 성공 시 `harq_buffer.flush()`; drop 시도 `harq_buffer.flush()`
+  - Collision → buffer 저장 안 함 (§9.2)
+- `stats` dict 추가: `harq_tx_success`, `harq_tx_fail`
+- `SlotLog` 필드 추가: `effective_snr_db`, `harq_combining_count` (기본값 None)
+- `compute_metrics()` 추가: `harq_tx_success`, `harq_tx_fail`
+- `run_step3.py` CLI: `--harq-horizon`, `--no-harq` 옵션, HARQ 컬럼 포함 summary
+- 검증 테스트 9개 (all pass)
+
+**검증된 핵심 불변식:**
+```text
+PHY_ERROR → harq_buffer.store(): combining_count++, accumulated_snr += snr_linear
+HARQ_RETX:  tx_type=HARQ_RETX, mcs=original_mcs (§9.4), eff_snr = acc + current
+Collision:  harq_buffer.active=False (soft information 저장 안 함, §9.2)
+Validity:   _is_harq_retx_applicable() 만료 시 flush → ARQ_RETX fallback
+Flush:      성공(delivery) 또는 drop 시 harq_buffer.flush()
+PDR gain:   경계 SNR(14dB, MCS3)에서 HARQ PDR ≈ 0.976 vs ARQ PDR ≈ 0.746 (+23%)
+```
+
+**HARQ-CC SNR 누적 예시 (SNR=14dB, MCS3, retry_limit=1):**
+```text
+attempt 1: snr_db=14.0, p_success=0.500 → PHY FAIL
+           → buffer.accumulated = snr_linear(14dB) = 25.12, combining_count=1
+attempt 2: snr_db=14.0, new_linear=25.12
+           eff_snr = 10·log10(25.12 + 25.12) = 10·log10(50.24) = 17.01 dB
+           p_success(17.01dB, MCS3) = sigmoid(17.01-14) ≈ 0.953 → PHY SUCCESS
+           → effective_snr_db=17.01, harq_combining_count=1 in CSV
+```
+
+**새 CSV 컬럼 (Step 3+):**
+```python
+# HARQ 이벤트 필터링 예시
+df = pd.read_csv("results/step3/sim_trace.csv")
+harq_events   = df[df["tx_type"] == "HARQ_RETX"]
+combining_gain = df[df["harq_combining_count"] >= 1]["effective_snr_db"] - df[...]["snr_db"]
+```
+
+### Step 4 ✅ 완료
+
+**구현 내용:**
+- `harq_sim/enums.py` 추가: `Action` enum (8개 값) + `NPCA_ACTIONS` frozenset
+- `harq_sim/policy.py` 신규 작성 — `NPCAHARQPolicy` 클래스 (guidelines §12)
+  - `estimate_primary_access_delay(sta)`: `obss_remain + primary_backoff_counter`
+  - `estimate_npca_access_delay(sta)`: `switching_delay + npca_cw_init // 2`
+  - `select_action(sta, slot)`: HARQ 유효 여부 + delay 비교 → NPCA/primary 중 선택
+- `STA` 파라미터 추가: `policy: Optional[NPCAHARQPolicy] = None`
+- `STA._decide_npca_or_stay()` 헬퍼:
+  - policy 있음 → `policy.select_action()` 호출, NPCA_ACTIONS면 전환, 아니면 PRIMARY_FROZEN 유지
+  - policy 없음 → Step 3 backward-compat (항상 NPCA 전환)
+- `STA._last_action` 필드: 매 슬롯 초기화, policy 결정 시 기록
+- `STA.stats` 추가: `policy_npca_chosen`, `policy_primary_chosen`
+- `SlotLog.action_taken` 필드 추가 (Optional[str]): policy 결정 CSV 기록
+- `compute_metrics()` 추가: `policy_npca_chosen`, `policy_primary_chosen`
+- `run_step4.py` CLI: `--policy rule-based | none` 옵션
+- 검증 테스트 8개 (all pass)
+
+**검증된 핵심 불변식:**
+```text
+HARQ_RETX_NPCA : HARQ 버퍼 유효 + npca_delay < primary_delay → NPCA 전환
+HARQ_RETX_PRIMARY : HARQ 버퍼 유효 + primary_delay ≤ npca_delay → primary 대기
+TX_NEW_NPCA : 버퍼 없음 + npca_delay < primary_delay → NPCA 전환
+NPCA 불가(disabled/threshold) → 항상 primary (HARQ_RETX_PRIMARY 등)
+policy=None → Step 3 동작 유지 (backward compatible)
+```
+
+**delay 추정 예시 (npca_qsrc=0, switching_delay=1):**
+```text
+npca_cw_init = 15 → expected_backoff = 7 → npca_delay = 8 슬롯
+short OBSS (6 slots): primary_delay = 6 < 8 = npca_delay → STAY PRIMARY ✓
+long  OBSS (60 slots): primary_delay = 60 >> 8 = npca_delay → GO NPCA  ✓
+```
+
+**`policy_primary_chosen` 관찰 예시 (obss_min=5, obss_max=20, 1000 slots, 2 STAs):**
+```text
+STA0: Pol_NPCA=19, Pol_Pri=13  ← 짧은 OBSS에서 primary 선택 다수
+STA1: Pol_NPCA=20, Pol_Pri=7
+```
 
 ### Step 5 ⬜ 미구현
 

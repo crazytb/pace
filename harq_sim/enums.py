@@ -73,3 +73,29 @@ class PacketStatus(Enum):
     IN_FLIGHT = "IN_FLIGHT"
     DELIVERED = "DELIVERED"
     DROPPED   = "DROPPED"
+
+
+class Action(Enum):
+    """NPCA-HARQ action space (guidelines §10).
+
+    Used by NPCAHARQPolicy.select_action() to decide:
+      - Which channel to use for retransmission / fresh TX
+      - Whether to use HARQ combining or ARQ / fresh TX
+      - Whether to stay on primary (OBSS will clear soon)
+    """
+    STAY_PRIMARY      = "STAY_PRIMARY"       # remain frozen on primary (wait for OBSS to end)
+    TX_NEW_PRIMARY    = "TX_NEW_PRIMARY"     # fresh packet TX on primary channel
+    TX_NEW_NPCA       = "TX_NEW_NPCA"       # fresh packet TX on NPCA channel
+    ARQ_RETX_PRIMARY  = "ARQ_RETX_PRIMARY"  # ARQ retransmission on primary channel
+    ARQ_RETX_NPCA     = "ARQ_RETX_NPCA"    # ARQ retransmission on NPCA channel
+    HARQ_RETX_PRIMARY = "HARQ_RETX_PRIMARY" # HARQ-CC retransmission on primary channel
+    HARQ_RETX_NPCA    = "HARQ_RETX_NPCA"   # HARQ-CC retransmission on NPCA channel
+    FLUSH_HARQ        = "FLUSH_HARQ"        # discard HARQ buffer, retry with fresh MCS
+
+
+# Convenience frozenset: actions that require transitioning to NPCA channel
+NPCA_ACTIONS: frozenset = frozenset({
+    Action.HARQ_RETX_NPCA,
+    Action.ARQ_RETX_NPCA,
+    Action.TX_NEW_NPCA,
+})

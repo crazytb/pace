@@ -1,0 +1,41 @@
+==============================================================================================================
+Step 6 Simulation Summary — Reward Module
+==============================================================================================================
+  Slots         : 500
+  STAs          : 3
+  OBSS rate     : 0.05
+  OBSS duration : 30~80 slots
+  PPDU duration : 20 slots
+  NPCA enabled  : True
+  HARQ enabled  : True
+  HARQ horizon  : 200 slots
+  CW mode       : fixed qsrc
+  SNR (mean)    : 20.0 dB  → MCS 5
+  SNR std dev   : 0.0 dB
+  Random seed   : 42
+  Intent        : throughput
+
+ STA |  P_succ  P_fail  N_succ  N_fail  HARQ_ok    PDR   Col_p  Energy_uJ
+--------------------------------------------------------------------------------
+   0 |       4       1       1       2        2  1.000   0.125      538.2
+   1 |       3       2       2       2        2  1.000   0.000      633.8
+   2 |       2       1       2       3        2  1.000   0.125      526.8
+
+Aggregate metrics:
+  Total delivered   : 14
+  Mean delay        : 105.4 slots
+  P95 delay         : 385.0 slots
+  P99 delay         : 385.0 slots
+  PDR               : 1.0000
+  Packet loss       : 0.0000
+  Col prob (primary): 0.1538
+  Col prob (NPCA)   : 0.0000
+  Jain fairness     : 0.9899
+  Total energy      : 1698.7 μJ
+  NPCA transitions  : 15
+
+Normalized metrics:
+  T_hat=0.2800  D_hat=0.2971  D95_hat=0.0375  loss_hat=1.0000
+  col_hat=0.9200  fair_hat=0.9899  E_hat=0.4338  leg_hat=1.0000
+
+  Reward (throughput): 0.520267

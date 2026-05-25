@@ -1,0 +1,22 @@
+================================================================================
+Step 3 Simulation Summary — HARQ-CC Chase Combining
+================================================================================
+  Slots         : 500
+  STAs          : 3
+  OBSS rate     : 0.05
+  OBSS duration : 30~80 slots
+  PPDU duration : 20 slots
+  NPCA enabled  : True
+  HARQ enabled  : True
+  HARQ horizon  : 200 slots (~1.8 ms)
+  NPCA qsrc     : 0  (CW_init = 15)
+  Min threshold : 0 slots
+  SNR (mean)    : 14.0 dB  → MCS 3
+  SNR std dev   : 0.0 dB  (deterministic)
+  Random seed   : 42
+
+ STA |  P_succ  P_fail  N_succ  N_fail  PHY_err  HARQ_ok HARQ_fail    PDR   Col_p  N_trans
+------------------------------------------------------------------------------------------
+   0 |       4       1       1       2        2        2         0  1.000   0.125        5
+   1 |       3       2       2       2        4        2         1  1.000   0.000        5
+   2 |       2       1       2       3        3        2         0  1.000   0.125        5

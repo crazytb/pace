@@ -1,0 +1,57 @@
+==============================================================================================================
+Step 7 Simulation Summary — LLM Reward Designer
+==============================================================================================================
+  Slots         : 200
+  STAs          : 2
+  OBSS rate     : 0.05
+  OBSS duration : 30~80 slots
+  PPDU duration : 20 slots
+  NPCA enabled  : True
+  HARQ enabled  : True
+  HARQ horizon  : 200 slots
+  CW mode       : fixed qsrc
+  SNR (mean)    : 25.0 dB  → MCS 6
+  SNR std dev   : 0.0 dB
+  Random seed   : 42
+  LLM mock      : True
+  LLM interval  : every 50 episodes
+
+LLM-Designed Reward Profile:
+  Intent name   : delay_sensitive
+  Weights:
+    throughput          : 0.100
+    delay               : 0.350
+    tail_delay          : 0.250
+    packet_loss         : 0.100
+    collision           : 0.050
+    fairness            : 0.050
+    energy              : 0.050
+    legacy_protection   : 0.050
+  Constraints:
+    packet_loss_max     : 0.05
+    p95_delay_max       : 300.0
+    legacy_degradation_max: 0.2
+
+ STA |  P_succ  P_fail  N_succ  N_fail  HARQ_ok    PDR   Col_p  Energy_uJ
+--------------------------------------------------------------------------------
+   0 |       2       0       1       0        0  1.000   0.000      199.9
+   1 |       4       0       1       0        0  1.000   0.000      361.6
+
+Aggregate metrics:
+  Total delivered   : 8
+  Mean delay        : 41.1 slots
+  P95 delay         : 108.0 slots
+  P99 delay         : 108.0 slots
+  PDR               : 1.0000
+  Packet loss       : 0.0000
+  Col prob (primary): 0.0000
+  Col prob (NPCA)   : 0.0000
+  Jain fairness     : 0.9412
+  Total energy      : 561.5 μJ
+  NPCA transitions  : 2
+
+Normalized metrics:
+  T_hat=0.1600  D_hat=0.7258  D95_hat=0.7300  loss_hat=1.0000
+  col_hat=1.0000  fair_hat=0.9412  E_hat=0.8128  leg_hat=1.0000
+
+  Reward (delay_sensitive): 0.740241

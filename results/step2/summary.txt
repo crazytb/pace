@@ -1,0 +1,20 @@
+======================================================================
+Step 2 Simulation Summary — ARQ-only retransmission
+======================================================================
+  Slots         : 500
+  STAs          : 3
+  OBSS rate     : 0.05
+  OBSS duration : 30~80 slots
+  PPDU duration : 20 slots
+  NPCA enabled  : True
+  NPCA qsrc     : 0  (CW_init = 15)
+  Min threshold : 0 slots
+  SNR (mean)    : 20.0 dB  → MCS 5
+  SNR std dev   : 0.0 dB  (deterministic)
+  Random seed   : 42
+
+ STA |  P_succ  P_fail  N_succ  N_fail  PHY_err    PDR   Col_p  N_trans
+---------------------------------------------------------------------------
+   0 |       4       1       1       2        2  1.000   0.125        5
+   1 |       3       2       2       2        4  1.000   0.000        5
+   2 |       2       1       2       3        3  1.000   0.125        5
