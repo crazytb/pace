@@ -200,3 +200,4 @@ per-STA adaptive는 qsrc 강한 분화 없이도 최고 per-STA fairness(Jain=0.
 |---|---|
 | 2026-05-25 | 초안 작성 (HARQ gain vs SNR) |
 | 2026-05-26 | 전면 재설계: per-STA frame length heterogeneity 실험으로 변경; Fig 4와 동일 환경(OBSS_MAX=500, occ=50%); pre-sweep oracle, 5개 비교군, 3-panel figure |
+| 2026-05-28 | `channel.py` 버그 수정 반영 재실험 (v2). 결과: `results/step9/fig5_v2/`, oracle: short=0, long=1 |

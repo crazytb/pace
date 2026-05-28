@@ -392,6 +392,7 @@ class Simulator:
                 "policy_npca_chosen":    s.get("policy_npca_chosen", 0),
                 "policy_primary_chosen": s.get("policy_primary_chosen", 0),
                 "avg_npca_qsrc":         avg_qsrc,
+                "npca_tx_truncated":     s.get("npca_tx_truncated", 0),
                 "packets_delivered":   delivered,
                 "packets_dropped":     dropped,
                 "pdr":                 delivered / total_pkts if total_pkts else 0.0,

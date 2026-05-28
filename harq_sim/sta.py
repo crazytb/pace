@@ -104,6 +104,9 @@ class STA:
         harq_validity_horizon:     int  = 200,     # buffer lifetime in slots (~1.8 ms coherence time)
         policy:                    Optional["NPCAHARQPolicy"] = None,  # Step 4+: action selection policy
         adaptive_cw:               bool = False,   # Step 5+: adaptive CW_npca_init via select_npca_qsrc
+        ppdu_truncation:           bool = True,    # Step 7+: allow truncated PPDU when W_eff < ppdu_duration
+        ppdu_min_tx_slots:         int  = 3,       # Step 7+: min slots to attempt TX when truncation enabled
+        cross_channel_harq:        bool = True,    # Step 8+: allow HARQ combining across primary↔NPCA channel switches
     ):
         self.sta_id                     = sta_id
         self.primary_channel            = primary_channel
@@ -123,6 +126,9 @@ class STA:
         self.harq_validity_horizon      = harq_validity_horizon
         self.policy: Optional["NPCAHARQPolicy"] = policy  # Step 4+: rule-based or RL policy
         self.adaptive_cw                = adaptive_cw      # Step 5+: adaptive qsrc selection
+        self.ppdu_truncation            = ppdu_truncation   # Step 7+: truncation policy
+        self.ppdu_min_tx_slots          = ppdu_min_tx_slots # Step 7+: min TX window when truncation on
+        self.cross_channel_harq         = cross_channel_harq # Step 8+: cross-channel HARQ combining flag
 
         # ── Primary EDCA state (guidelines §5.1) ──────────────────────────────
         self.primary_cw:              int = CW_MIN
@@ -192,6 +198,7 @@ class STA:
             "policy_primary_chosen": 0, # Step 4+: policy chose to stay primary (override)
             "primary_collision_count": 0,  # MAC collisions on primary channel
             "npca_collision_count":    0,  # MAC collisions on NPCA channel
+            "npca_tx_truncated":       0,  # Step 7+: NPCA TX attempts with tx_dur < ppdu_duration
         }
 
         # ── Trace log (optional, filled by simulator) ─────────────────────────
@@ -412,6 +419,9 @@ class STA:
 
     def _start_npca_transition(self, slot: int) -> None:
         """Save primary state and start NPCA switching delay."""
+        # Step 8+: flush HARQ buffer when cross-channel combining is disabled
+        if self.harq_enabled and not self.cross_channel_harq:
+            self.harq_buffer.flush()
         self._save_primary_state()
         self._init_npca_state()
         # D1.2 §37.18.4 pt 4a: NPCA_TIMER = NPCA_PPDU_REM_DUR − switch_back_delay
@@ -430,6 +440,9 @@ class STA:
 
     def _start_switch_back(self) -> None:
         """Begin radio switching back to BSS primary channel."""
+        # Step 8+: flush HARQ buffer when cross-channel combining is disabled
+        if self.harq_enabled and not self.cross_channel_harq:
+            self.harq_buffer.flush()
         self.switching_remain = self.switching_delay
         self.next_mode        = STAMode.SWITCH_BACK
         self.stats["switch_backs"] += 1
@@ -596,6 +609,17 @@ class STA:
                 pkt.current_mcs = mcs
                 # TX duration bounded by remaining OBSS time (D1.2 §37.18.4 pt 4a)
                 tx_dur = min(self.ppdu_duration, self.primary_channel.obss_remain)
+                # Step 7+: PPDU truncation policy
+                if tx_dur < self.ppdu_duration:
+                    if not self.ppdu_truncation:
+                        # No truncation: full PPDU required — switch back instead
+                        self._start_switch_back()
+                        return
+                    if tx_dur < self.ppdu_min_tx_slots:
+                        # Truncation enabled but window too short to be useful
+                        self._start_switch_back()
+                        return
+                    self.stats["npca_tx_truncated"] += 1
                 self.tx_request = TxRequest(
                     sta_id=self.sta_id,
                     channel_type=ChannelType.NPCA,

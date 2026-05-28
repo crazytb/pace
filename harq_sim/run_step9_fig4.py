@@ -30,18 +30,18 @@ from harq_sim.run_step8 import build_and_run
 # 실험 설정
 # ─────────────────────────────────────────────────────────────────────────────
 
-NUM_STAS_LIST = [5, 10, 20, 30, 50]
+NUM_STAS_LIST = [5, 10, 20, 30, 50, 70, 100, 150, 200]
 SEEDS         = [42, 123, 456]
 
 OBSS_MIN       = 20
 OBSS_MAX       = 500
 OBSS_OCCUPANCY = 0.50
 
-FULL_SLOTS = 50_000
-FAST_SLOTS =  5_000
+FULL_SLOTS = 200_000
+FAST_SLOTS =  10_000
 
-# Oracle: Fig 3 v2에서 도출된 num_stas별 최적 qsrc*
-ORACLE_QSRC = {5: 0, 10: 0, 20: 0, 30: 1, 50: 2}
+# Oracle: qsrc*(N) = max(0, round(log2(N/16))) 공식 기반
+ORACLE_QSRC = {5: 0, 10: 0, 20: 1, 30: 1, 50: 1, 70: 2, 100: 3, 150: 3, 200: 4}
 
 # 비교 기법 정의
 METHODS = [
@@ -236,7 +236,7 @@ def plot(rows: list[dict], fig_dir: str) -> None:
         fontsize=11,
     )
 
-    _save_figure(fig, fig_dir, "fig4_adaptive_qsrc")
+    _save_figure(fig, fig_dir, "fig4_adaptive_qsrc_massive_v3")
     plt.close(fig)
 
 
@@ -268,7 +268,7 @@ def main() -> None:
         description="Figure 4 — Adaptive qsrc vs Fixed qsrc vs Oracle")
     parser.add_argument("--fast",    action="store_true",
                         help=f"Quick validation: {FAST_SLOTS} slots")
-    parser.add_argument("--out-dir", default="results/step9/fig4")
+    parser.add_argument("--out-dir", default="results/step9/fig4_v3")
     args = parser.parse_args()
 
     num_slots = FAST_SLOTS if args.fast else FULL_SLOTS
@@ -290,9 +290,9 @@ def main() -> None:
     print("Plotting...")
     plot(rows, out_dir)
 
-    print(f"\nFigure 4 완료")
+    print(f"\nFigure 4 (massive) 완료")
     print(f"  데이터  : {csv_path}")
-    print(f"  논문용  : manuscript/figure/fig4_adaptive_qsrc.{{eps,png,pdf}}")
+    print(f"  논문용  : manuscript/figure/fig4_adaptive_qsrc_massive.{{eps,png,pdf}}")
 
 
 if __name__ == "__main__":

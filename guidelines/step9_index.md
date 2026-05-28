@@ -15,8 +15,8 @@ LLM/intent 기여는 별도 논문으로 분리.
 | Fig 4 | Adaptive qsrc vs. Fixed vs. Oracle (주요 기여) | `harq_sim/run_step9_fig4.py` | [fig4.md](step9/fig4.md) | ✅ 완료 |
 | Fig 5 | Per-STA 이질성: frame length × qsrc fairness-efficiency tradeoff | `harq_sim/run_step9_fig5.py` | [fig5.md](step9/fig5.md) | ✅ 완료 |
 | Fig 6 | HARQ combining gain vs Higher MCS crossover (부록/참고) | `harq_sim/run_step9_fig6.py` | [fig6.md](step9/fig6.md) | ✅ 완료 |
-
-> Fig 7, 8 (LLM/Intent 기반): 별도 논문으로 이관. 스크립트 및 guidelines 보존.
+| Fig 7 | PPDU Truncation × qsrc* 직교적 기여 분리 (Extension) | `harq_sim/run_step9_fig7.py` | [fig7.md](step9/fig7.md) | ✅ 완료 |
+| Fig 8 | Cross-Channel HARQ Combining 비교 (Extension) | `harq_sim/run_step9_fig8.py` | [fig8.md](step9/fig8.md) | ✅ 완료 |
 
 상태: ⬜ 미구현 / 🔄 진행 중 / ✅ 완료
 
@@ -30,7 +30,7 @@ LLM/intent 기여는 별도 논문으로 분리.
 § Analysis    : Theorem: qsrc*(N, W_eff, ppdu) 도출 (Bianchi 확장)
 § Algorithm   : Adaptive qsrc (col_rate + waste_rate 기반)
 § Evaluation  : Fig 4 (adaptive vs fixed vs oracle)
-§ Extension   : Fig 5 (per-STA heterogeneity), Fig 6 (HARQ interaction)
+§ Extension   : Fig 5 (per-STA heterogeneity), Fig 6 (HARQ interaction), Fig 8 (cross-channel HARQ)
 ```
 
 ---

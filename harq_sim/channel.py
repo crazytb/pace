@@ -67,7 +67,7 @@ class Channel:
     def generate_obss(self, slot: int) -> None:
         if self.obss_generation_rate == 0:
             return
-        if self.is_busy(slot):
+        if self.obss_remain > 0:
             return
         if random.random() < self.obss_generation_rate:
             duration = (

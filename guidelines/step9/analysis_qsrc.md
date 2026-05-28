@@ -298,9 +298,81 @@ $N \geq 100$: 인접 qsrc 간 throughput 차이가 미미 (< 8 packets ≈ 1.2%)
 
 ---
 
+## 10. qsrc* 기여 맥락 — HARQ-CC 및 Truncation과의 관계
+
+### 10.1 NPCA 손실 원인 분해
+
+NPCA 처리량 손실은 세 가지 독립 원인으로 분해된다:
+
+| 손실 원인 | 해결 수단 | qsrc*와 관계 |
+|-----------|----------|-------------|
+| Collision waste | qsrc* 최적화 | 직접 해결 |
+| PHY failure | HARQ-CC | 직교적 보완 |
+| Window waste (W_eff < ppdu) | PPDU Truncation | 독립 가산 |
+
+### 10.2 qsrc* × HARQ-CC: 보완적, qsrc* 기여 극대화
+
+**핵심 명제**: HARQ-CC가 가능할 때 qsrc* 기여가 최대화된다.
+
+**근거**:
+
+1. **잔여 병목 집중**: HARQ-CC가 PHY failure를 제거하면 남은 비회복 손실은 collision뿐.
+   qsrc*가 유일한 잔여 최적화 레버가 된다.
+
+2. **p_effective 증가**: 처리량 이득 = ΔC × p_delivery에서, HARQ-CC로 인해
+   p_delivery > p_PHY → 동일한 ΔC(collision 감소)가 더 큰 절대 이득으로 전환.
+
+3. **Collision의 기회비용 증가**: HARQ 버퍼에 soft bit가 누적된 상태에서 collision이
+   발생하면 combining 기회도 함께 낭비된다. qsrc*는 이 더 비싸진 collision을 방지.
+
+**중요 구분**: In-visit HARQ-CC(동일 채널, 단일 radio)만으로도 이 논리가 성립한다.
+Cross-radio HARQ-CC(NPCA → Primary combining)는 추가 강화 효과이지, 전제 조건이 아니다.
+
+### 10.3 qsrc* × PPDU Truncation: 독립 가산적(additive)
+
+Fig 7 실험 결과 (obss_max=500, occ=50%, harq=True, 50000슬롯 × 3 seeds):
+
+| N | Truncation 이득 | qsrc* 이득(no-trunc) | qsrc* 이득(trunc) | 상호작용 |
+|---|----------------|---------------------|------------------|---------|
+| 5  | +5.6% | 0.00% | 0.00% | — |
+| 10 | +5.8% | 0.00% | 0.00% | — |
+| 20 | +5.9% | 0.00% | 0.00% | — |
+| 30 | +6.2% | 3.81% | 3.80% | ≈0 |
+| 50 | +6.0% | 9.43% | 9.84% | +0.41%p |
+
+**결론**: Truncation과 qsrc*는 거의 가산적(additive). N=50에서 기대 가산값 대비
+실제 초과분 +17 TP(≈0.9%) — 통계적으로 무의미한 수준.
+
+**원인**: Truncated TX는 전체 NPCA TX의 약 5%에 불과. 이 소수의 추가 시도에서
+발생하는 collision이 qsrc* 전체 기여에 미치는 영향이 극히 작다.
+
+**대비**: HARQ-CC × qsrc*는 시너지(비선형), Truncation × qsrc*는 독립 가산(선형).
+
+### 10.4 Cross-radio HARQ-CC 구현 가능성
+
+시뮬레이터의 `_is_harq_retx_applicable()`은 채널 타입을 검사하지 않으므로
+NPCA TX1 실패 → Primary TX2에서 자동으로 cross-channel combining이 동작한다.
+이것이 물리적으로 타당한지에 대한 선행 연구:
+
+| 선행 연구 | 내용 | 적용성 |
+|----------|------|--------|
+| Wang et al. (IET Comms, 2021) | Multi-band Wi-Fi HARQ: ICFB/SBFB/CRDB 3모드. SBFB = 다른 밴드로 전환 재전송 | 가장 직접적, soft combining 가정은 명시적이지 않음 |
+| 3GPP Rel-17 cross-carrier HARQ | 다른 CC로 HARQ 재전송 허용. 단, UE 내부 단일 모뎀 칩의 shared soft buffer | AP cross-radio 시나리오와 다름 (UE는 단일 baseband) |
+| LTE CA HARQ | 각 CC 독립 soft buffer, cross-carrier combining 없음 (per-carrier 독립 처리 원칙) | 크로스 라디오 combining이 비표준임을 지지 |
+
+**논문 표현 권고**:
+> "assuming an idealized AP implementation with shared soft buffer across radio chains,
+> analogous to cross-carrier HARQ in 3GPP Rel-17 UE architecture"
+
+In-visit HARQ-CC(단일 채널 내 재시도)는 표준 동작이므로 §10.2의 보완성 논리에
+cross-radio 가정이 불필요하다.
+
+---
+
 ## 수정 이력
 
 | 날짜 | 내용 |
 |---|---|
 | 2026-05-26 | 초안 작성. 이론 유도 완료. Fig 3 v2 결과(N≤50)로 수치 검증 완료. |
+| 2026-05-26 | §10 추가: qsrc* × HARQ-CC 보완성(p_effective 증가, 잔여 병목 집중); qsrc* × Truncation 독립 가산성(Fig 7 결과); Cross-radio HARQ-CC 선행 연구 요약. |
 | 2026-05-26 | §8 추가: N=60~150 대규모 N 검증 실험. 9-seed 결과 포함. 모든 N에서 이론 예측 확인; N≥100에서 flat optimum 특성 설명. |

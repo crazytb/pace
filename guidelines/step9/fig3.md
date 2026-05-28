@@ -79,18 +79,40 @@ Figure 3: 3-row subplot (x축: npca_qsrc for (a)(b), num_stas for (c))
 
 - N=50 상세: qsrc=2에서 transition count 최고(1558) — 충돌 감소 + 완료 가능한 backoff의 균형점
 - qsrc* 이동 원인: 창이 길어지면(260슬롯) CW=31~63의 backoff가 완료될 공간이 생겨 충돌 감소 이득이 전환 횟수 감소 손실을 초과
-- 논문 메시지: "N 증가 → 충돌이 심해지면 qsrc*가 커져야 함 → 고정 qsrc는 suboptimal → Adaptive CW(Fig4) 필요성 동기"
+- **⚠️ 모델 결함**: OBSS 생성이 intra-BSS TX 중 차단되어 실제 OBSS 점유율이 N=50에서 11%로 급감함
+  - 원인: `channel.py generate_obss()`의 `if self.is_busy()` 조건이 intra-BSS TX도 차단
+  - 결과: N이 클수록 경쟁이 심해 OBSS 이벤트가 줄어 NPCA 기회가 감소하고 qsrc 최적화 효과가 희석됨
+
+### v3 결과 (channel.py 수정 후, OBSS 독립 생성) → `results/step9/fig3_v3/`
+
+**수정**: `generate_obss()`의 `if self.is_busy()` → `if self.obss_remain > 0`
+- 물리적 의미: OBSS는 외부 BSS의 hidden terminal로부터 도착하므로 우리 BSS의 intra-TX와 무관하게 생성
+- 결과: N에 무관하게 OBSS 이벤트 수 ~96으로 균등 (vs 수정 전 N=50에서 22개)
+
+| num_stas | qsrc* | CW* | TP gain vs qsrc=0 | col@qsrc=0 | col@qsrc* |
+|---|---|---|---|---|---|
+| 5  | 0 | 15  | 0.00% | 27.5% | 27.5% |
+| 10 | 0 | 15  | 0.00% | 47.6% | 47.6% |
+| 20 | **1** | **31** | **+1.52%** | 72.2% | 53.7% |
+| 30 | **1** | **31** | **+3.31%** | 83.2% | 66.9% |
+| 50 | **1** | **31** | **+6.11%** | 92.2% | 83.0% |
+
+- N=20부터 qsrc*=1이 최적, N≥30에서 gain이 뚜렷하게 증가 (3~6%)
+- N=50: qsrc=0 대비 +6.11% — 이전 v2의 +1.01% 대비 6배 개선
+- transition count: N=50에서 ~5000 (v2: ~1100) — OBSS 기회 4.5배 증가
 
 ## 출력 파일
 
 ```
 manuscript/figure/
-  fig3_qsrc_sweep.eps / .png / .pdf   ← v2 결과 (최신)
+  fig3_qsrc_sweep.eps / .png / .pdf   ← v3 결과 (최신, channel fix 적용)
 
 results/step9/fig3/
   data.csv            ← v1 (obss_max=200, N≤20)
 results/step9/fig3_v2/
-  data.csv            ← v2 (obss_max=500, N≤50)  ★ 현재 논문용
+  data.csv            ← v2 (obss_max=500, N≤50, channel bug 있음)
+results/step9/fig3_v3/
+  data.csv            ← v3 (channel fix 후)  ★ 현재 논문용
 ```
 
 ## 수정 이력
@@ -101,3 +123,4 @@ results/step9/fig3_v2/
 | 2026-05-26 | `harq_sim/run_step9_fig3.py` 구현 완료; obss_rate를 점유율 30% 기준으로 변환 적용 |
 | 2026-05-26 | Fig 3을 `num_stas × qsrc` 2D 스윕으로 확장; 3-panel 구성 (throughput/collision per qsrc + optimal qsrc* per num_stas) |
 | 2026-05-26 | 더 massive한 환경(obss_max=500, N≤50, occ=50%)으로 재실험; qsrc* 이동(N≥30에서 qsrc*=1→2) 확인; 결과 `results/step9/fig3_v2/` |
+| 2026-05-28 | `channel.py` 수정: OBSS 생성 시 intra-BSS TX 중 차단 버그 수정 (`is_busy()` → `obss_remain > 0`); v3 재실험; N=50 gain +1.01% → +6.11%; 결과 `results/step9/fig3_v3/` |

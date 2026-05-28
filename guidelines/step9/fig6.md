@@ -137,9 +137,104 @@ results/step9/fig6/
 
 ---
 
+## NPCA 환경에서 HARQ 유인 분석
+
+### Cross-channel HARQ Combining (채널 간 조합)
+
+`harq_sim/sta.py`의 `_is_harq_retx_applicable()`은 채널 타입을 검사하지 않는다:
+
+```python
+def _is_harq_retx_applicable(self, pkt, slot):
+    if not self.harq_enabled:              return False
+    if not self.harq_buffer.active:        return False
+    if self.harq_buffer.packet_id != ...:  return False
+    if not self.harq_buffer.is_valid(slot): return False
+    return True   # channel_type 검사 없음
+```
+
+그 결과, **NPCA TX 실패 → primary TX 재시도** 경로에서 자동으로 cross-channel Chase Combining이 발생한다:
+
+```
+effective_SNR = SNR_NPCA_linear + SNR_Primary_linear  (단위: linear)
+```
+
+이는 물리적으로 유효하다: Chase Combining은 수신단(AP)에서 동일 MCS로 인코딩된 비트의 LLR을 더하는 연산이므로, 수신 채널이 달라도 MCS가 같으면 SNR이 선형 합산된다. 두 채널의 페이딩이 독립적이므로 결합 후 SNR은 개별 SNR보다 항상 크거나 같다 (주파수 다이버시티 이득).
+
+### 재시도 타이밍 분석
+
+NPCA에서 PHY 실패 후 primary 재시도까지의 대기 시간:
+
+```
+t_fail  : NPCA TX1 실패 시각 (≈ 2 + B + D_ppdu)
+t_retry : primary TX2 시각 (≈ W_obs + primary_backoff)
+
+대기 = t_retry - t_fail ≈ W_obs - B - D_ppdu + switch_back + backoff_primary
+                         ≈ W_obs - B - 15 슬롯
+```
+
+| W_obs (슬롯) | 대기 (B≈8) | 버퍼 유효(≤200) | 결과 |
+|---|---|---|---|
+| 100 | ~77 슬롯 | ✅ | **Cross-channel HARQ combining** |
+| 200 | ~177 슬롯 | ✅ (간신히) | **Cross-channel HARQ combining** |
+| ~210 | ~187 슬롯 | 경계 | — |
+| 300 | ~277 슬롯 | ❌ 만료 | Primary에서 ARQ (combining 없음) |
+| 500 | ~477 슬롯 | ❌ 만료 | Primary에서 ARQ (combining 없음) |
+
+`obss_max=500`, uniform 분포에서 **W_obs ≤ 210인 이벤트 비율 ≈ (210−20)/(500−20) ≈ 40%**.
+
+즉 전체 OBSS 이벤트의 약 40%에서 cross-channel HARQ combining이 활성화된다.
+
+### NPCA 특유의 HARQ 유인 (정정된 요약)
+
+| 메커니즘 | 조건 | NPCA 유인 |
+|---|---|---|
+| In-visit combining | 잔여 W_eff ≥ D_ppdu (같은 방문 내 재시도) | 방문 내 채널 재사용 |
+| Cross-channel combining | W_obs ≤ ~210 슬롯 (버퍼 유효 내 primary 복귀) | 주파수 다이버시티 이득 |
+| Buffer 만료 (ARQ fallback) | W_obs > ~210 슬롯 | 이득 없음 (표준 ARQ) |
+
+**정정**: 이전 분석에서 "NPCA 실패 → 다음 OBSS 이벤트까지 ~280슬롯 대기"로 서술한 것은 잘못되었다. 실제로는 현재 OBSS가 끝나면 primary에서 곧바로 재시도할 수 있으며, 짧은 OBSS에서는 cross-channel combining까지 가능하다. "280슬롯 대기"는 primary 재시도마저 실패하여 다음 NPCA 기회를 기다리는 최악의 경우에만 해당한다.
+
+---
+
+## Cross-radio HARQ-CC 구현 가능성 — 선행 연구
+
+### 문제 정의
+
+시뮬레이터의 cross-channel HARQ-CC(NPCA fail → Primary combining)에서:
+- **STA**: 단일 radio를 재튜닝(NPCA → Primary) — STA 입장에서는 단일 라디오
+- **AP**: NPCA 밴드와 Primary 밴드 각각의 RF chain으로 수신 → **AP가 두 radio에서 soft bit 조합** 필요
+
+이는 AP가 cross-radio soft buffer를 공유해야 하는 비표준 요구사항이다.
+
+### 선행 연구 요약
+
+| 연구 | 내용 | NPCA 적용성 |
+|------|------|------------|
+| **Wang et al. (IET Comms, 2021)** "Intelligent HARQ retransmission for multi-band Wi-Fi" | 3모드: ICFB(현재 밴드 유지), SBFB(백업 밴드 전환), CRDB(동시 전송). SBFB = NPCA cross-channel 재전송과 동일 구조 | 가장 직접적. 단, soft combining 가정 명시 없음 |
+| **3GPP Rel-17** Cross-carrier HARQ retransmission | Rel-15/16: 동일 CC에서만 재전송. **Rel-17부터**: 다른 CC로 HARQ 재전송 허용 | UE 내부 단일 모뎀 칩의 shared soft buffer가 전제. AP cross-radio와는 다름 |
+| **LTE CA** HARQ soft buffer (WO2012060842A1 등) | 각 Component Carrier마다 독립 soft buffer. Cross-carrier combining = 없음 ("per-carrier 독립 처리" 원칙) | Cross-radio combining이 비표준임을 지지 |
+| **802.11be/bn** | HARQ는 단일 링크 기준. Cross-link soft combining 미정의. Wi-Fi 표준에 RV(Redundancy Version)도 없으므로 HARQ-IR도 미적용 | 현재 표준에 근거 없음 |
+
+### 결론 및 논문 포지셔닝
+
+**Cross-radio HARQ-CC (NPCA→Primary)**: 이론적으로 유효(LLR combining은 채널 무관), 
+실제 구현은 AP에 cross-radio shared soft buffer 필요 → 비표준, Wi-Fi 7 MLO AP 이후 미래 기능.
+
+**In-visit HARQ-CC (동일 NPCA 채널 내 재시도)**: 표준 단일 radio 동작, 구현 전제 없음.
+
+qsrc* × HARQ-CC 보완성 논리는 **in-visit HARQ-CC만으로 성립**. Cross-radio는 추가 이득이지 전제 조건이 아니다 (`guidelines/step9/analysis_qsrc.md §10.2` 참조).
+
+논문 assumption 표기 권고:
+> "assuming an idealized AP with shared soft buffer across radio chains (analogous to 3GPP Rel-17 UE cross-carrier HARQ)"
+
+---
+
 ## 수정 이력
 
 | 날짜 | 변경 내용 |
 |---|---|
 | 2026-05-25 | 초안 작성 |
 | 2026-05-26 | `harq_sim/run_step9_fig6.py` 구현 및 full 실행 완료; 실험 결과 기록; 주기적 패턴(패킷 단위 측정) 및 교차점 없음 분석 추가 |
+| 2026-05-26 | NPCA 특유의 HARQ 유인 분석 추가: cross-channel combining 메커니즘 확인 (`_is_harq_retx_applicable()`의 채널 타입 무관 설계); 재시도 타이밍 분석 (W_obs ≤ ~210슬롯에서 combining 활성, ~40% OBSS 이벤트 해당); "280슬롯 대기" 잘못된 설명 정정 |
+| 2026-05-26 | Cross-radio HARQ-CC 선행 연구 섹션 추가: Wang et al. 2021 (IET, multi-band Wi-Fi HARQ), 3GPP Rel-17 cross-carrier HARQ, LTE CA 독립 buffer 원칙, 802.11be/bn 미정의 현황; 논문 assumption 표기 권고 추가 |
+| 2026-05-28 | `channel.py` 버그 수정 반영 재실험 (v2). 결과: `results/step9/fig6_v2/` |

@@ -77,3 +77,4 @@ results/step9/fig1/
 | 2026-05-25 | 초안 작성 |
 | 2026-05-25 | `harq_sim/run_step9_fig1.py` 구현 완료; fast mode 검증 통과 |
 | 2026-05-26 | `obss_rate` 파라미터를 OBSS 채널 점유율(occupancy)로 재정의. 기존 obss_rate=0.10~0.50은 per-slot 도착률로 실제 점유율이 92~98%였음 — Legacy EDCA starvation 문제. 내부적으로 `_occupancy_to_rate(occ)`로 변환하여 원하는 점유율을 정확히 달성. x축 레이블도 "OBSS Channel Occupancy"로 변경. |
+| 2026-05-28 | `channel.py` 버그 수정 반영 재실험 (v3). `generate_obss()`의 `is_busy()` → `obss_remain > 0` 수정으로 intra-BSS TX 중에도 OBSS 이벤트가 정상 생성됨. 결과: `results/step9/fig1_v3/` |
