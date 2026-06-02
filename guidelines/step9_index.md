@@ -21,6 +21,8 @@ LLM/intent 기여는 별도 논문으로 분리.
 | Fig 10 | qsrc*(W_eff) 의존성 — OBSS duration sweep (Fig 3 보완) | `harq_sim/run_step9_fig10.py` | [fig10.md](step9/fig10.md) | ✅ 완료 |
 | Fig 11 | PPDU duration 효과 — W_avail = W−PPDU 통합 이론 검증 | `harq_sim/run_step9_fig11.py` | [fig11.md](step9/fig11.md) | ⬜ 미구현 |
 | Fig 12 | Multi-Round 동역학 — K = W_avail/PPDU 특성화 및 collapse 경계 | `harq_sim/run_step9_fig12.py` | [fig12.md](step9/fig12.md) | ✅ 완료 |
+| Fig 13 | Frame Delivery Delay — qsrc × HARQ on/off 교차 분석 (Fig 2 대체) | `harq_sim/run_step9_fig13.py` | [fig13.md](step9/fig13.md) | ✅ 완료 |
+| Fig 14 | Per-STA PPDU-aware threshold — 이질적 PPDU 환경 adaptive qsrc 검증 | `harq_sim/run_step9_fig14.py` | [fig14.md](step9/fig14.md) | ✅ 완료 |
 
 상태: ⬜ 미구현 / 🔄 진행 중 / ✅ 완료
 
@@ -39,6 +41,7 @@ LLM/intent 기여는 별도 논문으로 분리.
 § Analysis+  : Fig 10 (qsrc*(W_eff) — W 의존성, Fig 3 보완)
               Fig 11 (qsrc*(W_avail=W−PPDU) — PPDU 포함 통합 이론 완성)
               Fig 12 (K = W_avail/PPDU — multi-round collapse 경계 검증)
+§ Extension 3 : Fig 13 (delay 분석), Fig 14 (per-STA PPDU-aware threshold — 이질 PPDU 일반화)
 ```
 
 ---

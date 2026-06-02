@@ -330,9 +330,62 @@ N_native=30, q=0: collision 0.842 (높음)이지만 그래도 trans TP가 최대
 
 ---
 
+---
+
+## 실험 결과 v2 — Trans + Native 동시 시각화 (results/step9/fig9_v2/, 50k슬롯 × 3 seeds)
+
+### Total NPCA Throughput (trans + native) per qsrc
+
+| N_n | q=0  | q=1      | q=2      | q=3  | q=4  | q=5  | qsrc*_total | qsrc*_trans |
+|-----|------|----------|----------|------|------|------|-------------|-------------|
+| 0   | 1285 | **1285** | 1238     | 1197 | 1135 | 1041 | 1           | 1           |
+| 5   | 2072 | 2095     | 2094     | 2099 | 2121 | **2131** | **5**   | 0           |
+| 10  | 2075 | **2145** | 2119     | 2114 | 2139 | 2128 | **1**       | 0           |
+| 20  | 2084 | 2078     | **2156** | 2089 | 2090 | 2070 | **2**       | 0           |
+| 30  | 2063 | 2069     | 2078     | 2059 | **2100** | 2083 | **4**   | 0           |
+
+### 핵심 관찰 (v2 확장 분석)
+
+#### 1. Trans vs. Native 처리량 역전 관계 (Panel a/b 명확화)
+
+| qsrc 증가 방향 | Trans STA | Native STA |
+|---|---|---|
+| qsrc ↑ | 처리량 **단조 감소** | 처리량 **단조 증가** |
+| 이유 | 더 큰 CW → 채널 접근 기회 감소 | Trans의 CW 증가 → native가 빈 슬롯 채움 |
+
+N_n=5 예시: native TP(q=0)=883 → native TP(q=5)=1203 (+36%), trans TP(q=0)=1189 → trans TP(q=5)=928 (-22%)
+
+#### 2. Trans-optimal vs. Total-optimal 이분화 (Panel d 핵심)
+
+| N_n | qsrc*_trans | qsrc*_total | Δ | TP range (total) |
+|-----|-------------|-------------|---|-----------------|
+| 0   | 1           | 1           | 0 | (tied q=0,1) |
+| 5   | 0           | **5**       | +5 | 2072→2131 (+3.0%) |
+| 10  | 0           | **1**       | +1 | 2075→2145 (+3.4%), flat after q=1 |
+| 20  | 0           | **2**       | +2 | 2084→2156 (+3.5%), flat |
+| 30  | 0           | **4**       | +4 | 2063→2100 (+1.8%), flat |
+
+- Trans STAs는 **항상 qsrc=0 선호** (자기 이익 최대화)
+- 시스템 total optimal은 **N_n에 따라 비단조적으로 변화** (noise-level flatness 주의)
+- Total TP range는 1.8~3.5% — qsrc 선택보다 N_n 자체가 total TP에 더 큰 영향
+
+#### 3. qsrc = "공정성 파라미터" 재해석
+
+qsrc는 단순 collision 감소 파라미터가 아니라, **trans ↔ native 간 채널 점유 비율을 조정하는 공정성 파라미터**로 해석 가능:
+
+| qsrc | Trans STA 관점 | Native STA 관점 | 시스템 관점 |
+|------|---------------|----------------|------------|
+| 0    | 자기 이익 최대 | 불리 (차별) | 편향 |
+| 3~4  | 손해 | 거의 동등 | 근사 공정 |
+| 5    | 최대 손해 | 최대 이익 | native 편향 |
+
+---
+
 ## 수정 이력
 
 | 날짜 | 변경 내용 |
 |------|----------|
 | 2026-05-28 | 초안 작성. native NPCA STA 환경에서의 qsrc 최적화 실험 설계. |
 | 2026-05-28 | 구현 완료. simulator.py TX 라우팅 수정 (sta.primary_channel.channel_id 사용, req.channel_type으로 실패 dispatch). run_step9_fig9.py 신규 작성. 정식 실험 완료 (results/step9/fig9/). v1 결과: qsrc*가 N_native 증가에 따라 감소(0으로 수렴)하는 반직관적 결과 — native STA의 qsrc=0 경쟁이 trans STA의 CW 증가 이득을 흡수. |
+| 2026-06-01 | v2 확장: run_step9_fig9.py를 4-panel로 변경 (trans TP / native TP / total TP / qsrc* 비교). --replot 플래그 추가. results/step9/fig9_v2/ 신규 실험 (90 runs). 핵심 발견: qsrc는 trans↔native 공정성 파라미터; trans-optimal(q=0)과 total-optimal(q=1~5)의 이분화 확인. |
+| 2026-06-01 | adaptive qsrc 알고리즘 native STA 감지 로직 추가 (harq_sim/sta.py `_maybe_update_qsrc()`). 설계: qsrc를 올렸음에도 col_rate가 5% 이상 줄지 않으면 native 경쟁으로 판정 → qsrc=0 리셋 + native_mode=True(이후 qsrc 인상 차단). 효과: N_native=30에서 mean_qsrc 1.22→0.087, trans TP Δ -4.2%→+2.4% (vs fixed_q0) 개선. |

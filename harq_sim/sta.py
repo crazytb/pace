@@ -231,6 +231,10 @@ class STA:
         self._adap_cur_tx:         int = 0    # TX attempts in the current ongoing visit
         self._theta_col:   float = 0.70  # per-TX collision rate threshold → increase qsrc
         self._theta_waste: float = 0.30  # per-visit waste rate threshold  → decrease qsrc
+        # Native STA detection: track whether last window's qsrc raise helped
+        self._adap_prev_col_rate: float = 0.0   # col_rate from previous window
+        self._adap_raised_last:   bool  = False  # True if qsrc was raised last window
+        self._adap_native_mode:   bool  = False  # True once native competition detected
 
         # ── Step 6+: energy and delivery-delay tracking ───────────────────────
         self.total_energy_uj:   float = 0.0   # cumulative energy this episode (μJ)
@@ -852,9 +856,23 @@ class STA:
         # waste_rate: P(no TX in visit) — backoff exceeded NPCA timer before first attempt
         waste_rate = 1.0 - self._adap_visits_with_tx / self._adap_trans
         if col_rate > self._theta_col:
-            self.npca_initial_qsrc = min(self.npca_initial_qsrc + 1, 5)
+            if self._adap_native_mode:
+                # Native STAs already detected: raising qsrc never helps → stay at 0
+                pass
+            elif self._adap_raised_last and col_rate >= self._adap_prev_col_rate * 0.95:
+                # Raised qsrc last window but col_rate didn't drop ≥ 5% → native STA competition
+                self._adap_native_mode   = True
+                self.npca_initial_qsrc   = 0
+                self._adap_raised_last   = False
+            else:
+                self.npca_initial_qsrc   = min(self.npca_initial_qsrc + 1, 5)
+                self._adap_raised_last   = True
         elif waste_rate > self._theta_waste:
-            self.npca_initial_qsrc = max(self.npca_initial_qsrc - 1, 0)
+            self.npca_initial_qsrc       = max(self.npca_initial_qsrc - 1, 0)
+            self._adap_raised_last       = False
+        else:
+            self._adap_raised_last       = False
+        self._adap_prev_col_rate  = col_rate
         self._adap_trans          = 0
         self._adap_col            = 0
         self._adap_tx             = 0
