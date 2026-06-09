@@ -1,0 +1,302 @@
+=== Figure 21 [FULL]  1000 visits ===
+    visitor methods : ['oracle', 'pnd', 'ema_ad_low', 'consec_L2', 'dcf_self_excl', 'and']
+    N_visitor       : 10
+    N_native        : [0, 5, 10, 20]
+    W_eff           : [50, 100]
+    seeds           : [42, 123, 456, 789, 1234]
+    total configs   : 240
+  Computing native-only baselines ...
+  [   1/240] N_nat= 0  W_eff= 50  oracle             seed=42
+  [   2/240] N_nat= 0  W_eff= 50  pnd                seed=42
+  [   3/240] N_nat= 0  W_eff= 50  ema_ad_low         seed=42
+  [   4/240] N_nat= 0  W_eff= 50  consec_L2          seed=42
+  [   5/240] N_nat= 0  W_eff= 50  dcf_self_excl      seed=42
+  [   6/240] N_nat= 0  W_eff= 50  and                seed=42
+  [   7/240] N_nat= 0  W_eff= 50  oracle             seed=123
+  [   8/240] N_nat= 0  W_eff= 50  pnd                seed=123
+  [   9/240] N_nat= 0  W_eff= 50  ema_ad_low         seed=123
+  [  10/240] N_nat= 0  W_eff= 50  consec_L2          seed=123
+  [  11/240] N_nat= 0  W_eff= 50  dcf_self_excl      seed=123
+  [  12/240] N_nat= 0  W_eff= 50  and                seed=123
+  [  13/240] N_nat= 0  W_eff= 50  oracle             seed=456
+  [  14/240] N_nat= 0  W_eff= 50  pnd                seed=456
+  [  15/240] N_nat= 0  W_eff= 50  ema_ad_low         seed=456
+  [  16/240] N_nat= 0  W_eff= 50  consec_L2          seed=456
+  [  17/240] N_nat= 0  W_eff= 50  dcf_self_excl      seed=456
+  [  18/240] N_nat= 0  W_eff= 50  and                seed=456
+  [  19/240] N_nat= 0  W_eff= 50  oracle             seed=789
+  [  20/240] N_nat= 0  W_eff= 50  pnd                seed=789
+  [  21/240] N_nat= 0  W_eff= 50  ema_ad_low         seed=789
+  [  22/240] N_nat= 0  W_eff= 50  consec_L2          seed=789
+  [  23/240] N_nat= 0  W_eff= 50  dcf_self_excl      seed=789
+  [  24/240] N_nat= 0  W_eff= 50  and                seed=789
+  [  25/240] N_nat= 0  W_eff= 50  oracle             seed=1234
+  [  26/240] N_nat= 0  W_eff= 50  pnd                seed=1234
+  [  27/240] N_nat= 0  W_eff= 50  ema_ad_low         seed=1234
+  [  28/240] N_nat= 0  W_eff= 50  consec_L2          seed=1234
+  [  29/240] N_nat= 0  W_eff= 50  dcf_self_excl      seed=1234
+  [  30/240] N_nat= 0  W_eff= 50  and                seed=1234
+  [  31/240] N_nat= 0  W_eff=100  oracle             seed=42
+  [  32/240] N_nat= 0  W_eff=100  pnd                seed=42
+  [  33/240] N_nat= 0  W_eff=100  ema_ad_low         seed=42
+  [  34/240] N_nat= 0  W_eff=100  consec_L2          seed=42
+  [  35/240] N_nat= 0  W_eff=100  dcf_self_excl      seed=42
+  [  36/240] N_nat= 0  W_eff=100  and                seed=42
+  [  37/240] N_nat= 0  W_eff=100  oracle             seed=123
+  [  38/240] N_nat= 0  W_eff=100  pnd                seed=123
+  [  39/240] N_nat= 0  W_eff=100  ema_ad_low         seed=123
+  [  40/240] N_nat= 0  W_eff=100  consec_L2          seed=123
+  [  41/240] N_nat= 0  W_eff=100  dcf_self_excl      seed=123
+  [  42/240] N_nat= 0  W_eff=100  and                seed=123
+  [  43/240] N_nat= 0  W_eff=100  oracle             seed=456
+  [  44/240] N_nat= 0  W_eff=100  pnd                seed=456
+  [  45/240] N_nat= 0  W_eff=100  ema_ad_low         seed=456
+  [  46/240] N_nat= 0  W_eff=100  consec_L2          seed=456
+  [  47/240] N_nat= 0  W_eff=100  dcf_self_excl      seed=456
+  [  48/240] N_nat= 0  W_eff=100  and                seed=456
+  [  49/240] N_nat= 0  W_eff=100  oracle             seed=789
+  [  50/240] N_nat= 0  W_eff=100  pnd                seed=789
+  [  51/240] N_nat= 0  W_eff=100  ema_ad_low         seed=789
+  [  52/240] N_nat= 0  W_eff=100  consec_L2          seed=789
+  [  53/240] N_nat= 0  W_eff=100  dcf_self_excl      seed=789
+  [  54/240] N_nat= 0  W_eff=100  and                seed=789
+  [  55/240] N_nat= 0  W_eff=100  oracle             seed=1234
+  [  56/240] N_nat= 0  W_eff=100  pnd                seed=1234
+  [  57/240] N_nat= 0  W_eff=100  ema_ad_low         seed=1234
+  [  58/240] N_nat= 0  W_eff=100  consec_L2          seed=1234
+  [  59/240] N_nat= 0  W_eff=100  dcf_self_excl      seed=1234
+  [  60/240] N_nat= 0  W_eff=100  and                seed=1234
+  [  61/240] N_nat= 5  W_eff= 50  oracle             seed=42
+  [  62/240] N_nat= 5  W_eff= 50  pnd                seed=42
+  [  63/240] N_nat= 5  W_eff= 50  ema_ad_low         seed=42
+  [  64/240] N_nat= 5  W_eff= 50  consec_L2          seed=42
+  [  65/240] N_nat= 5  W_eff= 50  dcf_self_excl      seed=42
+  [  66/240] N_nat= 5  W_eff= 50  and                seed=42
+  [  67/240] N_nat= 5  W_eff= 50  oracle             seed=123
+  [  68/240] N_nat= 5  W_eff= 50  pnd                seed=123
+  [  69/240] N_nat= 5  W_eff= 50  ema_ad_low         seed=123
+  [  70/240] N_nat= 5  W_eff= 50  consec_L2          seed=123
+  [  71/240] N_nat= 5  W_eff= 50  dcf_self_excl      seed=123
+  [  72/240] N_nat= 5  W_eff= 50  and                seed=123
+  [  73/240] N_nat= 5  W_eff= 50  oracle             seed=456
+  [  74/240] N_nat= 5  W_eff= 50  pnd                seed=456
+  [  75/240] N_nat= 5  W_eff= 50  ema_ad_low         seed=456
+  [  76/240] N_nat= 5  W_eff= 50  consec_L2          seed=456
+  [  77/240] N_nat= 5  W_eff= 50  dcf_self_excl      seed=456
+  [  78/240] N_nat= 5  W_eff= 50  and                seed=456
+  [  79/240] N_nat= 5  W_eff= 50  oracle             seed=789
+  [  80/240] N_nat= 5  W_eff= 50  pnd                seed=789
+  [  81/240] N_nat= 5  W_eff= 50  ema_ad_low         seed=789
+  [  82/240] N_nat= 5  W_eff= 50  consec_L2          seed=789
+  [  83/240] N_nat= 5  W_eff= 50  dcf_self_excl      seed=789
+  [  84/240] N_nat= 5  W_eff= 50  and                seed=789
+  [  85/240] N_nat= 5  W_eff= 50  oracle             seed=1234
+  [  86/240] N_nat= 5  W_eff= 50  pnd                seed=1234
+  [  87/240] N_nat= 5  W_eff= 50  ema_ad_low         seed=1234
+  [  88/240] N_nat= 5  W_eff= 50  consec_L2          seed=1234
+  [  89/240] N_nat= 5  W_eff= 50  dcf_self_excl      seed=1234
+  [  90/240] N_nat= 5  W_eff= 50  and                seed=1234
+  [  91/240] N_nat= 5  W_eff=100  oracle             seed=42
+  [  92/240] N_nat= 5  W_eff=100  pnd                seed=42
+  [  93/240] N_nat= 5  W_eff=100  ema_ad_low         seed=42
+  [  94/240] N_nat= 5  W_eff=100  consec_L2          seed=42
+  [  95/240] N_nat= 5  W_eff=100  dcf_self_excl      seed=42
+  [  96/240] N_nat= 5  W_eff=100  and                seed=42
+  [  97/240] N_nat= 5  W_eff=100  oracle             seed=123
+  [  98/240] N_nat= 5  W_eff=100  pnd                seed=123
+  [  99/240] N_nat= 5  W_eff=100  ema_ad_low         seed=123
+  [ 100/240] N_nat= 5  W_eff=100  consec_L2          seed=123
+  [ 101/240] N_nat= 5  W_eff=100  dcf_self_excl      seed=123
+  [ 102/240] N_nat= 5  W_eff=100  and                seed=123
+  [ 103/240] N_nat= 5  W_eff=100  oracle             seed=456
+  [ 104/240] N_nat= 5  W_eff=100  pnd                seed=456
+  [ 105/240] N_nat= 5  W_eff=100  ema_ad_low         seed=456
+  [ 106/240] N_nat= 5  W_eff=100  consec_L2          seed=456
+  [ 107/240] N_nat= 5  W_eff=100  dcf_self_excl      seed=456
+  [ 108/240] N_nat= 5  W_eff=100  and                seed=456
+  [ 109/240] N_nat= 5  W_eff=100  oracle             seed=789
+  [ 110/240] N_nat= 5  W_eff=100  pnd                seed=789
+  [ 111/240] N_nat= 5  W_eff=100  ema_ad_low         seed=789
+  [ 112/240] N_nat= 5  W_eff=100  consec_L2          seed=789
+  [ 113/240] N_nat= 5  W_eff=100  dcf_self_excl      seed=789
+  [ 114/240] N_nat= 5  W_eff=100  and                seed=789
+  [ 115/240] N_nat= 5  W_eff=100  oracle             seed=1234
+  [ 116/240] N_nat= 5  W_eff=100  pnd                seed=1234
+  [ 117/240] N_nat= 5  W_eff=100  ema_ad_low         seed=1234
+  [ 118/240] N_nat= 5  W_eff=100  consec_L2          seed=1234
+  [ 119/240] N_nat= 5  W_eff=100  dcf_self_excl      seed=1234
+  [ 120/240] N_nat= 5  W_eff=100  and                seed=1234
+  [ 121/240] N_nat=10  W_eff= 50  oracle             seed=42
+  [ 122/240] N_nat=10  W_eff= 50  pnd                seed=42
+  [ 123/240] N_nat=10  W_eff= 50  ema_ad_low         seed=42
+  [ 124/240] N_nat=10  W_eff= 50  consec_L2          seed=42
+  [ 125/240] N_nat=10  W_eff= 50  dcf_self_excl      seed=42
+  [ 126/240] N_nat=10  W_eff= 50  and                seed=42
+  [ 127/240] N_nat=10  W_eff= 50  oracle             seed=123
+  [ 128/240] N_nat=10  W_eff= 50  pnd                seed=123
+  [ 129/240] N_nat=10  W_eff= 50  ema_ad_low         seed=123
+  [ 130/240] N_nat=10  W_eff= 50  consec_L2          seed=123
+  [ 131/240] N_nat=10  W_eff= 50  dcf_self_excl      seed=123
+  [ 132/240] N_nat=10  W_eff= 50  and                seed=123
+  [ 133/240] N_nat=10  W_eff= 50  oracle             seed=456
+  [ 134/240] N_nat=10  W_eff= 50  pnd                seed=456
+  [ 135/240] N_nat=10  W_eff= 50  ema_ad_low         seed=456
+  [ 136/240] N_nat=10  W_eff= 50  consec_L2          seed=456
+  [ 137/240] N_nat=10  W_eff= 50  dcf_self_excl      seed=456
+  [ 138/240] N_nat=10  W_eff= 50  and                seed=456
+  [ 139/240] N_nat=10  W_eff= 50  oracle             seed=789
+  [ 140/240] N_nat=10  W_eff= 50  pnd                seed=789
+  [ 141/240] N_nat=10  W_eff= 50  ema_ad_low         seed=789
+  [ 142/240] N_nat=10  W_eff= 50  consec_L2          seed=789
+  [ 143/240] N_nat=10  W_eff= 50  dcf_self_excl      seed=789
+  [ 144/240] N_nat=10  W_eff= 50  and                seed=789
+  [ 145/240] N_nat=10  W_eff= 50  oracle             seed=1234
+  [ 146/240] N_nat=10  W_eff= 50  pnd                seed=1234
+  [ 147/240] N_nat=10  W_eff= 50  ema_ad_low         seed=1234
+  [ 148/240] N_nat=10  W_eff= 50  consec_L2          seed=1234
+  [ 149/240] N_nat=10  W_eff= 50  dcf_self_excl      seed=1234
+  [ 150/240] N_nat=10  W_eff= 50  and                seed=1234
+  [ 151/240] N_nat=10  W_eff=100  oracle             seed=42
+  [ 152/240] N_nat=10  W_eff=100  pnd                seed=42
+  [ 153/240] N_nat=10  W_eff=100  ema_ad_low         seed=42
+  [ 154/240] N_nat=10  W_eff=100  consec_L2          seed=42
+  [ 155/240] N_nat=10  W_eff=100  dcf_self_excl      seed=42
+  [ 156/240] N_nat=10  W_eff=100  and                seed=42
+  [ 157/240] N_nat=10  W_eff=100  oracle             seed=123
+  [ 158/240] N_nat=10  W_eff=100  pnd                seed=123
+  [ 159/240] N_nat=10  W_eff=100  ema_ad_low         seed=123
+  [ 160/240] N_nat=10  W_eff=100  consec_L2          seed=123
+  [ 161/240] N_nat=10  W_eff=100  dcf_self_excl      seed=123
+  [ 162/240] N_nat=10  W_eff=100  and                seed=123
+  [ 163/240] N_nat=10  W_eff=100  oracle             seed=456
+  [ 164/240] N_nat=10  W_eff=100  pnd                seed=456
+  [ 165/240] N_nat=10  W_eff=100  ema_ad_low         seed=456
+  [ 166/240] N_nat=10  W_eff=100  consec_L2          seed=456
+  [ 167/240] N_nat=10  W_eff=100  dcf_self_excl      seed=456
+  [ 168/240] N_nat=10  W_eff=100  and                seed=456
+  [ 169/240] N_nat=10  W_eff=100  oracle             seed=789
+  [ 170/240] N_nat=10  W_eff=100  pnd                seed=789
+  [ 171/240] N_nat=10  W_eff=100  ema_ad_low         seed=789
+  [ 172/240] N_nat=10  W_eff=100  consec_L2          seed=789
+  [ 173/240] N_nat=10  W_eff=100  dcf_self_excl      seed=789
+  [ 174/240] N_nat=10  W_eff=100  and                seed=789
+  [ 175/240] N_nat=10  W_eff=100  oracle             seed=1234
+  [ 176/240] N_nat=10  W_eff=100  pnd                seed=1234
+  [ 177/240] N_nat=10  W_eff=100  ema_ad_low         seed=1234
+  [ 178/240] N_nat=10  W_eff=100  consec_L2          seed=1234
+  [ 179/240] N_nat=10  W_eff=100  dcf_self_excl      seed=1234
+  [ 180/240] N_nat=10  W_eff=100  and                seed=1234
+  [ 181/240] N_nat=20  W_eff= 50  oracle             seed=42
+  [ 182/240] N_nat=20  W_eff= 50  pnd                seed=42
+  [ 183/240] N_nat=20  W_eff= 50  ema_ad_low         seed=42
+  [ 184/240] N_nat=20  W_eff= 50  consec_L2          seed=42
+  [ 185/240] N_nat=20  W_eff= 50  dcf_self_excl      seed=42
+  [ 186/240] N_nat=20  W_eff= 50  and                seed=42
+  [ 187/240] N_nat=20  W_eff= 50  oracle             seed=123
+  [ 188/240] N_nat=20  W_eff= 50  pnd                seed=123
+  [ 189/240] N_nat=20  W_eff= 50  ema_ad_low         seed=123
+  [ 190/240] N_nat=20  W_eff= 50  consec_L2          seed=123
+  [ 191/240] N_nat=20  W_eff= 50  dcf_self_excl      seed=123
+  [ 192/240] N_nat=20  W_eff= 50  and                seed=123
+  [ 193/240] N_nat=20  W_eff= 50  oracle             seed=456
+  [ 194/240] N_nat=20  W_eff= 50  pnd                seed=456
+  [ 195/240] N_nat=20  W_eff= 50  ema_ad_low         seed=456
+  [ 196/240] N_nat=20  W_eff= 50  consec_L2          seed=456
+  [ 197/240] N_nat=20  W_eff= 50  dcf_self_excl      seed=456
+  [ 198/240] N_nat=20  W_eff= 50  and                seed=456
+  [ 199/240] N_nat=20  W_eff= 50  oracle             seed=789
+  [ 200/240] N_nat=20  W_eff= 50  pnd                seed=789
+  [ 201/240] N_nat=20  W_eff= 50  ema_ad_low         seed=789
+  [ 202/240] N_nat=20  W_eff= 50  consec_L2          seed=789
+  [ 203/240] N_nat=20  W_eff= 50  dcf_self_excl      seed=789
+  [ 204/240] N_nat=20  W_eff= 50  and                seed=789
+  [ 205/240] N_nat=20  W_eff= 50  oracle             seed=1234
+  [ 206/240] N_nat=20  W_eff= 50  pnd                seed=1234
+  [ 207/240] N_nat=20  W_eff= 50  ema_ad_low         seed=1234
+  [ 208/240] N_nat=20  W_eff= 50  consec_L2          seed=1234
+  [ 209/240] N_nat=20  W_eff= 50  dcf_self_excl      seed=1234
+  [ 210/240] N_nat=20  W_eff= 50  and                seed=1234
+  [ 211/240] N_nat=20  W_eff=100  oracle             seed=42
+  [ 212/240] N_nat=20  W_eff=100  pnd                seed=42
+  [ 213/240] N_nat=20  W_eff=100  ema_ad_low         seed=42
+  [ 214/240] N_nat=20  W_eff=100  consec_L2          seed=42
+  [ 215/240] N_nat=20  W_eff=100  dcf_self_excl      seed=42
+  [ 216/240] N_nat=20  W_eff=100  and                seed=42
+  [ 217/240] N_nat=20  W_eff=100  oracle             seed=123
+  [ 218/240] N_nat=20  W_eff=100  pnd                seed=123
+  [ 219/240] N_nat=20  W_eff=100  ema_ad_low         seed=123
+  [ 220/240] N_nat=20  W_eff=100  consec_L2          seed=123
+  [ 221/240] N_nat=20  W_eff=100  dcf_self_excl      seed=123
+  [ 222/240] N_nat=20  W_eff=100  and                seed=123
+  [ 223/240] N_nat=20  W_eff=100  oracle             seed=456
+  [ 224/240] N_nat=20  W_eff=100  pnd                seed=456
+  [ 225/240] N_nat=20  W_eff=100  ema_ad_low         seed=456
+  [ 226/240] N_nat=20  W_eff=100  consec_L2          seed=456
+  [ 227/240] N_nat=20  W_eff=100  dcf_self_excl      seed=456
+  [ 228/240] N_nat=20  W_eff=100  and                seed=456
+  [ 229/240] N_nat=20  W_eff=100  oracle             seed=789
+  [ 230/240] N_nat=20  W_eff=100  pnd                seed=789
+  [ 231/240] N_nat=20  W_eff=100  ema_ad_low         seed=789
+  [ 232/240] N_nat=20  W_eff=100  consec_L2          seed=789
+  [ 233/240] N_nat=20  W_eff=100  dcf_self_excl      seed=789
+  [ 234/240] N_nat=20  W_eff=100  and                seed=789
+  [ 235/240] N_nat=20  W_eff=100  oracle             seed=1234
+  [ 236/240] N_nat=20  W_eff=100  pnd                seed=1234
+  [ 237/240] N_nat=20  W_eff=100  ema_ad_low         seed=1234
+  [ 238/240] N_nat=20  W_eff=100  consec_L2          seed=1234
+  [ 239/240] N_nat=20  W_eff=100  dcf_self_excl      seed=1234
+  [ 240/240] N_nat=20  W_eff=100  and                seed=1234
+The PostScript backend does not support transparency; partially transparent artists will be rendered opaque.
+  CSV → results/step9/fig21/data.csv
+
+=== Hypothesis Check (W_eff=50) ===
+  N_native tested: [0, 5, 10, 20]
+
+H1: weff_util_visitor decreases monotonically with N_native
+  oracle              : ['0.799', '0.657', '0.555', '0.431']  ✅
+  pnd                 : ['0.775', '0.661', '0.593', '0.504']  ✅
+  ema_ad_low          : ['0.755', '0.586', '0.498', '0.400']  ✅
+  consec_L2           : ['0.729', '0.500', '0.396', '0.288']  ✅
+  dcf_self_excl       : ['0.667', '0.458', '0.354', '0.242']  ✅
+  and                 : ['0.628', '0.611', '0.601', '0.600']  ✅
+  → H1 overall ✅ PASS
+
+H2: PND proportionality >= DCF proportionality
+  N_native= 5: PND=1.2648  DCF=0.9853  ✅
+  N_native=10: PND=1.5067  DCF=1.0028  ✅
+  N_native=20: PND=1.9378  DCF=1.0254  ✅
+  → H2 overall ✅ PASS
+
+H3: AND proportionality <= DCF proportionality
+  N_native= 5: AND=1.4364  DCF=0.9853  ❌
+  N_native=10: AND=1.8979  DCF=1.0028  ❌
+  N_native=20: AND=2.8373  DCF=1.0254  ❌
+  → H3 overall ❌ FAIL
+
+H4: PND native TP ≈ DCF native TP  (N_native=10, W_eff=50)
+  PND=0.1621  DCF=0.2928  |diff|/DCF=0.446  ❌ (>10% diff)
+
+H5: DCF visitor proportionality ≈ 1.0 (symmetric → fair)
+  N_native= 5: DCF prop=0.9853  ✅
+  N_native=10: DCF prop=1.0028  ✅
+  N_native=20: DCF prop=1.0254  ✅
+  → H5 overall ✅ PASS
+
+--- Summary (N_native=10, W_eff=50) ---
+  method                util_v  util_n  util_t    prop  nat_pres
+  oracle                0.5553  0.2060  0.7612  1.3868    0.3364
+  pnd                   0.5931  0.1621  0.7552  1.5067    0.2647
+  ema_ad_low            0.4983  0.2350  0.7333  1.2712    0.3838
+  consec_L2             0.3960  0.3075  0.7035  1.0110    0.5022
+  dcf_self_excl         0.3536  0.2928  0.6464  1.0028    0.4782
+  and                   0.6014  0.0266  0.6280  1.8979    0.0434
+
+Plotting ...
+  Figure → /Users/crazytb/Code/vNPCA/manuscript/figure/fig21_native_visitor_fairness.eps
+  Figure → /Users/crazytb/Code/vNPCA/manuscript/figure/fig21_native_visitor_fairness.png
+  Figure → /Users/crazytb/Code/vNPCA/manuscript/figure/fig21_native_visitor_fairness.pdf
+  Preview → results/step9/fig21/fig21_native_visitor_fairness_preview.png
+
+Figure 21 complete.
+  Data    : results/step9/fig21/data.csv
+  Figures : /Users/crazytb/Code/vNPCA/manuscript/figure/fig21_native_visitor_fairness.{eps,png,pdf}

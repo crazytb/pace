@@ -23,6 +23,13 @@ LLM/intent 기여는 별도 논문으로 분리.
 | Fig 12 | Multi-Round 동역학 — K = W_avail/PPDU 특성화 및 collapse 경계 | `harq_sim/run_step9_fig12.py` | [fig12.md](step9/fig12.md) | ✅ 완료 |
 | Fig 13 | Frame Delivery Delay — qsrc × HARQ on/off 교차 분석 (Fig 2 대체) | `harq_sim/run_step9_fig13.py` | [fig13.md](step9/fig13.md) | ✅ 완료 |
 | Fig 14 | Per-STA PPDU-aware threshold — 이질적 PPDU 환경 adaptive qsrc 검증 | `harq_sim/run_step9_fig14.py` | [fig14.md](step9/fig14.md) | ✅ 완료 |
+| Fig 15 | MFG-optimal access protocol vs DCF-static — finite horizon W_eff 활용 이득 | `harq_sim/run_step9_fig15.py` | [fig15.md](step9/fig15.md) | ✅ 완료 |
+| Fig 16 | Topology-aware MFG — adjacency 그래프 기반 공간 재사용 이득 | `harq_sim/run_step9_fig16.py` | [fig16.md](step9/fig16.md) | ✅ 완료 |
+| Fig 17 | PPDU-aware self-exclusion + adaptive τ — 이질 PPDU 환경 알고리즘 검증 | `harq_sim/run_step9_fig17.py` | [fig17.md](step9/fig17.md) | ✅ 완료 |
+| Fig 18 | PND MIMD parameter study — c_coll × c_idle grid, N/W_eff 조건별 최적 파라미터 | `harq_sim/run_step9_fig18.py` | [fig18.md](step9/fig18.md) | ✅ 완료 |
+| Fig 19 | DCF benchmark 비교 — W_eff_utilization + τ trajectory (pnd, ema_ad_low, consec_L2, dcf, and) | `harq_sim/run_step9_fig19.py` | [fig19.md](step9/fig19.md) | 🔄 진행 중 |
+| Fig 20 | Throughput–Fairness tradeoff — PPDU-class fairness, Jain's J, TP-Fair scatter | `harq_sim/run_step9_fig20.py` | [fig20.md](step9/fig20.md) | ✅ 완료 |
+| Fig 21 | Native vs Visitor Fairness — mixed contention, proportionality index | `harq_sim/run_step9_fig21.py` | [fig21.md](step9/fig21.md) | ✅ 완료 |
 
 상태: ⬜ 미구현 / 🔄 진행 중 / ✅ 완료
 
@@ -42,6 +49,7 @@ LLM/intent 기여는 별도 논문으로 분리.
               Fig 11 (qsrc*(W_avail=W−PPDU) — PPDU 포함 통합 이론 완성)
               Fig 12 (K = W_avail/PPDU — multi-round collapse 경계 검증)
 § Extension 3 : Fig 13 (delay 분석), Fig 14 (per-STA PPDU-aware threshold — 이질 PPDU 일반화)
+§ Extension 4 : Fig 16 (topology-aware MFG — adjacency 그래프, 공간 재사용)
 ```
 
 ---

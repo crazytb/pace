@@ -197,8 +197,30 @@ results/step9/fig14/
 
 ---
 
+## 실험 결과 (results/step9/fig14/, hetero PPDU=10/20/40)
+
+### Aggregate Throughput vs N (hetero PPDU config)
+
+| N | fixed_q0_t0 | fixed_q0_tppdu | adaptive_t0 | adaptive_tppdu | oracle_tppdu |
+|---|-------------|----------------|-------------|----------------|--------------|
+| 10 | 1249 | 1287 (+3.0%) | 1233 | **1317 (+5.4%)** | 1287 |
+| 20 | 1173 | 1214 (+3.5%) | 1230 | 1214 (+3.5%) | 1234 (+5.2%) |
+| 30 | 1193 | 1271 (+6.5%) | 1204 | 1240 (+4.0%) | 1294 (+8.5%) |
+| 50 | 1059 | 1116 (+5.4%) | 1061 | 1111 (+4.9%) | **1194 (+12.7%)** |
+
+### 핵심 발견
+
+**PPDU-aware threshold의 일관된 이득**: 전 N에서 +3~7% (fixed_q0_tppdu vs _t0).
+
+**adaptive_tppdu mean_qsrc 과소적응**: qsrc≈0.02~0.06 (oracle=1~2). 이질 PPDU 환경에서 waste_rate 신호가 흐릿해 adaptive가 qsrc*를 충분히 올리지 못함. threshold 효과 > adaptive qsrc 효과.
+
+**논문 메시지**: "Per-STA PPDU-aware threshold eliminates futile NPCA transitions (W_eff < ppdu_dur), providing consistent +3~7% throughput gain in heterogeneous PPDU environments."
+
+---
+
 ## 수정 이력
 
 | 날짜 | 변경 내용 |
 |---|---|
 | 2026-06-01 | 초안 작성 — per-STA PPDU-aware threshold 실험 설계 |
+| 2026-06-03 | 실험 결과 추가 — thr=ppdu +3~7% 이득, adaptive 과소적응 확인 |
