@@ -8,6 +8,7 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{blindtext}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -24,6 +25,49 @@ twsong@dongguk.edu}
 
 \maketitle
 
+\begin{abstract}
+Modern Wi-Fi deployments increasingly suffer from spectrum underutilization as overlapping Basic Service Sets (OBSSs) compete for primary channel access. IEEE 802.11bn introduces Non-Primary Channel Access (NPCA) to exploit these underutilized intervals, yet the standard contention mechanism is fundamentally mismatched to NPCA's constrained transmission windows: backoff counters routinely exceed the remaining opportunity duration, wasting slots that could otherwise carry data.
+We propose PACE, a probabilistic adaptive contention control scheme that enables stations to collectively converge toward a theoretically optimal transmission probability without central coordination. PACE combines a distributed multiplicative feedback rule---copying the successful sender's probability on solo receptions---with a prospective self-exclusion mechanism that silences stations whose frame length exceeds the remaining window.
+We evaluate PACE through simulation spanning a wide range of station counts and window lengths, comparing against Binary Exponential Backoff and several competing adaptive schemes under both homogeneous and heterogeneous frame-length distributions. PACE consistently outperforms standard backoff in channel utilization and achieves Pareto-dominance in the throughput--fairness tradeoff. The advantage is most pronounced when the available window is scarce relative to the contending population, precisely the regime in which standard backoff wastes the largest share of transmission opportunities.
+These results identify the tight-window regime as the critical operating condition for NPCA and establish PACE as a practical design reference for adaptive contention policy in next-generation Wi-Fi networks.
+\end{abstract}
 
+
+\begin{IEEEkeywords}
+Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, Mean Field Game, OBSS, Adaptive Contention, Wi-Fi
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+% Introduction
+\section{Introduction}
+\label{sec:introduction}
+\cite{wei2024non}
+\blindtext
+
+\section{Related Works}
+\label{sec:related_work}
+\blindtext
+
+\section{System Model}
+\label{sec:system_model}
+\blindtext
+
+\section{Pace Algorithm}
+\label{sec:pace_algorithm}
+\blindtext
+
+\section{Performance Evaluation}
+\label{sec:performance_evaluation}
+\blindtext
+
+\section{Conclusion}
+\label{sec:conclusion}
+\blindtext
+
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{pace}
 
 \end{document}

@@ -38,7 +38,7 @@ import run_step9_fig17 as _f17
 
 # ─── Parameters ───────────────────────────────────────────────────────────────
 
-METHODS_21     = ["oracle", "pnd", "ema_ad_low", "consec_L2", "dcf_self_excl", "and"]
+METHODS_21     = ["oracle", "pnd", "pnd_cd", "ema_ad_low", "consec_L2", "dcf_self_excl", "and"]
 
 N_VISITOR      = 10
 N_NATIVE_LIST  = [0, 5, 10, 20]

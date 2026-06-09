@@ -235,11 +235,14 @@ manuscript/figure/fig21_native_visitor_fairness.{eps,png,pdf}
 
 ## 9. 실험 결과 (full run: 1000 visits × 5 seeds, N_native=[0,5,10,20], W_eff=[50,100])
 
+**메서드 목록**: oracle, pnd, pnd_cd, ema_ad_low, consec_L2, dcf_self_excl, and  
+(2026-06-09: pnd_cd 추가 — ACK 기반 implicit CD, 사후 제거 포함)
+
 ### Full-run 가설 검증
 
 | 가설 | 결과 | 비고 |
 |---|---|---|
-| H1: visitor TP 단조 감소 | ✅ PASS | AND도 full run에서 단조 (fast-mode 노이즈였음) |
+| H1: visitor TP 단조 감소 | ✅ PASS | 전 방법 단조 감소 (AND 포함) |
 | H2: PND prop ≥ DCF prop | ✅ PASS | PND=1.51, DCF=1.00 @ N_native=10 |
 | H3: AND prop ≤ DCF prop | ❌ FAIL | AND=1.90 > DCF=1.00 @ N_native=10 — 반직관 |
 | H4: PND native TP ≈ DCF native TP | ❌ FAIL | PND=0.162, DCF=0.293 (−44.6%) |
@@ -251,10 +254,24 @@ manuscript/figure/fig21_native_visitor_fairness.{eps,png,pdf}
 |---|---|---|---|---|---|
 | oracle | 0.555 | 0.206 | 0.761 | 1.39 | 0.336 |
 | **pnd** | **0.593** | 0.162 | 0.755 | **1.51** | 0.265 |
+| **pnd_cd** | 0.586 | 0.166 | 0.752 | 1.49 | 0.270 |
 | ema_ad_low | 0.498 | 0.235 | 0.733 | 1.27 | 0.384 |
 | consec_L2 | 0.396 | 0.308 | 0.704 | 1.01 | 0.502 |
 | **dcf_self_excl** | 0.354 | **0.293** | 0.646 | **1.00** | 0.478 |
 | and | 0.601 | 0.027 | 0.628 | 1.90 | 0.043 |
+
+### pnd vs pnd_cd 비교
+
+| 지표 | pnd | pnd_cd | 차이 |
+|---|---|---|---|
+| util_v | 0.593 | 0.586 | −1.2% |
+| util_n | 0.162 | 0.166 | +2.5% |
+| util_t | 0.755 | 0.752 | −0.4% |
+| prop | 1.507 | 1.492 | −1.0% |
+
+**해석**: pnd_cd (ACK 기반 CD) ≈ pnd — NPCA finite window에서 CD 효과 미미.  
+원인: PPDU-aware self-exclusion이 이미 non-viable STA 제거 → TX 충돌 시 TX 장치 τ 감소(CD 추가 효과)의 marginal benefit 작음.  
+원래 PND에서 CD가 57% 개선한 이유: infinite-horizon neighbor discovery에서 device 탈퇴 효과가 핵심이었으나, finite W_eff에서는 창 자체가 자연 종료 조건.
 
 ### 핵심 발견 (full-run 확정)
 
@@ -325,3 +342,4 @@ visitor AND STA들은 τ를 낮춰가는 schedule이지만 초반 선점으로 p
 | 2026-06-04 | 초안 작성 — native/visitor mixed contention 모델, 3패널 proportionality 분석 |
 | 2026-06-04 | 구현 완료 (run_step9_fig21.py); fast-mode 예비 결과 추가 |
 | 2026-06-04 | Full run 완료 (1000 visits × 5 seeds); 확정 결과 추가; H2/H5 PASS, H3/H4 FAIL |
+| 2026-06-09 | pnd_cd 추가 (ACK 기반 implicit CD + 사후 제거); full re-run; pnd_cd ≈ pnd (marginal CD effect in finite window) |
