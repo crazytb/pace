@@ -34,7 +34,7 @@ These results identify the tight-window regime as the critical operating conditi
 
 
 \begin{IEEEkeywords}
-Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, Mean Field Game, OBSS, Adaptive Contention, Wi-Fi
+Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, OBSS, Adaptive Contention, Wi-Fi
 \end{IEEEkeywords}
 
 \IEEEpeerreviewmaketitle
@@ -42,8 +42,79 @@ Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, Mean Fi
 % Introduction
 \section{Introduction}
 \label{sec:introduction}
-\cite{wei2024non}
-\blindtext
+
+Spectrum efficiency in next-generation Wi-Fi networks depends critically on how
+effectively stations exploit available channel time. In dense deployments, overlapping
+Basic Service Sets (OBSSs) routinely occupy the primary channel while adjacent channels
+remain idle, creating a persistent underutilization problem. IEEE 802.11bn addresses
+this gap by introducing Non-Primary Channel Access (NPCA), which allows stations to
+transmit opportunistically on non-primary channels during ongoing OBSS intervals~\cite{ieee80211bn,wei2024non}.
+
+NPCA, however, presents a contention challenge distinct from conventional channel
+access. Each NPCA opportunity has a finite duration bounded by the ongoing OBSS
+transmission, and competing stations must coordinate their access within this
+constrained window. The Binary Exponential Backoff (BEB) mechanism was designed for
+open-ended contention: each collision doubles the backoff window, and the resulting
+delay frequently exceeds the remaining NPCA window duration. Affected stations are
+effectively silenced for the rest of the interval, leaving the channel idle even when
+other stations could have transmitted. In heterogeneous deployments where stations
+carry frames of varying lengths, the problem is further compounded: stations whose
+frame cannot fit in the remaining window continue to occupy contention slots despite
+having no viable transmission opportunity.
+
+Consider a dense office environment where multiple stations detect an OBSS transmission
+and attempt to use the secondary channel concurrently. Early collisions trigger
+exponential backoff growth; within a few rounds, a large fraction of stations have
+accumulated backoff counts that exceed the remaining window duration. The channel
+spends the final slots idle, not because no station wanted to transmit, but because
+the contention mechanism pushed every backoff counter beyond the opportunity horizon.
+
+Existing work on NPCA has focused on characterizing aggregate throughput and delay
+under the standard switching rule, taking Binary Exponential Backoff within the
+non-primary channel as given \cite{wei2024non,bellalta2025performance,wei2024optimized}.
+The contention dynamics within the finite NPCA window---and the mismatch between
+BEB's infinite-horizon design and the window's bounded duration---have not been
+addressed. Adaptive probabilistic schemes designed for infinite-horizon neighbor
+discovery, such as the ALOHA-like Neighbor Discovery (AND) algorithm
+\cite{vasudevan2013efficient}, reduce overhead by avoiding explicit coordination,
+but their stationary-population assumption makes them ill-suited to a window that
+depletes over time. BEB's infinite-horizon design and AND's open-loop phase structure
+both fail to track the time-varying optimal access probability as the window shrinks
+and the set of viable stations changes.
+
+In this paper, we propose PACE, a Probabilistic Adaptive Contention control scheme
+for NPCA that enables stations to collectively converge toward the theoretically
+optimal transmission probability for each moment within the window, without central
+coordination or explicit inter-station signaling. PACE adapts the MIMD feedback rule
+of the Probabilistic Neighbor Discovery (PND) algorithm \cite{song2014pnd} to the
+finite-window NPCA context: stations copy the successful sender's probability on solo
+receptions, reduce on collision, and increase on idle slots, causing distributed
+dynamics to track the throughput-optimal policy. PACE further adds a
+PPDU-aware self-exclusion rule that silences stations whose frame length exceeds the
+remaining window, eliminating a class of futile contention attempts that BEB would
+otherwise sustain.
+
+The main contributions of this paper are as follows:
+\begin{itemize}
+  \item We derive the throughput-optimal transmission probability for finite-window
+        NPCA, showing that the target probability must track both the remaining window
+        duration and the number of still-viable competing stations.
+  \item We propose PACE, a fully distributed algorithm that approximates the
+        throughput-optimal policy through MIMD feedback and PPDU-aware self-exclusion,
+        without requiring any inter-station signaling or knowledge of the total
+        station count.
+  \item Through extensive simulation under homogeneous and heterogeneous
+        frame-length distributions, we demonstrate that PACE achieves significantly
+        higher window utilization than BEB, is Pareto-dominant in the
+        throughput--fairness tradeoff, and maintains proportional fairness between
+        native and visiting stations.
+\end{itemize}
+
+The remainder of this paper is organized as follows.
+Section~\ref{sec:related_work} reviews related work on NPCA and adaptive MAC protocols. Section~\ref{sec:system_model} presents the system
+model. Section~\ref{sec:pace_algorithm} describes the PACE algorithm and its
+theoretical foundation. Section~\ref{sec:performance_evaluation} presents simulation
+results, and Section~\ref{sec:conclusion} concludes the paper.
 
 \section{Related Works}
 \label{sec:related_work}

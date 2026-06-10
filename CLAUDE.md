@@ -39,9 +39,9 @@ MIMD 규칙은 동일하게 적용. 핵심 추가:
 
 **파라미터**: c_coll = 1.2 (fig17 최적 튜닝), c_idle = 1.5
 
-### MFG 이론적 최적해
+### 이론적 최적해
 
-Mean Field Game 분석: NPCA 방문에서의 최적 τ*(t):
+NPCA 방문에서의 throughput-optimal τ*(t) (classical slotted ALOHA 확장):
 
 ```
 τ*(t) = 1 / remaining(t)
@@ -55,15 +55,15 @@ Mean Field Game 분석: NPCA 방문에서의 최적 τ*(t):
 
 ## 시뮬레이션 결과 요약
 
-### Fig 15: MFG-optimal vs DCF (tight window regime)
+### Fig 15: throughput-optimal vs DCF (tight window regime)
 
-| 조건 | MFG-adaptive 대비 DCF |
+| 조건 | adaptive-optimal 대비 DCF |
 |---|---|
 | N=10, W_eff=20 | **+70.4%** |
 | N=20, W_eff=20 | **+67.1%** |
 | W_eff >> N | ≈ 0% (DCF 회복) |
 
-핵심: W_eff ≤ N 구간에서 MFG τ*(t)=1/remaining이 BEB 압도.
+핵심: W_eff ≤ N 구간에서 τ*(t)=1/remaining이 BEB 압도.
 
 ### Fig 17: PPDU 이질 환경 효율성 순위 (U[3,12], W_eff=50, N=20)
 
@@ -205,7 +205,7 @@ cd manuscript && pdflatex pace.tex && bibtex pace && pdflatex pace.tex
 - [x] PACE 논문 제목 확정 (pace.tex)
 - [x] Abstract 초안 작성
 - [ ] Introduction 작성
-- [ ] Related Work 작성 (PND, MFG, NPCA 선행연구)
+- [ ] Related Work 작성 (PND, NPCA 선행연구)
 - [ ] System Model 작성
 - [ ] PACE Algorithm 섹션 작성 (알고리즘 pseudocode 포함)
 - [ ] Performance Evaluation 섹션 작성 (Fig 삽입)
