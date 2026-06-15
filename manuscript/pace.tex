@@ -9,6 +9,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{blindtext}
+\usepackage{stfloats}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
@@ -80,7 +81,7 @@ discovery, such as the ALOHA-like Neighbor Discovery (AND) algorithm
 but their stationary-population assumption makes them ill-suited to a window that
 depletes over time. BEB's infinite-horizon design and AND's open-loop phase structure
 both fail to track the time-varying optimal access probability as the window shrinks
-and the set of viable stations changes.
+and the set of viable stations changes (see Table~\ref{tab:comparison}).
 
 In this paper, we propose PACE, a Probabilistic Adaptive Contention control scheme
 for NPCA that enables stations to collectively converge toward the theoretically
@@ -94,21 +95,54 @@ PPDU-aware self-exclusion rule that silences stations whose frame length exceeds
 remaining window, eliminating a class of futile contention attempts that BEB would
 otherwise sustain.
 
-The main contributions of this paper are as follows:
+The design of PACE is motivated by two requirements that are unique to
+NPCA's bounded-window structure: \textit{(i)} the optimal transmission
+probability is time-varying and must track the depleting window rather than
+converge to a static equilibrium, and \textit{(ii)} stations whose frame
+length exceeds the remaining window must proactively self-exclude to prevent
+futile contention that wastes viable slots. The main contributions of this
+paper are as follows:
 \begin{itemize}
-  \item We derive the throughput-optimal transmission probability for finite-window
-        NPCA, showing that the target probability must track both the remaining window
-        duration and the number of still-viable competing stations.
-  \item We propose PACE, a fully distributed algorithm that approximates the
-        throughput-optimal policy through MIMD feedback and PPDU-aware self-exclusion,
-        without requiring any inter-station signaling or knowledge of the total
-        station count.
+  \item We derive the throughput-optimal transmission probability for
+        finite-window NPCA, showing that it must continuously track the
+        remaining window duration and the number of still-viable competing
+        stations---a time-varying target that neither BEB nor existing
+        infinite-horizon adaptive schemes can follow.
+  \item We propose PACE, a fully distributed algorithm that addresses both
+        requirements simultaneously: MIMD feedback drives the transmission
+        probability toward the time-varying optimum~\textit{(i)}, while
+        PPDU-aware self-exclusion eliminates futile contention by silencing
+        stations that cannot complete a frame within the remaining
+        window~\textit{(ii)}, all without inter-station signaling or
+        knowledge of the total station count.
   \item Through extensive simulation under homogeneous and heterogeneous
-        frame-length distributions, we demonstrate that PACE achieves significantly
-        higher window utilization than BEB, is Pareto-dominant in the
-        throughput--fairness tradeoff, and maintains proportional fairness between
-        native and visiting stations.
+        frame-length distributions, we demonstrate that PACE achieves
+        significantly higher window utilization than BEB, is Pareto-dominant
+        in the throughput--fairness tradeoff, and maintains proportional
+        fairness between native and visiting stations.
 \end{itemize}
+
+\begin{table*}[ht]
+\centering
+\caption{Comparison of Contention Control Schemes}
+\label{tab:comparison}
+\begin{tabular}{lp{4cm} p{4cm}ccc}
+\hline
+\textbf{Method} & \textbf{Mechanism} & \textbf{Objective} & \textbf{PPDU-aware} & \textbf{Signaling-free} & \textbf{NPCA target} \\
+\hline
+AND~\cite{vasudevan2013efficient}           & Fixed-probability slotted ALOHA                            & Discover all neighbors in finite time without coordination    & $\times$   & \checkmark & $\times$   \\ \hline
+PND~\cite{song2014pnd}                      & Multiplicative feedback with solo-copy rule                & Converge transmission probability to optimal without $N$      & $\times$   & \checkmark & $\times$   \\ \hline
+% BEB~\cite{bianchi2000performance}           & Collision-triggered window doubling                        & Resolve collisions by spreading retransmission attempts       & $\times$   & \checkmark & $\times$   \\ \hline
+Cali \textit{et al.}~\cite{cali2002dynamic} & p-persistent with contender estimation                     & Approach theoretical throughput limit in a distributed manner & $\times$   & \checkmark & $\times$   \\ \hline
+BLADE~\cite{guo2026blade}                   & Hybrid increase / multiplicative decrease via access rate  & Eliminate packet-delivery droughts for real-time Wi-Fi        & $\times$   & \checkmark & $\times$   \\ \hline
+IYT~\cite{wilhelmi2025s}                   & Neighbor-ordered backoff interval assignment               & Reduce collision probability and worst-case latency           & $\times$   & \checkmark & $\times$   \\ \hline
+ACWB-DQN~\cite{zuo2025adaptive}            & Deep Q-network contention window selection                 & Maximize throughput under varying network load                & $\times$   & $\times$   & $\times$   \\ \hline
+FC-MAPPO~\cite{pan2025ai}                  & Fairness-constrained multi-agent policy optimization       & Minimize collisions while ensuring inter-station fairness     & $\times$   & $\times$   & $\times$   \\
+\hline
+\textbf{PACE (proposed)}               & \textbf{Multiplicative feedback with PPDU-aware self-exclusion} & \textbf{Maximize channel utilization in finite NPCA window} & \checkmark & \checkmark & \checkmark \\
+\hline
+\end{tabular}
+\end{table*}
 
 The remainder of this paper is organized as follows.
 Section~\ref{sec:related_work} reviews related work on NPCA and adaptive MAC protocols. Section~\ref{sec:system_model} presents the system
@@ -116,9 +150,54 @@ model. Section~\ref{sec:pace_algorithm} describes the PACE algorithm and its
 theoretical foundation. Section~\ref{sec:performance_evaluation} presents simulation
 results, and Section~\ref{sec:conclusion} concludes the paper.
 
-\section{Related Works}
+\section{Related Work}
 \label{sec:related_work}
-\blindtext
+
+Table~\ref{tab:comparison} summarizes the key distinctions among existing
+contention control schemes and the proposed PACE.
+
+\subsection{Non-Primary Channel Access in IEEE 802.11bn}
+
+IEEE 802.11bn introduces NPCA as a core mechanism for exploiting idle
+secondary channels during OBSS transmissions~\cite{ieee80211bn,galati2024will}.
+Wei \textit{et al.}~\cite{wei2024non} extended Bianchi's DCF model to a
+multi-channel setting, establishing analytically that NPCA always outperforms
+the legacy baseline; a follow-up study~\cite{wei2024optimized} incorporated
+switching overhead and proposed a threshold policy to toggle between NPCA
+and legacy modes based on primary channel occupancy. Bellalta
+\textit{et al.}~\cite{bellalta2025performance} developed a Continuous-Time
+Markov Chain model for a multi-BSS topology, identifying a secondary-channel
+contention trade-off that can limit NPCA gains when the secondary channel
+is shared. Lee and Song~\cite{lee2024impact} further showed that PPDU frame
+duration has a nonlinear effect on inter-BSS coexistence, and Song~\cite{song2026adaptive}
+applied deep reinforcement learning to the NPCA channel-activation decision.
+
+Across these studies, however, the contention mechanism within the NPCA
+window is held fixed at Binary Exponential Backoff. How stations should
+adapt their access probability as the window depletes and viable stations
+drop out has not been studied.
+
+\subsection{Adaptive Contention Control in Wireless LANs}
+
+Bianchi~\cite{bianchi2000performance} established that BEB operates below
+the theoretical throughput ceiling, and Cali \textit{et al.}~\cite{cali2002dynamic}
+showed that p-persistent access with dynamic contender estimation can
+approach this limit in a distributed manner. Subsequent work has diversified
+the adaptation mechanisms: BLADE~\cite{guo2026blade} uses a HIMD policy
+driven by a universally observable channel signal; Wilhelmi
+\textit{et al.}~\cite{wilhelmi2025s} impose structured transmission order
+via inter-BSS activity awareness; and learning-based approaches optimize the
+contention window through deep Q-networks~\cite{zuo2025adaptive} or
+fairness-constrained multi-agent policy optimization~\cite{pan2025ai}.
+
+Despite this breadth, all existing schemes assume stations contend over an
+open-ended horizon and target steady-state convergence. NPCA's bounded
+window demands a fundamentally different approach: the optimal transmission
+probability must evolve as the window shrinks and the viable station
+population changes. The MIMD feedback rule of PND~\cite{song2014pnd} is
+the closest mechanism in spirit, but was designed for infinite-horizon
+neighbor discovery and provides no accounting for bounded window duration
+or frame-length viability.
 
 \section{System Model}
 \label{sec:system_model}
