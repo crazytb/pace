@@ -112,7 +112,7 @@ PACE = Pareto-dominant: 처리량·공정성 동시 최고.
 ## 파일 구조
 
 ```
-vNPCA/
+pace/
 ├── CLAUDE.md                        ← 이 파일
 ├── manuscript/
 │   ├── pace.tex                     ← 논문 본문 (PACE)
