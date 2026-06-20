@@ -205,24 +205,11 @@ or frame-length viability.
 \subsection{Network and Channel Model}
 \label{subsec:network_model}
 
-We consider a single Basic Service Set (BSS) comprising an Access Point
-(AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations
-that operate under IEEE 802.11bn. Following the NPCA capability
-requirement, the BSS occupies a wide operating channel of at least
-$80$~MHz~\cite{ieee80211bn}. The operating channel is partitioned into a
-\emph{BSS primary channel}---the primary $20$~MHz channel on which all
-legacy contention is performed---and a secondary portion of one or more
-$20$~MHz subchannels. Within the secondary portion the AP designates one
+We consider a single Basic Service Set (BSS) comprising an Access Point (AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations that operate under IEEE 802.11bn. Following the NPCA capability requirement, the BSS occupies a wide operating channel of at least $80$~MHz. The operating channel is partitioned into a \emph{BSS primary channel} and a secondary portion of one or more $20$~MHz subchannels. Within the secondary portion the AP designates one
 $20$~MHz subchannel as the \emph{NPCA primary channel}, which serves as an
 auxiliary contention channel during NPCA operation. Throughout, we use the
 qualifier ``BSS'' to distinguish the original primary channel from the NPCA
-primary channel, consistent with the terminology of P802.11bn/D1.2
-Clause~37.18.
-
-An overlapping BSS (OBSS) periodically occupies the BSS primary channel
-with transmissions of duration $D_\mathrm{obss}$, sensed as busy by the
-stations of the BSS under study. These OBSS busy periods are the
-opportunities that NPCA seeks to exploit.
+primary channel, consistent with the terminology of P802.11bn Draft~\cite{ieee80211bn}.
 
 \begin{figure}
     \centering
@@ -234,43 +221,53 @@ opportunities that NPCA seeks to exploit.
 \subsection{Legacy versus NPCA Medium Access}
 \label{subsec:npca_access}
 
-Fig.~\ref{fig:channel_access} contrasts the two medium-access processes.
-Under \emph{legacy} access (top), a station contends only on the BSS
-primary channel: it decrements its backoff counter while the channel is
-idle and transmits when the counter reaches zero. When an OBSS transmission
-seizes the BSS primary channel, the station must defer and freeze its
-backoff for the entire OBSS busy period, even though the secondary channel
-is idle. This idle secondary time is wasted, and the deferral grows with
-$D_\mathrm{obss}$.
+Fig.~\ref{fig:channel_access} contrasts the two medium-access processes. Under \emph{legacy} access (top), a station contends only on the BSS primary channel.\footnote{We use the term \emph{BSS primary channel} to distinguish the original primary channel from the NPCA primary channel introduced in IEEE 802.11bn. Prior to 802.11bn, when NPCA was not yet defined, this channel was referred to simply as the \emph{primary channel}.} It decrements its backoff counter while the channel is idle and transmits when the counter reaches zero. If the secondary channel is also sensed idle at this instant, the station may bond it with the BSS primary channel and transmit a wideband PPDU spanning the combined bandwidth (e.g., $40$, $80$, or $160$~MHz). When an overlapping BSS (OBSS) transmission seizes the BSS primary channel, however, the station must defer and freeze its backoff for the entire OBSS busy period, even though the secondary channel is idle.
 
-Under \emph{NPCA} access (bottom), a station that detects an OBSS
-transmission on the BSS primary channel switches to the NPCA primary
-channel rather than deferring in place. The switch is gated by a
-\emph{Min Duration Threshold}: the station migrates only when the remaining
-OBSS duration, $D_\mathrm{rem}$, exceeds the threshold $D_\mathrm{th}$, so
-that the cost of a switching delay $\delta_\mathrm{sw}$ is amortized over a
-useful contention interval. After switching, the station performs an
-\emph{independent} backoff-and-transmission cycle on the NPCA primary
-channel, reclaiming the otherwise-wasted busy period. When the OBSS
-transmission ends---equivalently, when the NPCA timer expires---the station
-switches back to the BSS primary channel and resumes legacy operation.
+Under \emph{NPCA} access (bottom), a station no longer wastes the OBSS busy period. When it detects an OBSS transmission on the BSS primary channel, it decodes the preamble of that transmission and learns its duration in advance; rather than freezing its backoff for the whole period, it switches to the idle NPCA primary channel and continues to contend and transmit there. On each such switch the station saves its backoff state on the BSS primary channel and initializes a fresh contention window for the NPCA primary channel, so every NPCA visit begins at the minimum backoff stage regardless of prior history. The station already knows when the OBSS transmission will finish, so it sets a timer to that instant and switches back to the BSS primary channel when the timer expires, restoring the saved state without having to re-sense the channel. In this way the secondary spectrum that the legacy station leaves idle is put to use, and a station can complete one or more transmissions that it would otherwise have had to postpone.
 
-\subsection{NPCA Contention Window}
-\label{subsec:npca_window}
-
-The defining feature of NPCA access is that contention on the NPCA primary
-channel is confined to a \emph{bounded window}, in contrast to the
-open-ended horizon of legacy DCF. We model time on the NPCA primary channel
-as a sequence of slots of duration $\sigma$. The usable window after
-accounting for the switching delay spans
+Two constraints shape this access. First, a radio transition delay
+$\delta_\mathrm{sw}$ is incurred on each switch. Second, the opportunity
+lasts only until the known end of the OBSS transmission, whose remaining
+duration $D_\mathrm{rem}$ is read from the preamble. Contention and
+transmission must therefore fit within a bounded window of
 \begin{equation}
     W_\mathrm{eff} \;=\; \left\lfloor
     \frac{D_\mathrm{rem}-\delta_\mathrm{sw}}{\sigma} \right\rfloor
     \quad\text{slots},
     \label{eq:weff}
 \end{equation}
-and we denote by $W_\mathrm{rem}(t)=W_\mathrm{eff}-t$ the number of slots
-remaining at slot $t\in\{0,1,\dots,W_\mathrm{eff}\}$.
+where $\sigma$ is the slot time, typically $9$~$\mu$s in IEEE 802.11-compliance systems. This deadline is the crux of NPCA: every
+backoff decision competes against it. A station that collides doubles its
+contention window as usual, and once the resulting backoff exceeds the slots
+left in $W_\mathrm{eff}$, it can no longer transmit before the window
+closes so it wastes the rest of the opportunity despite having data to send.
+
+Because the contention window is reset at every NPCA visit, this penalty
+recurs each time rather than amortizing across visits. This mismatch between
+open-ended backoff and the finite window is the inefficiency that PACE
+targets.
+
+\subsection{Slotted Contention Model}
+\label{subsec:npca_window}
+
+IEEE 802.11 stations access the medium through the DCF, a CSMA/CA mechanism
+in which each station maintains a backoff counter rather than transmitting
+at random in every slot. Directly analyzing DCF over a finite window is
+intractable, so we adopt the standard slotted abstraction introduced by
+Bianchi~\cite{bianchi2000performance}: the backoff process of a saturated
+DCF station is represented by a single per-slot transmission probability
+$\tau$, the steady-state probability that the station transmits in a
+randomly chosen slot. We stress that this is an analytical model, not a
+change to the access mechanism---802.11 remains backoff-based DCF, and
+Section~\ref{sec:pace_algorithm} maps the probabilities derived here back to
+a concrete, backoff-compatible rule.
+
+Under this abstraction, we model time on the NPCA primary channel as a
+sequence of slots of duration $\sigma$ and index them by
+$t\in\{0,1,\dots,W_\mathrm{eff}\}$. We denote by
+$W_\mathrm{rem}(t)=W_\mathrm{eff}-t$ the number of slots remaining at slot
+$t$, so that $W_\mathrm{rem}$ counts down toward the deadline as contention
+proceeds.
 
 Let $\mathcal{V}\subseteq\mathcal{N}$ be the set of stations that switch to
 the NPCA primary channel, each holding a pending PPDU whose transmission
@@ -297,16 +294,38 @@ $|\mathcal{D}(t)|\ge 2$. These three observable events are the only
 feedback available to a station, and they drive the adaptive contention
 control developed in Section~\ref{sec:pace_algorithm}.
 
-A throughput-optimal scheme would set $\tau_i(t)=1/|\mathcal{V}(t)|$, so
-that exactly one viable station transmits per slot in expectation. The
-bounded window $W_\mathrm{eff}$ and the shrinking viable population
-$\mathcal{V}(t)$ make this target time-varying, which is precisely where
-legacy Binary Exponential Backoff falls short: a collision doubles the
-contention window and can push a station's backoff beyond
-$W_\mathrm{rem}(t)$, squandering the remaining slots.
-
-\section{Pace Algorithm}
+\section{PACE Algorithm}
 \label{sec:pace_algorithm}
+
+\subsection{Throughput-Optimal Target}
+\label{subsec:optimal_target}
+
+We first establish the access probability that PACE aims to track. In a
+slot with $|\mathcal{V}(t)|$ viable stations, the probability that exactly
+one of them transmits---a successful slot---is maximized when each attempts
+with probability
+\begin{equation}
+    \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
+    \label{eq:tau_opt}
+\end{equation}
+so that one viable station transmits per slot in expectation. Unlike the
+fixed optimum of an infinite-horizon network, this target is
+\emph{time-varying}: the bounded window $W_\mathrm{eff}$ and the shrinking
+viable population $\mathcal{V}(t)$ of~\eqref{eq:viable} cause
+$|\mathcal{V}(t)|$ to decrease as the deadline approaches, so $\tau^*(t)$
+must rise over the course of a single NPCA visit.
+
+This is precisely where legacy Binary Exponential Backoff falls short. BEB
+moves the access probability in the wrong direction: a collision doubles the
+contention window and \emph{halves} the attempt rate, whereas the optimal
+policy calls for an \emph{increase} as stations drop out. Worse, the doubled
+backoff can exceed $W_\mathrm{rem}(t)$, silencing the station for the rest of
+the window and squandering the remaining slots. PACE instead drives each
+station's $\tau_i$ toward $\tau^*(t)$ using only the per-slot feedback of
+Section~\ref{subsec:npca_window}, as developed next.
+
+\subsection{Adaptive Contention Control}
+\label{subsec:adaptive_control}
 \blindtext
 
 \section{Performance Evaluation}
