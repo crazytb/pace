@@ -386,6 +386,25 @@ def run_sweep_mixed(
                     print(f"  [{done:4d}/{total}] N_nat={N_native:2d}  W_eff={W_eff:3d}  "
                           f"{method:<18} seed={seed}", flush=True)
 
+    # Step 3: emit native-only baseline (no NPCA visitor) as explicit rows.
+    # weff_util_native here is the native window utilization with N_visitor=0,
+    # i.e. the reference against which native_preservation is measured.
+    for (N_native, W_eff, seed), base in native_only_map.items():
+        rows.append({
+            "method":              "native_only",
+            "N_visitor":           0,
+            "N_native":            N_native,
+            "W_eff":               W_eff,
+            "seed":                seed,
+            "weff_util_visitor":   0.0,
+            "weff_util_native":    float(base),
+            "weff_util_total":     float(base),
+            "proportionality":     float("nan"),
+            "visitor_share":       0.0,
+            "ideal_share":         float("nan"),
+            "native_preservation": 1.0,
+        })
+
     return rows
 
 
@@ -468,9 +487,16 @@ def _panel_c(ax, rows: list) -> None:
     if not points:
         return
 
+    # native-only baseline (no visitor): native utilization reference
+    nat_base = _mean_m21(rows, "weff_util_native",
+                         method="native_only", N_native=N_nat_ref, W_eff=W_ref)
+
     xs, ys = [p[0] for p in points.values()], [p[1] for p in points.values()]
     x_max = max(xs) * 1.30
-    y_max = max(ys) * 1.60   # 위쪽 여유 — annotation 두 줄 공간
+    y_top = max(ys)
+    if nat_base == nat_base:            # include baseline in y-range
+        y_top = max(y_top, nat_base)
+    y_max = y_top * 1.60   # 위쪽 여유 — annotation 두 줄 공간
 
     # 기울기 -1 iso-total 직선 (먼저 그려 마커 뒤에 위치)
     for method, (x, y) in points.items():
@@ -506,15 +532,55 @@ def _panel_c(ax, rows: list) -> None:
                     textcoords="offset points", fontsize=7.0,
                     ha=ha, color=st["color"])
 
+    # native-only reference: horizontal line + star marker at x=0
+    if nat_base == nat_base:
+        ax.axhline(nat_base, color="black", ls="--", lw=1.3, alpha=0.75, zorder=2,
+                   label=f"Native-only (no visitor) = {nat_base:.3f}")
+        ax.plot(0, nat_base, marker="*", color="black", ms=14,
+                markeredgecolor="white", markeredgewidth=0.6, zorder=6)
+        ax.annotate("native-only\n(no NPCA)", xy=(0, nat_base),
+                    xytext=(6, -2), textcoords="offset points",
+                    fontsize=7.0, ha="left", va="top", color="black")
+
     ax.set_xlim(0, x_max)
     ax.set_ylim(0, y_max)
     ax.set_xlabel("Visitor W_eff_utilization", fontsize=10)
     ax.set_ylabel("Native W_eff_utilization", fontsize=10)
-    ax.legend(fontsize=7.5, frameon=True)
+    ax.legend(fontsize=7.0, frameon=True, loc="lower left")
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     ax.set_title(f"(c) Visitor TP vs Native TP Scatter\n"
                  f"(N_native={N_nat_ref}, W_eff={W_ref}, dashed = iso-total)",
                  fontsize=10)
+
+    # ── Zoom inset: crowded adaptive-method cluster ──────────────────────────
+    zx0, zx1, zy0, zy1 = 0.45, 0.62, 0.10, 0.32
+    in_zoom = {m: (x, y) for m, (x, y) in points.items()
+               if zx0 <= x <= zx1 and zy0 <= y <= zy1}
+    if in_zoom:
+        axins = ax.inset_axes([0.09, 0.50, 0.46, 0.44])
+        for method, (x, y) in in_zoom.items():     # iso-total guides (behind)
+            C = x + y
+            axins.plot([zx0, zx1], [C - zx0, C - zx1],
+                       color=_STYLE_21[method]["color"], ls=":", lw=0.9,
+                       alpha=0.45, zorder=1)
+        for method, (x, y) in in_zoom.items():
+            st   = _STYLE_21[method]
+            _m   = st["marker"]
+            _mec = st["color"] if _m in _edge_only else "white"
+            _mew = st.get("markeredgewidth", 1.8) if _m in _edge_only else 0.6
+            axins.plot(x, y, linestyle="none", color=st["color"], marker=_m,
+                       ms=st.get("ms", 8) + 2, markeredgecolor=_mec,
+                       markeredgewidth=_mew, zorder=5)
+            short = _LABEL_21[method].split(" (")[0]
+            axins.annotate(f"{short}\nΣ={x + y:.3f}", xy=(x, y), xytext=(4, 3),
+                           textcoords="offset points", fontsize=6.3,
+                           ha="left", color=st["color"])
+        axins.set_xlim(zx0, zx1)
+        axins.set_ylim(zy0, zy1)
+        axins.tick_params(labelsize=6.3)
+        axins.grid(True, ls=":", lw=0.5, alpha=0.6)
+        axins.set_title("zoom", fontsize=7)
+        ax.indicate_inset_zoom(axins, edgecolor="gray", lw=1.0, alpha=0.7)
 
 
 def _panel_d(ax, rows: list) -> None:
@@ -526,6 +592,14 @@ def _panel_d(ax, rows: list) -> None:
                            method=method, W_eff=W_ref, N_native=n)
                  for n in avail_nn]
         ax.plot(avail_nn, means, label=_LABEL_21[method], **_STYLE_21[method])
+
+    # native-only baseline (no visitor): total = native DCF utilization alone
+    base_means = [_mean_m21(rows, "weff_util_total",
+                            method="native_only", W_eff=W_ref, N_native=n)
+                  for n in avail_nn]
+    ax.plot(avail_nn, base_means, color="black", ls="--", lw=1.4,
+            marker="*", ms=9, markeredgecolor="white", markeredgewidth=0.5,
+            label="native-only (no visitor)", zorder=2)
 
     ax.set_xlabel("N_native (permanent NPCA STAs)", fontsize=11)
     ax.set_ylabel("Total Window Utilization  Σ(ppdu·succ) / W_eff", fontsize=10)
