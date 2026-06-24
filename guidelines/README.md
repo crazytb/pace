@@ -16,6 +16,7 @@
 | `step7_llm.md` | §21 LLM as reward designer, §24 Grid-best baseline | ~80줄 | Step 7 작업 시 |
 | `step8_experiments.md` | §22–26, §28–34 실험, baseline, 로깅, 실행 방법 | ~280줄 | Step 8 작업 시 |
 | `reference_mechanics.md` | §4–12, §15–18 STA 메커니즘 상세 (Step 1–4 참고용) | ~350줄 | 필요할 때만 |
+| `contribution_positioning.md` | PACE contribution 논지 (native vs visitor trade-off, native-aware 변형 TODO) | ~90줄 | 논문 작성 시 |
 
 ---
 
