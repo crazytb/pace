@@ -6,6 +6,7 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{graphicx}
+\usepackage{subcaption}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{blindtext}
@@ -250,6 +251,29 @@ targets.
 \subsection{Slotted Contention Model}
 \label{subsec:npca_window}
 
+\begin{figure}
+    \centering
+    \begin{subfigure}{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/transition_npca.pdf}
+        \caption{NPCA baseline (binary exponential backoff).}
+        \label{fig:transition_npca}
+    \end{subfigure}
+    \\[1.5ex]
+    \begin{subfigure}{\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/transition_pace.pdf}
+        \caption{Proposed PACE (probabilistic adaptive contention).}
+        \label{fig:transition_pace}
+    \end{subfigure}
+    \caption{Medium access on the NPCA primary channel: a station that detects
+    an OBSS transmission on the BSS primary channel migrates and contends within
+    the bounded NPCA window. (a) the standard NPCA baseline with binary
+    exponential backoff, and (b) the proposed PACE with probabilistic adaptive
+    contention and PPDU-aware self-exclusion.}
+    \label{fig:contention}
+\end{figure}
+
 IEEE 802.11 stations access the medium through the DCF, a CSMA/CA mechanism
 in which each station maintains a backoff counter rather than transmitting
 at random in every slot. Directly analyzing DCF over a finite window is
@@ -293,6 +317,24 @@ $t$. The slot outcome is \emph{idle} when $|\mathcal{D}(t)|=0$, a
 $|\mathcal{D}(t)|\ge 2$. These three observable events are the only
 feedback available to a station, and they drive the adaptive contention
 control developed in Section~\ref{sec:pace_algorithm}.
+
+Fig.~\ref{fig:contention} illustrates this slotted contention on the NPCA
+primary channel and contrasts the two schemes studied in this paper. In
+both, a station that detects an OBSS transmission on the BSS primary channel
+stores its DCF state, migrates to the NPCA primary channel, and contends
+there until the NPCA timer expires, whereupon it restores the saved state
+and resumes on the BSS primary channel. Under the \emph{NPCA baseline} of
+Fig.~\ref{fig:transition_npca}, stations contend with Binary Exponential
+Backoff: a station that collides doubles its contention window, and one
+whose pending TXOP no longer fits the remaining window acquires the channel
+only to find it cannot transmit, wasting the slots it occupied. Under the
+proposed \emph{PACE} scheme of Fig.~\ref{fig:transition_pace}, each station
+instead adapts its per-slot probability $\tau_i$ from the idle, success, and
+collision feedback---raising it multiplicatively on idle slots, lowering it
+on collisions, and copying a successful sender's value---while proactively
+withdrawing from contention once its frame can no longer fit within
+$W_\mathrm{rem}(t)$. We detail this mechanism in
+Section~\ref{sec:pace_algorithm}.
 
 \section{PACE Algorithm}
 \label{sec:pace_algorithm}
