@@ -206,11 +206,46 @@ or frame-length viability.
 \subsection{Network and Channel Model}
 \label{subsec:network_model}
 
-We consider a single Basic Service Set (BSS) comprising an Access Point (AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations that operate under IEEE 802.11bn. Following the NPCA capability requirement, the BSS occupies a wide operating channel of at least $80$~MHz. The operating channel is partitioned into a \emph{BSS primary channel} and a secondary portion of one or more $20$~MHz subchannels. Within the secondary portion the AP designates one
-$20$~MHz subchannel as the \emph{NPCA primary channel}, which serves as an
-auxiliary contention channel during NPCA operation. Throughout, we use the
-qualifier ``BSS'' to distinguish the original primary channel from the NPCA
-primary channel, consistent with the terminology of P802.11bn Draft~\cite{ieee80211bn}.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\textwidth]{figure/topology_and_channel.pdf}
+    \caption{Two-BSS topology and channel assignment.}
+    \label{fig:topology_and_channel}
+\end{figure}
+
+Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel assignment assumed throughout this work. The \emph{target BSS}, whose NPCA operation is our focus, comprises an Access Point (AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations and they can be considered as visitors to the neighboring BSS. 
+
+The visitors normally contend on their \emph{BSS primary channel}, Channel~\#1 in Fig.~\ref{fig:topology_and_channel}, which is the channel under observation. As the \emph{OBSS} row of the table in Fig.~\ref{fig:topology_and_channel} indicates, Channel~\#1 is also used by an overlapping BSS (OBSS) operating on the same channel; its transmissions intermittently render Channel~\#1 busy, and NPCA is invoked during these intervals. The AP designates a separate channel, Channel~\#2, as the \emph{NPCA primary channel}, to which the visitors migrate during NPCA operation. We use the qualifier ``BSS'' to distinguish the original primary channel from the NPCA primary channel, consistent with P802.11bn Draft terminology~\cite{ieee80211bn}.
+
+Crucially, the NPCA primary channel is not unused spectrum reserved for the
+target BSS: as the table in Fig.~\ref{fig:topology_and_channel} shows,
+Channel~\#2 is the \emph{BSS primary channel of a neighboring BSS}. The
+neighboring BSS comprises its own AP and a set $\mathcal{M}=\{1,2,\dots,M\}$
+of \emph{native stations} that contend on this channel with standard
+DCF/EDCA at all times. The visitors access it only opportunistically: when
+an OBSS transmission occupies the target BSS's BSS primary channel
+(Channel~\#1), the visitors migrate to the NPCA primary channel
+(Channel~\#2) and contend there \emph{alongside the native stations} for the
+duration of the OBSS busy period, before switching back. Two contention
+disciplines thus coexist on the NPCA primary channel during each NPCA visit:
+the native stations' persistent DCF and the visitors' bounded opportunistic
+access.
+
+Because the two BSSs only partially overlap in coverage
+(Fig.~\ref{fig:topology_and_channel}), the native contention a visitor
+experiences on the NPCA primary channel depends on its location. A visitor
+inside the overlap region senses, defers to, and competes with the native
+stations, whereas a visitor outside the neighboring BSS coverage encounters
+no native traffic there and effectively reuses the channel without
+contending with natives. The coexistence cost to the neighboring BSS is thus
+greatest when every visitor lies within its coverage. Unless otherwise
+stated we adopt this full-overlap configuration---a single collision domain
+in which all visitors and native stations are mutually within
+carrier-sensing range---since it upper-bounds the impact on native airtime;
+the partial-overlap regime, in which non-overlapping visitors enjoy
+interference-free spatial reuse, is left to future work. The resulting
+impact on native airtime under full overlap is evaluated in
+Section~\ref{sec:performance_evaluation}.
 
 \begin{figure}
     \centering

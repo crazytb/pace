@@ -38,7 +38,7 @@ import run_step9_fig17 as _f17
 
 # ─── Parameters ───────────────────────────────────────────────────────────────
 
-METHODS_21     = ["oracle", "pnd", "pnd_cd", "ema_ad_low", "consec_L2", "dcf_self_excl", "and"]
+METHODS_21     = ["oracle", "pnd", "dcf_self_excl"]   # plotted set (CSV retains all methods)
 
 N_VISITOR      = 10
 N_NATIVE_LIST  = [0, 5, 10, 20]
@@ -557,7 +557,7 @@ def _panel_c(ax, rows: list) -> None:
     in_zoom = {m: (x, y) for m, (x, y) in points.items()
                if zx0 <= x <= zx1 and zy0 <= y <= zy1}
     if in_zoom:
-        axins = ax.inset_axes([0.09, 0.50, 0.46, 0.44])
+        axins = ax.inset_axes([0.50, 0.52, 0.46, 0.44])
         for method, (x, y) in in_zoom.items():     # iso-total guides (behind)
             C = x + y
             axins.plot([zx0, zx1], [C - zx0, C - zx1],
@@ -585,7 +585,8 @@ def _panel_c(ax, rows: list) -> None:
 
 def _panel_d(ax, rows: list) -> None:
     W_ref    = 50
-    avail_nn = sorted({r["N_native"] for r in rows if r["W_eff"] == W_ref})
+    avail_nn = sorted({r["N_native"] for r in rows
+                       if r["W_eff"] == W_ref and r["N_native"] > 0})
 
     for method in METHODS_21:
         means = [_mean_m21(rows, "weff_util_total",
@@ -605,7 +606,7 @@ def _panel_d(ax, rows: list) -> None:
     ax.set_ylabel("Total Window Utilization  Σ(ppdu·succ) / W_eff", fontsize=10)
     ax.set_xticks(avail_nn)
     ax.margins(y=0.12)
-    ax.legend(fontsize=7.5, frameon=True, loc="upper right")
+    ax.legend(fontsize=7.5, frameon=True, loc="lower right")
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     ax.set_title(f"(d) Total TP vs N_native\n"
                  f"(W_eff={W_ref}, visitor+native combined)",
