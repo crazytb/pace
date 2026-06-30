@@ -213,43 +213,14 @@ or frame-length viability.
     \label{fig:topology_and_channel}
 \end{figure}
 
-Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel assignment assumed throughout this work. The \emph{target BSS}, whose NPCA operation is our focus, comprises an Access Point (AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations and they can be considered as visitors to the neighboring BSS. 
+Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel assignment assumed throughout this work. The target BSS, whose NPCA operation is our focus, comprises an Access Point (AP) and a set $\mathcal{N}=\{1,2,\dots,N\}$ of associated non-AP stations and they can be considered as visitors to the neighboring BSS. The visitors normally contend on their BSS primary channel, Channel~\#1 in Fig.~\ref{fig:topology_and_channel}, which is the main channel used by the target BSS for its own transmissions.
 
-The visitors normally contend on their \emph{BSS primary channel}, Channel~\#1 in Fig.~\ref{fig:topology_and_channel}, which is the channel under observation. As the \emph{OBSS} row of the table in Fig.~\ref{fig:topology_and_channel} indicates, Channel~\#1 is also used by an overlapping BSS (OBSS) operating on the same channel; its transmissions intermittently render Channel~\#1 busy, and NPCA is invoked during these intervals. The AP designates a separate channel, Channel~\#2, as the \emph{NPCA primary channel}, to which the visitors migrate during NPCA operation. We use the qualifier ``BSS'' to distinguish the original primary channel from the NPCA primary channel, consistent with P802.11bn Draft terminology~\cite{ieee80211bn}.
-
-Crucially, the NPCA primary channel is not unused spectrum reserved for the
-target BSS: as the table in Fig.~\ref{fig:topology_and_channel} shows,
-Channel~\#2 is the \emph{BSS primary channel of a neighboring BSS}. The
-neighboring BSS comprises its own AP and a set $\mathcal{M}=\{1,2,\dots,M\}$
-of \emph{native stations} that contend on this channel with standard
-DCF/EDCA at all times. The visitors access it only opportunistically: when
-an OBSS transmission occupies the target BSS's BSS primary channel
-(Channel~\#1), the visitors migrate to the NPCA primary channel
-(Channel~\#2) and contend there \emph{alongside the native stations} for the
-duration of the OBSS busy period, before switching back. Two contention
-disciplines thus coexist on the NPCA primary channel during each NPCA visit:
-the native stations' persistent DCF and the visitors' bounded opportunistic
-access.
-
-Because the two BSSs only partially overlap in coverage
-(Fig.~\ref{fig:topology_and_channel}), the native contention a visitor
-experiences on the NPCA primary channel depends on its location. A visitor
-inside the overlap region senses, defers to, and competes with the native
-stations, whereas a visitor outside the neighboring BSS coverage encounters
-no native traffic there and effectively reuses the channel without
-contending with natives. The coexistence cost to the neighboring BSS is thus
-greatest when every visitor lies within its coverage. Unless otherwise
-stated we adopt this full-overlap configuration---a single collision domain
-in which all visitors and native stations are mutually within
-carrier-sensing range---since it upper-bounds the impact on native airtime;
-the partial-overlap regime, in which non-overlapping visitors enjoy
-interference-free spatial reuse, is left to future work. The resulting
-impact on native airtime under full overlap is evaluated in
-Section~\ref{sec:performance_evaluation}.
+Channel~\#1 is also used by an overlapping BSS (OBSS) operating on the same channel, whose transmissions intermittently render it busy. In standards prior to IEEE 802.11bn, a station could not initiate a transmission whenever its designated primary channel was busy, even if the secondary channel was idle.
+In IEEE 802.11bn, however, the AP can designate a separate channel as the NPCA primary channel, used by the visitors during NPCA operation, named as Channel~\#2 in Fig.~\ref{fig:topology_and_channel}. We use the qualifier ``BSS'' to distinguish the original primary channel from the NPCA primary channel, consistent with P802.11bn Draft terminology~\cite{ieee80211bn}.
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.45\textwidth]{figure/channel_access.pdf}
+    \includegraphics[width=0.48\textwidth]{figure/channel_access.pdf}
     \caption{The medium access process comparison between legacy and NPCA.}
     \label{fig:channel_access}
 \end{figure}
@@ -257,9 +228,10 @@ Section~\ref{sec:performance_evaluation}.
 \subsection{Legacy versus NPCA Medium Access}
 \label{subsec:npca_access}
 
-Fig.~\ref{fig:channel_access} contrasts the two medium-access processes. Under \emph{legacy} access (top), a station contends only on the BSS primary channel.\footnote{We use the term \emph{BSS primary channel} to distinguish the original primary channel from the NPCA primary channel introduced in IEEE 802.11bn. Prior to 802.11bn, when NPCA was not yet defined, this channel was referred to simply as the \emph{primary channel}.} It decrements its backoff counter while the channel is idle and transmits when the counter reaches zero. If the secondary channel is also sensed idle at this instant, the station may bond it with the BSS primary channel and transmit a wideband PPDU spanning the combined bandwidth (e.g., $40$, $80$, or $160$~MHz). When an overlapping BSS (OBSS) transmission seizes the BSS primary channel, however, the station must defer and freeze its backoff for the entire OBSS busy period, even though the secondary channel is idle.
+Let us elaborate on the medium-access process under legacy and NPCA operation.
+Fig.~\ref{fig:channel_access} contrasts the two medium-access processes. Under legacy access (top), prior to IEEE 802.11bn, a station contends only on the BSS primary channel.\footnote{We use the term BSS primary channel to distinguish the original primary channel from the NPCA primary channel introduced in IEEE 802.11bn. Prior to 802.11bn, when NPCA was not yet defined, this channel was referred to simply as the primary channel.} It decrements its backoff counter while the channel is idle and transmits when the counter reaches zero. If the secondary channel is also sensed idle at this instant, the station may bond it with the BSS primary channel and transmit a wideband PPDU spanning the combined bandwidth (e.g., $40$, $80$, or $160$~MHz). When an overlapping BSS (OBSS) transmission seizes the BSS primary channel, however, the station must defer and freeze its backoff for the entire OBSS busy period, even though the secondary channel is idle.
 
-Under \emph{NPCA} access (bottom), a station no longer wastes the OBSS busy period. When it detects an OBSS transmission on the BSS primary channel, it decodes the preamble of that transmission and learns its duration in advance; rather than freezing its backoff for the whole period, it switches to the idle NPCA primary channel and continues to contend and transmit there. On each such switch the station saves its backoff state on the BSS primary channel and initializes a fresh contention window for the NPCA primary channel, so every NPCA visit begins at the minimum backoff stage regardless of prior history. The station already knows when the OBSS transmission will finish, so it sets a timer to that instant and switches back to the BSS primary channel when the timer expires, restoring the saved state without having to re-sense the channel. In this way the secondary spectrum that the legacy station leaves idle is put to use, and a station can complete one or more transmissions that it would otherwise have had to postpone.
+Under NPCA access (bottom), a station no longer wastes the OBSS busy period. When it detects an OBSS transmission on the BSS primary channel, it decodes the preamble of that transmission and learns its duration in advance,\footnote{NPCA relies on preamble detection rather than energy detection: a station must decode the inter-BSS PPDU preamble (L-SIG and BSS color) at PHY-RXSTART to both classify the transmission and derive its remaining duration, from which the NPCA window is determined. Energy detection alone, which yields no length or BSS information, is insufficient to trigger an NPCA transition.} rather than freezing its backoff for the whole period, it switches to the idle NPCA primary channel and contends and transmits there. On each such switch the station saves its backoff state on the BSS primary channel and initializes a fresh contention window for the NPCA primary channel, so every NPCA visit begins at the minimum backoff stage regardless of prior history. The station already knows when the OBSS transmission will finish, so it sets a timer to that instant and switches back to the BSS primary channel when the timer expires, restoring the saved state without having to re-sense the channel. In this way the secondary spectrum that the legacy station leaves idle is put to use, and a station can complete one or more transmissions that it would otherwise have had to postpone.
 
 Two constraints shape this access. First, a radio transition delay
 $\delta_\mathrm{sw}$ is incurred on each switch. Second, the opportunity
@@ -331,7 +303,7 @@ proceeds.
 Let $\mathcal{V}\subseteq\mathcal{N}$ be the set of stations that switch to
 the NPCA primary channel, each holding a pending PPDU whose transmission
 occupies $L_i$ slots. Because a transmission must complete before the
-window closes, station $i$ is \emph{viable} at slot $t$ only if its frame
+window closes, station $i$ is viable at slot $t$ only if its frame
 still fits, i.e.\ $L_i \le W_\mathrm{rem}(t)$; otherwise it can no longer
 succeed and should remain silent to avoid wasting slots. We write the
 viable population at slot $t$ as
@@ -347,8 +319,8 @@ At each slot, a viable station $i$ attempts transmission with probability
 $\tau_i$. Following the half-duplex assumption, a transmitting station
 cannot sense the channel in the same slot. Let $\mathcal{D}(t)$ denote the
 set of stations whose transmissions are detected by a given station in slot
-$t$. The slot outcome is \emph{idle} when $|\mathcal{D}(t)|=0$, a
-\emph{success} when $|\mathcal{D}(t)|=1$, and a \emph{collision} when
+$t$. The slot outcome is idle when $|\mathcal{D}(t)|=0$, a
+success when $|\mathcal{D}(t)|=1$, and a collision when
 $|\mathcal{D}(t)|\ge 2$. These three observable events are the only
 feedback available to a station, and they drive the adaptive contention
 control developed in Section~\ref{sec:pace_algorithm}.
@@ -358,12 +330,12 @@ primary channel and contrasts the two schemes studied in this paper. In
 both, a station that detects an OBSS transmission on the BSS primary channel
 stores its DCF state, migrates to the NPCA primary channel, and contends
 there until the NPCA timer expires, whereupon it restores the saved state
-and resumes on the BSS primary channel. Under the \emph{NPCA baseline} of
+and resumes on the BSS primary channel. Under the NPCA baseline of
 Fig.~\ref{fig:transition_npca}, stations contend with Binary Exponential
 Backoff: a station that collides doubles its contention window, and one
 whose pending TXOP no longer fits the remaining window acquires the channel
 only to find it cannot transmit, wasting the slots it occupied. Under the
-proposed \emph{PACE} scheme of Fig.~\ref{fig:transition_pace}, each station
+proposed PACE scheme of Fig.~\ref{fig:transition_pace}, each station
 instead adapts its per-slot probability $\tau_i$ from the idle, success, and
 collision feedback---raising it multiplicatively on idle slots, lowering it
 on collisions, and copying a successful sender's value---while proactively
@@ -387,15 +359,15 @@ with probability
 \end{equation}
 so that one viable station transmits per slot in expectation. Unlike the
 fixed optimum of an infinite-horizon network, this target is
-\emph{time-varying}: the bounded window $W_\mathrm{eff}$ and the shrinking
+time-varying: the bounded window $W_\mathrm{eff}$ and the shrinking
 viable population $\mathcal{V}(t)$ of~\eqref{eq:viable} cause
 $|\mathcal{V}(t)|$ to decrease as the deadline approaches, so $\tau^*(t)$
 must rise over the course of a single NPCA visit.
 
 This is precisely where legacy Binary Exponential Backoff falls short. BEB
 moves the access probability in the wrong direction: a collision doubles the
-contention window and \emph{halves} the attempt rate, whereas the optimal
-policy calls for an \emph{increase} as stations drop out. Worse, the doubled
+contention window and halves the attempt rate, whereas the optimal
+policy calls for an increase as stations drop out. Worse, the doubled
 backoff can exceed $W_\mathrm{rem}(t)$, silencing the station for the rest of
 the window and squandering the remaining slots. PACE instead drives each
 station's $\tau_i$ toward $\tau^*(t)$ using only the per-slot feedback of
@@ -404,6 +376,34 @@ Section~\ref{subsec:npca_window}, as developed next.
 \subsection{Adaptive Contention Control}
 \label{subsec:adaptive_control}
 \blindtext
+
+\subsection{Coexistence with Native Stations}
+\label{subsec:native_coexistence}
+
+The NPCA primary channel is not unused spectrum reserved for the target BSS:
+Channel~\#2 is itself the BSS primary channel of a neighboring BSS,
+comprising its own AP and a set $\mathcal{M}=\{1,2,\dots,M\}$ of native
+stations that contend on it with standard DCF/EDCA at all times. The
+visitors, by contrast, use Channel~\#2 only opportunistically, during NPCA
+visits. Two contention disciplines therefore coexist on the NPCA primary
+channel: the native stations' persistent DCF and the visitors' bounded
+PACE-driven access.
+
+Because the two BSSs only partially overlap in coverage
+(Fig.~\ref{fig:topology_and_channel}), the native contention a visitor
+experiences on the NPCA primary channel depends on its location. A visitor
+inside the overlap region senses, defers to, and competes with the native
+stations, whereas a visitor outside the neighboring BSS coverage encounters
+no native traffic there and effectively reuses the channel without
+contending with natives. The coexistence cost to the neighboring BSS is thus
+greatest when every visitor lies within its coverage. Unless otherwise
+stated we adopt this full-overlap configuration---a single collision domain
+in which all visitors and native stations are mutually within
+carrier-sensing range---since it upper-bounds the impact on native airtime;
+the partial-overlap regime, in which non-overlapping visitors enjoy
+interference-free spatial reuse, is left to future work. The resulting
+impact on native airtime under full overlap is evaluated in
+Section~\ref{sec:performance_evaluation}.
 
 \section{Performance Evaluation}
 \label{sec:performance_evaluation}

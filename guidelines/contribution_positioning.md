@@ -79,3 +79,82 @@ native-only 0.612 → **PACE 0.755 (+23%)**. DCF-visitor는 0.646 (+6%)뿐.
 - 그림: `manuscript/figure/fig21_native_visitor_fairness.{eps,png,pdf}` (panel c zoom inset + native-only reference line)
 - 스크립트: `harq_sim/run_step9_fig21.py`
 - 기존 한계 명시: `CLAUDE.md` Fig 21 절 (native_preservation=0.265)
+
+---
+
+## 7. Topology / 공간 overlap 논점 (limitation + 방어)
+
+현 모델 = **single collision domain** (전 visitor가 전 native와 상호 carrier-sense). 부분 overlap이면 깨짐.
+
+visitor가 BSS-2(native) overlap 여부로 갈림:
+
+| | Class A (overlap 안) | Class B (BSS-1 assoc, BSS-2 coverage 밖) |
+|---|---|---|
+| native 감지/경쟁 | ✓ | ✗ (경쟁 상대 없음) |
+| native 간섭 | ✓ | ✗ (reciprocity) |
+| NPCA primary 체감 | 혼잡 | 빈 채널 (**spatial reuse**) |
+
+함의:
+- **Fig 21(full overlap) = worst case.** 현실 native 침식은 B 비율만큼 희석.
+- Class B = native 무비용 reuse → "그냥 native 뺏는다" 비판 **완화 논리**.
+- **local-sensing native-aware PACE가 두 부류 자동 처리**: 들리는 native만 셈 → B는 0(공격적·무해), A는 $N_n^{local}$(양보). geometry-emergent 정확성.
+
+방어 framing: "보인 침식은 worst case(완전 overlap); 부분 overlap에선 non-overlap visitor가 interference-free reuse. local-sensing 확장이 자연히 활용." → future work.
+
+부작용(hidden terminal): B가 native RX 범위엔 있고 TX는 안 들리면 → hidden 충돌 + 피드백 오염(false idle→τ↑). geometry 의존.
+
+→ 본문 반영: System Model A에 "single collision domain / full-overlap = worst case" 가정 **명시**, partial overlap은 future work.
+
+---
+
+## 8. τ* 유도 — classical임, 과장 주의 (★ reviewer 리스크)
+
+**τ*=1/N은 classical slotted ALOHA** (Abramson 1970; throughput $N\tau(1-\tau)^{N-1}$ argmax). **유도하면 textbook 재유도** → "이거 classical 아니냐" 공격.
+
+→ **유도 X, 인용·STATE.** 기여는 공식이 아니라:
+1. 유한창에서 **유효 경쟁자 수가 시변** ($\mathcal{V}(t)$가 deadline 소진 + viability 탈락 두 경로로 감소)
+2. 따라서 최적이 **고정 1/N 아니라 시변 $1/|\mathcal{V}(t)|$** → BEB(역방향)·AND(open-loop) 못 따라감
+3. $|\mathcal{V}(t)|$ **모른 채 분산 추적**
+
+주의: $1/|\mathcal{V}(t)|$ = **per-slot greedy 최적**, 전역 window-optimal **증명 아님** (이질 $L_i$ 스케줄링은 별개; sim oracle은 탐색으로 구해 미세하게 다름). → "window-optimal 유도" 주장 **금지**. "per-slot success-maximizing (classical), near-optimal는 sim 검증."
+
+`subsec C(viability $\mathcal{V}(t)$)는 삭제 불가` — τ*·self-exclusion 토대이자 **시변성 통찰의 핵심 재료**.
+
+분석 깊이: **레벨 2** (closed-form 최적 인용 + fixed-point 1단락[PND 인용] + 시뮬 수렴 검증 + pseudocode). **full 수렴증명 안 함** (finite-horizon 시변 MIMD = 험악, hand-wavy 위험). PND도 algorithm-form + 시뮬이었음.
+
+---
+
+## 9. "track" 과장 금지 — 실시간 추적 불가 (★)
+
+$|\mathcal{V}(t)|$는 **실시간 측정·카운트 불가** (몇 명 viable인지 못 셈). 따라서 "track 1/|V(t)| in real time"은 **과장**.
+
+PACE 실제 = **암묵적 근사 추적**. 전역 미지 → 국소 신호 변환:
+- MIMD가 **idle/collision 통계로 operating point 추론** (카운트 아님; Cali et al. dynamic-tuning)
+- **solo-copy = 빠른 consensus** (성공자 τ 복사 → 한 관측에 점프)
+- **idle-increase가 population 감소 자동 추종** (탈락→idle↑→τ×)
+- **self-exclusion은 순수 로컬** (내 $L_i$ vs $W_\mathrm{rem}$, 남 카운트 불필요)
+
+정당한 한계: **transient lag** — MIMD 수 슬롯 적응 → 급변 못 맞춤. **tight window는 부분 수렴(근사)**. → 그래서 oracle > PACE 약간, gain<100%.
+
+표현 수정:
+- ~~"track the time-varying optimum in real time"~~ → **"drive toward / approximately track using only local feedback, without knowing the contender count"**
+- $|\mathcal{V}(t)|$ 명시 추정 안 함 = **강점**으로 (Contribution의 "without knowledge of total station count"와 일관)
+- 추적 충실도 = **시뮬 검증** (Fig 15 adaptive≈oracle), 이론적 완전추적 주장 X
+
+| 주장 | 가능? |
+|---|---|
+| $\tau^*=1/n$ per-slot 최적 | ✓ classical 인용 |
+| 유한창 시변 $1/\|\mathcal{V}(t)\|$ | ✓ viability 통찰 |
+| 정확·실시간 추적 | ✗ 과장 |
+| 국소 피드백 근사 추적, near-oracle | ✓ 시뮬 |
+
+---
+
+## TODO (본문 반영 대기)
+- [ ] Introduction Contribution #1: "derive optimal τ" → "시변성·viability 통찰 + 카운트 없는 분산 근사 추적"으로 reframe
+- [ ] Sec 4 "Throughput-Optimal Target": τ* classical 인용(STATE), window-optimal 주장 제거, "per-slot greedy + sim near-optimal"
+- [ ] "track" → "drive toward / approximately track" 전역 수정
+- [ ] System Model: single collision domain / full-overlap=worst-case 가정 명시
+- [ ] slotted model 배치: 관측부(idle/success/collision)=System Model, τ-attempt 규칙=PACE Algorithm (τ-per-slot은 ALOHA식, 802.11 메커니즘 아님)
+- [ ] subsec C 유지, fixed-point 단락 + pseudocode 작성
+- [ ] native-aware PACE (local-sensing) 변형 = future work 또는 추가 실험
