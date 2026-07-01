@@ -30,6 +30,7 @@ LLM/intent 기여는 별도 논문으로 분리.
 | Fig 19 | DCF benchmark 비교 — W_eff_utilization + τ trajectory (pnd, ema_ad_low, consec_L2, dcf, and) | `harq_sim/run_step9_fig19.py` | [fig19.md](step9/fig19.md) | 🔄 진행 중 |
 | Fig 20 | Throughput–Fairness tradeoff — PPDU-class fairness, Jain's J, TP-Fair scatter | `harq_sim/run_step9_fig20.py` | [fig20.md](step9/fig20.md) | ✅ 완료 |
 | Fig 21 | Native vs Visitor Fairness — mixed contention, proportionality index | `harq_sim/run_step9_fig21.py` | [fig21.md](step9/fig21.md) | ✅ 완료 |
+| Fig 22 | Initial τ₀ sensitivity — PACE vs PND init-robustness (finite window) | `harq_sim/run_step9_fig22.py` | — | ✅ 완료 |
 
 상태: ⬜ 미구현 / 🔄 진행 중 / ✅ 완료
 

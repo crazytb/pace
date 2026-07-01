@@ -107,6 +107,25 @@ PACE = Pareto-dominant: 처리량·공정성 동시 최고.
 - AND: prop=1.90 > pnd=1.51 — open-loop 초기 high-τ 선점으로 native BEB 폭증
 - PND native 침해: native_preservation=0.265 (native 단독 대비 26.5%) — 논문 한계로 명시
 
+### Fig 22: Initial τ₀ sensitivity (PND Fig 2 대응, uniform PPDU U[3,12])
+
+RQ: PND은 무한 horizon에서 init τ₀ 무관 (randomized≈optimal, 빠른 수렴). PACE 유한 창 W_eff에서도 성립?
+
+| init τ₀ | W20(tight) | W100 | W200(loose) | 판정 |
+|---|---|---|---|---|
+| optimal 1/N | 0.955 | 0.972 | 0.996 | ✅ near-oracle |
+| rand U(0,2/N) | 0.976 | 0.965 | 0.995 | ✅ near-oracle |
+| low 1/W_eff | 0.952 | 0.932 | 0.985 | ✅ near-oracle |
+| high 0.5 | 0.551 | 0.837 | 0.970 | ⚠️ 붕괴→창 늘면 회복 |
+| **rand U(0,1)** | 0.453 | 0.381 | 0.493 | ❌ 전 구간 붕괴 |
+
+핵심: **init 무관성은 scale~1/N일 때만 성립** (randomization 자체는 무해 — PND Fig 2 재현). init mean≫1/N이면 붕괴.
+- fixed high(0.5): 전 STA 동시 c_coll 하강 → coordinated recovery (창 크면 회복)
+- rand U(0,1): high-τ tail이 solo success 차단 → solo-copy consensus 실패 → mean τ 고착 → 회복 불가
+- 유한 창 = 붕괴 증폭 (τ 낮출 시간 없음, W20 최악)
+
+→ PND의 "init 무관" 주장은 scale-matched 조건부. PACE 유한창+이질 PPDU가 infinite-horizon 분석이 숨긴 regime 노출.
+
 ---
 
 ## 파일 구조
