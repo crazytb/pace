@@ -358,15 +358,15 @@ Section~\ref{sec:pace_algorithm}.
 \label{alg:pace}
 \begin{algorithmic}[1]
 \REQUIRE PPDU length $L_i$ (slots), window $W_\mathrm{eff}$, factors $c_\mathrm{coll},\,c_\mathrm{idle}>1$
-\PHASE {/* (a) Probability Initialization */}
+\PHASE {/* Phase (a): Probability Initialization */}
 \STATE $\tau_i \leftarrow 1/W_\mathrm{eff}$ 
 \FOR{$t = 0$ \TO $W_\mathrm{eff}-1$}
     \STATE $W_\mathrm{rem} \leftarrow W_\mathrm{eff} - t$
-    \PHASE {/* (b) PPDU-aware Self-Exclusion */}
+    \PHASE {/* Phase (b): PPDU-aware Self-Exclusion */}
     \IF{$L_i > W_\mathrm{rem}$}
         \STATE $\tau_i \leftarrow 0$
     \ENDIF
-    \PHASE {/* (c) Probabilistic Channel Access */}
+    \PHASE {/* Phase (c): Probabilistic Channel Access */}
     \STATE draw $u \sim \mathrm{Uniform}(0,1)$
     \IF{$u < \tau_i$}
         \STATE transmit the PPDU advertising $\tau_i$ 
@@ -374,7 +374,7 @@ Section~\ref{sec:pace_algorithm}.
             \STATE \textbf{break} 
         \ENDIF
     \ELSE
-        \PHASE {/* (d) Feedback-based Adaptation */}
+        \PHASE {/* Phase (d): Feedback-based Adaptation */}
         \STATE observe the slot outcome $|\mathcal{D}(t)|$
         \IF{$|\mathcal{D}(t)| = 0$}
             \STATE $\tau_i \leftarrow \min(\tau_i \cdot c_\mathrm{idle},\;1)$ 
@@ -426,70 +426,40 @@ neighboring BSS that owns the NPCA primary channel. That is, a visitor competes 
 parameterize $1/N$ is thus doubly hidden, which motivates a surrogate that
 avoids counting STAs altogether.
 
-The window length itself sets the scale. A visit spans $W_\mathrm{eff}$ slots,
-and a STA contends in at most one of them per slot so $W_\mathrm{eff}$ upper-bounds the number of attempt opportunities any
-STA sees in a visit. A STA attempting with probability $\tau$ therefore
-expects at most $W_\mathrm{eff}\,\tau$ attempts before the deadline. Fixing this
-budget to a single probe per STA,
+We propose a method where the window length itself determines the scale. A visit spans $W_\mathrm{eff}$ slots, and a STA contends in at most one of them per slot so $W_\mathrm{eff}$ upper-bounds the number of attempt opportunities any STA sees in a visit. A STA attempting with probability $\tau$ therefore expects at most $W_\mathrm{eff}\,\tau$ attempts before the deadline. Fixing this budget to a single probe per STA,
 \begin{equation}
-W_\mathrm{eff}\,\tau_0 = 1,
-\label{eq:one_probe}
+    W_\mathrm{eff}\,\tau_0 = 1,
+    \label{eq:one_probe}
 \end{equation}
-sets the most conservative self-consistent exploration rate: low enough to avoid
-an early collision storm, yet high enough for each STA to test the medium
-about once before the window drains. This yields
+sets the most conservative self-consistent  exploration rate: low enough to avoid an early collision storm, yet high enough for each STA to test the medium about once before the window drains. This yields
 \begin{equation}
-\tau_0 = \frac{1}{W_\mathrm{eff}},
-\label{eq:init}
+    \tau_0 = \frac{1}{W_\mathrm{eff}},
+    \label{eq:init}
 \end{equation}
-which depends only on the effective window $W_\mathrm{eff}$---a quantity each
-STA computes locally from the OBSS PPDU duration it decoded at NPCA
-transition. No knowledge of the contender count is required: $W_\mathrm{eff}$
-bounds the number of attempt opportunities, not the STA population.
+which depends only on the effective window $W_\mathrm{eff}$, which is a quantity that each STA can compute locally from the OBSS PPDU duration. No knowledge of the contender count is required.
 
-This choice is deliberately biased toward under-attempting, for two reasons.
-First, it is self-correcting in the safe direction: an over-conservative
-$\tau_i$ is raised toward the operating point within a few slots by the
-idle-driven multiplicative increase of Phase~(d), whereas an
-over-aggressive start triggers collisions whose wasted slots cannot be
-reclaimed inside a finite window. The MIMD recovery is thus asymmetric, and
-starting low pays only a bounded ramp-up cost. Second, $1/W_\mathrm{eff}$
-tracks the regime where initialization matters most: when the window is tight
-($W_\mathrm{eff}\!\approx\!N$) it already approximates the optimum $1/N$, and
-when the window is loose ($W_\mathrm{eff}\!\gg\!N$) the mild initial timidity is
-erased by the idle increase long before the window drains.
-Section~\ref{sec:performance_evaluation}
-shows that this locally computable initialization stays within a few percent of
-the count-aware optimum across the entire window-tightness range, while
-aggressive or wide-spread initializations collapse---confirming that PACE
-inherits the initialization-robustness of neighbor discovery only when the
-initial scale is kept at or below $1/W_\mathrm{eff}$.
+In general frame length to be transmitted on NPCA primacy channel is longer than a single slot, so $\tau_0 $ is bound to be smaller than the optimal value. This choice is deliberately biased toward under-attempting for two reasons. First, it is self-correcting in the safe direction: an over-conservative $\tau_i$ is raised toward the operating point within a few slots by the idle-driven multiplicative increase in Phase~(d), whereas an over-aggressive start triggers collisions whose wasted slots cannot be reclaimed inside a finite window. The MIMD recovery is thus asymmetric, and starting low pays only a bounded ramp-up cost. Second, $1/W_\mathrm{eff}$ tracks the regime where initialization matters most: when the window is tight ($W_\mathrm{eff}\!\approx\!N$) it already approximates the optimum $1/N$, and when the window is loose ($W_\mathrm{eff}\!\gg\!N$) the mild initial timidity is erased by the idle increase long before the window drains. 
+% Section~\ref{sec:performance_evaluation} shows that this locally computable initialization stays within a few percent of the count-aware optimum across the entire window-tightness range, while aggressive or wide-spread initializations collapse---confirming that PACE inherits the initialization-robustness of neighbor discovery only when the initial scale is kept at or below $1/W_\mathrm{eff}$.
 
-\subsection{Phase (b): PPDU-aware Self-Exclusion}
+\subsection{PPDU-aware Self Exclusion}
 \label{subsec:self_exclusion}
 
-At the start of every slot a STA compares its own frame length $L_i$ to the
-remaining window $W_\mathrm{rem}(t)$. If $L_i > W_\mathrm{rem}(t)$ the frame can
-no longer finish before the deadline, so the STA sets $\tau_i=0$ and falls
-silent for the rest of the visit. The test is purely local---it involves only
-the STA's own $L_i$ and the slot index---and thus, like initialization,
-requires no knowledge of the contending population.
+At the start of every slot a STA compares its own frame length $L_i$ to the remaining window $W_\mathrm{rem}(t)$. If $L_i > W_\mathrm{rem}(t)$ the frame can no longer finish before the deadline, so the STA sets $\tau_i=0$ and falls silent for the rest of the visit. The test is purely local. That means it involves only the STA's own $L_i$ and the slot index and thus, like initialization, requires no knowledge of the contending population.
 
-Self-exclusion is what keeps the throughput-optimal target that PACE aims to
-track,
+Self exclusion keeps the optimal target that PACE aims to track,
 \begin{equation}
     \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
     \label{eq:tau_opt}
 \end{equation}
-meaningful in a heterogeneous, finite window: in a slot with
-$|\mathcal{V}(t)|$ viable STAs, a success---exactly one transmitter---is
+meaningful in a heterogeneous and finite window. In a slot with
+$|\mathcal{V}(t)|$ viable STAs, a success, meaning exactly one transmitter, is
 most likely when each attempts with probability $\tau^*(t)$, and this target
 rises over the visit as the viable set drains. A STA whose frame no longer
 fits is removed from the viable set $\mathcal{V}(t)$ of~\eqref{eq:viable}, so it
 neither wastes slots on doomed attempts nor inflates the contention seen by the
-STAs that can still succeed. This plays the same role as the collision-detection
-departure of the original neighbor-discovery algorithm, in which a STA
-leaves the contention once its advertisement succeeds: here a STA also
+STAs that can still succeed. This plays the same role as the collision detection
+departure of the original neighbor discovery algorithm, in which a STA
+leaves the contention once its advertisement succeeds. Here a STA also
 leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$
 toward the set of STAs that genuinely compete for the remaining slots.
 
