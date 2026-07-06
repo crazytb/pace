@@ -168,6 +168,8 @@ def _run_visit_mixed(
                 W_rem -= 1
                 outcome_solo = False
                 outcome_coll = True
+        elif outcome_coll:
+            W_rem -= _f17.collision_cost(ppdus, tx)
         else:
             W_rem -= 1
 
@@ -741,7 +743,7 @@ def plot(rows: list, out_dir: str, fig_dir: str) -> None:
         fontsize=11,
     )
 
-    fig_name = "fig21_native_visitor_fairness"
+    fig_name = "fig21_native_visitor_fairness_"
     for ext, kwargs in [
         ("eps", dict(format="eps", bbox_inches="tight")),
         ("png", dict(format="png", bbox_inches="tight", dpi=300)),

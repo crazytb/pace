@@ -325,12 +325,29 @@ become infeasible.
 At each slot, a viable STA $i$ attempts transmission with probability
 $\tau_i$. Following the half-duplex assumption, a transmitting STA
 cannot sense the channel in the same slot. Let $\mathcal{D}(t)$ denote the
-set of STAs whose transmissions are detected by a given STA in slot
-$t$. The slot outcome is idle when $|\mathcal{D}(t)|=0$, a
+set of STAs whose transmissions on the NPCA primary channel are detected by a
+given STA in slot $t$. This set is defined at the channel level: it counts every
+STA transmitting on that channel in the slot, not only the switching visitors
+but also any other STA that uses the same channel as its own primary. The slot
+outcome is idle when $|\mathcal{D}(t)|=0$, a
 success when $|\mathcal{D}(t)|=1$, and a collision when
 $|\mathcal{D}(t)|\ge 2$. These three observable events are the only
 feedback available to a STA, and they drive the adaptive contention
 control developed in Section~\ref{sec:pace_algorithm}.
+
+The remaining window advances by the time each outcome occupies the medium. A
+busy slot lasts until the longest frame it carries has ended, so it consumes
+\begin{equation}
+    L_{\max}(t) \;=\; \max_{i\in\mathcal{D}(t)} L_i
+    \label{eq:lmax}
+\end{equation}
+slots: for a success this is the sole sender's length, and for a collision it is
+the longest colliding frame, as in standard IEEE 802.11 without collision
+detection. An idle slot consumes one slot. Charging a collision the full frame
+length is the conservative choice; a bounded-collision variant, in which an
+early collision detection or notification aborts the colliding frames after a
+short overhead, would only reduce this cost and is discussed in
+Section~\ref{sec:performance_evaluation}.
 
 Fig.~\ref{fig:contention} illustrates this slotted contention on the NPCA
 primary channel and contrasts the two schemes studied in this paper. In
@@ -359,9 +376,8 @@ Section~\ref{sec:pace_algorithm}.
 \begin{algorithmic}[1]
 \REQUIRE PPDU length $L_i$ (slots), window $W_\mathrm{eff}$, factors $c_\mathrm{coll},\,c_\mathrm{idle}>1$
 \PHASE {/* Phase (a): Probability Initialization */}
-\STATE $\tau_i \leftarrow 1/W_\mathrm{eff}$ 
-\FOR{$t = 0$ \TO $W_\mathrm{eff}-1$}
-    \STATE $W_\mathrm{rem} \leftarrow W_\mathrm{eff} - t$
+\STATE $\tau_i \leftarrow 1/W_\mathrm{eff}$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{eff}$
+\WHILE{$W_\mathrm{rem} > 0$}
     \PHASE {/* Phase (b): PPDU-aware Self-Exclusion */}
     \IF{$L_i > W_\mathrm{rem}$}
         \STATE $\tau_i \leftarrow 0$
@@ -369,22 +385,23 @@ Section~\ref{sec:pace_algorithm}.
     \PHASE {/* Phase (c): Probabilistic Channel Access */}
     \STATE draw $u \sim \mathrm{Uniform}(0,1)$
     \IF{$u < \tau_i$}
-        \STATE transmit the PPDU advertising $\tau_i$ 
+        \STATE transmit the PPDU advertising $\tau_i$
         \IF{solo success}
-            \STATE \textbf{break} 
+            \STATE \textbf{break}
         \ENDIF
+        \STATE $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_{\max}(t)$ \COMMENT{collided: medium busy for the longest colliding frame}
     \ELSE
         \PHASE {/* Phase (d): Feedback-based Adaptation */}
         \STATE observe the slot outcome $|\mathcal{D}(t)|$
         \IF{$|\mathcal{D}(t)| = 0$}
-            \STATE $\tau_i \leftarrow \min(\tau_i \cdot c_\mathrm{idle},\;1)$ 
+            \STATE $\tau_i \leftarrow \min(\tau_i \cdot c_\mathrm{idle},\;1)$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - 1$
         \ELSIF{$|\mathcal{D}(t)| = 1$}
-            \STATE $\tau_i \leftarrow \tau_\mathrm{sender}$ 
+            \STATE $\tau_i \leftarrow \tau_\mathrm{sender}$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_{\max}(t)$
         \ELSE
-            \STATE $\tau_i \leftarrow \tau_i / c_\mathrm{coll}$ 
+            \STATE $\tau_i \leftarrow \tau_i / c_\mathrm{coll}$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_{\max}(t)$
         \ENDIF
     \ENDIF
-\ENDFOR
+\ENDWHILE
 \end{algorithmic}
 \end{algorithm}
 
@@ -441,51 +458,29 @@ which depends only on the effective window $W_\mathrm{eff}$, which is a quantity
 In general frame length to be transmitted on NPCA primacy channel is longer than a single slot, so $\tau_0 $ is bound to be smaller than the optimal value. This choice is deliberately biased toward under-attempting for two reasons. First, it is self-correcting in the safe direction: an over-conservative $\tau_i$ is raised toward the operating point within a few slots by the idle-driven multiplicative increase in Phase~(d), whereas an over-aggressive start triggers collisions whose wasted slots cannot be reclaimed inside a finite window. The MIMD recovery is thus asymmetric, and starting low pays only a bounded ramp-up cost. Second, $1/W_\mathrm{eff}$ tracks the regime where initialization matters most: when the window is tight ($W_\mathrm{eff}\!\approx\!N$) it already approximates the optimum $1/N$, and when the window is loose ($W_\mathrm{eff}\!\gg\!N$) the mild initial timidity is erased by the idle increase long before the window drains. 
 % Section~\ref{sec:performance_evaluation} shows that this locally computable initialization stays within a few percent of the count-aware optimum across the entire window-tightness range, while aggressive or wide-spread initializations collapse---confirming that PACE inherits the initialization-robustness of neighbor discovery only when the initial scale is kept at or below $1/W_\mathrm{eff}$.
 
-\subsection{PPDU-aware Self Exclusion}
+\subsection{PPDU-aware Self-Exclusion}
 \label{subsec:self_exclusion}
 
 At the start of every slot a STA compares its own frame length $L_i$ to the remaining window $W_\mathrm{rem}(t)$. If $L_i > W_\mathrm{rem}(t)$ the frame can no longer finish before the deadline, so the STA sets $\tau_i=0$ and falls silent for the rest of the visit. The test is purely local. That means it involves only the STA's own $L_i$ and the slot index and thus, like initialization, requires no knowledge of the contending population.
 
-Self exclusion keeps the optimal target that PACE aims to track,
+Self-exclusion keeps the optimal target that PACE aims to track,
 \begin{equation}
     \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
     \label{eq:tau_opt}
 \end{equation}
-meaningful in a heterogeneous and finite window. In a slot with
-$|\mathcal{V}(t)|$ viable STAs, a success, meaning exactly one transmitter, is
-most likely when each attempts with probability $\tau^*(t)$, and this target
-rises over the visit as the viable set drains. A STA whose frame no longer
-fits is removed from the viable set $\mathcal{V}(t)$ of~\eqref{eq:viable}, so it
-neither wastes slots on doomed attempts nor inflates the contention seen by the
-STAs that can still succeed. This plays the same role as the collision detection
-departure of the original neighbor discovery algorithm, in which a STA
-leaves the contention once its advertisement succeeds. Here a STA also
-leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$
-toward the set of STAs that genuinely compete for the remaining slots.
+meaningful in a heterogeneous and finite window. In a slot with $|\mathcal{V}(t)|$ viable STAs, a success, meaning exactly one transmitter, is most likely when each attempts with probability $\tau^*(t)$, and this target rises over the visit as the viable set drains. A STA whose frame no longer fits is removed from the viable set $\mathcal{V}(t)$ of Eq.~\eqref{eq:viable}, so it neither wastes time on attempts destined to fail nor inflates the contention seen by the STAs that can still succeed. This plays the same role as the collision detection departure of the original neighbor discovery algorithm, in which a STA leaves the contention once its advertisement succeeds. Here a STA also leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$ toward the set of STAs that genuinely compete for the remaining slots.
 
-\subsection{Phase (c): Probabilistic Channel Access}
+\subsection{Probabilistic Channel Access}
 \label{subsec:channel_access}
 
-A STA that is still viable transmits in the current slot with probability
-$\tau_i$ and otherwise listens. Because the radio is half-duplex, a transmitting
-STA cannot sense the slot it occupies, so it performs no adaptation on its
-own transmissions. Each transmitted PPDU advertises the sender's current
-$\tau_i$ in its header, which the listeners use in Phase~(d).
+A STA that is still viable transmits in the current slot with probability $\tau_i$ and otherwise listens. Because the radio is half-duplex, a transmitting STA cannot sense the slot it occupies, so it performs no adaptation on its own transmissions. Each transmitted PPDU advertises the sender's current $\tau_i$ in its header, which the listeners use in Phase~(d).
 
-A slot is a success when exactly one viable STA transmits and its frame fits
-the remaining window. The winner then departs the visit---mirroring the
-post-success departure of neighbor discovery---which decrements
-$|\mathcal{V}(t)|$ and raises the optimal target $\tau^*(t)$ for the STAs
-that remain. Slots with no transmission are idle, and slots with two or more
-transmissions are collisions; both outcomes are observed by every non-transmitting
-STA and feed the adaptation of Phase~(d).
+A slot is a success when exactly one viable STA transmits and its frame fits the remaining window. The winner then departs the visit---mirroring the post-success departure of neighbor discovery---which decrements $|\mathcal{V}(t)|$ and raises the optimal target $\tau^*(t)$ for the STAs that remain. Slots with no transmission are idle, and slots with two or more transmissions are collisions; both outcomes are observed by every non-transmitting STA and feed the adaptation of Phase~(d).
 
-\subsection{Phase (d): Feedback-based Adaptation}
+\subsection{Feedback-based Adaptation}
 \label{subsec:adaptive_control}
 
-Every viable STA that listened in the slot updates $\tau_i$ from the slot
-outcome $|\mathcal{D}(t)|$ using the multiplicative-increase/multiplicative-decrease
-rule inherited from neighbor discovery:
+Every viable STA that listened in the slot updates $\tau_i$ from the slot outcome $|\mathcal{D}(t)|$ using the multiplicative-increase and multiplicative-decrease (MIMD) rule inherited from neighbor discovery:
 \begin{equation}
 \tau_i \leftarrow
 \begin{cases}
@@ -540,6 +535,18 @@ visitors, by contrast, use Channel~\#2 only opportunistically, during NPCA
 visits. Two contention disciplines therefore coexist on the NPCA primary
 channel: the native STAs' persistent DCF and the visitors' bounded
 PACE-driven access.
+
+Because the slot outcome $\mathcal{D}(t)$ is measured on the channel, native
+activity enters a visitor's feedback directly. A slot in which two or more
+frames overlap is a collision whether the extra transmitter is a visitor or a
+native, so a native transmission that clashes with a visitor lowers that
+visitor's $\tau_i$ through~\eqref{eq:mimd}, and a slot with no transmission at
+all, native or visitor, is idle and raises it. The solo case is the one
+exception. The copy $\tau_i \leftarrow \tau_\mathrm{sender}$ requires the
+successful frame to advertise a probability, which only a PACE visitor does.
+When a native transmits alone its frame carries no such value, so a listening
+visitor keeps $\tau_i$ unchanged and simply observes the busy slot while the
+window continues to shrink.
 
 Because the two BSSs only partially overlap in coverage
 (Fig.~\ref{fig:topology_and_channel}), the native contention a visitor

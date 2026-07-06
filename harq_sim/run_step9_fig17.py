@@ -104,6 +104,28 @@ FIELDS = [
 ]
 
 
+# ─── Collision-cost model ─────────────────────────────────────────────────────
+# Slots a collision consumes. Pluggable so CD / CN features can be applied later.
+#   "nocd" : standard 802.11 CSMA/CA — the medium is busy until the longest
+#            colliding frame ends, so a collision costs max_i L_i  (DEFAULT).
+#   "cd"   : ideal collision detection — colliders abort after one slot.
+#   "cn"   : CSMA/CN-style notification (Sen et al.) — bounded constant overhead.
+# A successful (solo) frame always advances the window by its own L_i; an idle
+# slot by 1.  Set COLLISION_MODE to switch the whole figure family at once.
+COLLISION_MODE = "nocd"
+CN_COST_SLOTS  = 2          # CSMA/CN abort overhead ≈ 18-22 us ≈ 2-3 slots (σ=9us)
+
+
+def collision_cost(ppdus: np.ndarray, tx: np.ndarray) -> int:
+    """Slots consumed by a collision under the active COLLISION_MODE."""
+    if COLLISION_MODE == "cd":
+        return 1
+    if COLLISION_MODE == "cn":
+        return CN_COST_SLOTS
+    idx = np.where(tx)[0]                       # "nocd": longest colliding frame
+    return int(ppdus[idx].max()) if idx.size else 1
+
+
 # ─── PPDU samplers ────────────────────────────────────────────────────────────
 
 def sample_ppdu(dist_name: str, N: int, rng: np.random.Generator) -> np.ndarray:
@@ -138,6 +160,8 @@ def _run_oracle_visit(W_eff: int, ppdus: np.ndarray, rng: np.random.Generator) -
             succeeded[i] = True
             W_rem -= int(ppdus[i])
             successes += 1
+        elif n_tx > 1:
+            W_rem -= collision_cost(ppdus, tx)
         else:
             W_rem -= 1
 
@@ -237,6 +261,8 @@ def _run_visit(
                 outcome_coll = True
                 if k_viable > 0:
                     viable_idle_slots += 1
+        elif outcome_coll:
+            W_rem -= collision_cost(ppdus, tx)
         else:
             W_rem -= 1
             if outcome_idle and k_viable > 0:
@@ -459,6 +485,8 @@ def run_trajectory_visit(
                 tau[i] = 0.0
                 if method == "dcf_self_excl":
                     dcf_bo[i] = W_eff + 1
+            elif outcome_coll:
+                W_rem -= collision_cost(ppdus, tx)
             else:
                 W_rem -= 1
 
@@ -697,7 +725,7 @@ def plot(rows: list, traj_data: dict, fig_dir: str) -> None:
         f"(Bernoulli Aloha/DCF, N∈[10,50], PPDU U[3,12], PND cc={PND_C_COLL}/ci={PND_C_IDLE}, +AND baseline)",
         fontsize=12,
     )
-    _save_figure(fig, fig_dir, "fig17_ppdu_aware_tau")
+    _save_figure(fig, fig_dir, "fig17_ppdu_aware_tau_")
     plt.close(fig)
 
 

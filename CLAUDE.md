@@ -55,6 +55,10 @@ NPCA 방문에서의 throughput-optimal τ*(t) (classical slotted ALOHA 확장):
 
 ## 시뮬레이션 결과 요약
 
+> **⚠️ Collision-cost 모델 변경 (base = no-CD)**: fig17/19/20/21은 collision 비용을 **최장 충돌 프레임 길이**(`max L_i`, 표준 802.11 CSMA/CA)로 청구하도록 재생성됨. 이전엔 collision=1 slot(ideal CD). 코드: `run_step9_fig17.py`의 `COLLISION_MODE`(`nocd`/`cd`/`cn`) + `collision_cost()`. 재생성본 파일명 = trailing `_` (원본 보존). fig15는 unit-frame 모델이라 무관, fig22는 `cd` pin, fig23은 cd/cn/nocd 비교 전용.
+>
+> **핵심**: no-CD에서 절대 util ~40%↓지만 **PACE 상대 우위 전부 보존** — fig17 pnd>dcf 순서, fig20 Pareto-dominant(TP+Jain), fig21 total +18%. 즉 PACE 이득은 cheap-collision 가정의 artifact 아님(robustness). 아래 표는 **no-CD 재생성 수치**(괄호 안 = 이전 CD 값).
+
 ### Fig 15: throughput-optimal vs DCF (tight window regime)
 
 | 조건 | adaptive-optimal 대비 DCF |
@@ -85,27 +89,30 @@ NPCA 방문에서의 throughput-optimal τ*(t) (classical slotted ALOHA 확장):
 
 ### Fig 20: Throughput–Fairness (bimodal {4,12}, W_eff=50, N=20)
 
+no-CD 재생성 (괄호=이전 CD):
+
 | 방법 | Throughput | Jain's J |
 |---|---|---|
-| pnd | **0.772** | **0.263** |
-| dcf_self_excl | 0.669 | 0.228 |
-| and | 0.409 | 0.155 |
+| pnd | **0.457** (0.772) | **0.178** (0.263) |
+| dcf_self_excl | 0.430 (0.669) | 0.165 (0.228) |
+| and | 0.000 (0.409) | — (0.155) |
 
-PACE = Pareto-dominant: 처리량·공정성 동시 최고.
+PACE = **Pareto-dominant 유지** (H4 PASS): TP 0.457>0.430 AND Jain 0.178>0.165. AND는 nocd에서 붕괴(TP≈0).
 
 ### Fig 21: Native vs Visitor Fairness (bimodal {4,12}, W_eff=50, N_visitor=10, N_native=10)
 
-| 방법 | util_v | util_n | prop |
-|---|---|---|---|
-| oracle | 0.555 | 0.206 | 1.39 |
-| pnd | **0.593** | 0.162 | **1.51** |
-| pnd_cd | 0.586 | 0.166 | 1.49 |
-| dcf_self_excl | 0.354 | **0.293** | 1.00 |
-| and | 0.601 | 0.027 | 1.90 |
+no-CD 재생성 (괄호=이전 CD):
 
-- pnd_cd ≈ pnd: NPCA finite window에서 ACK 기반 CD의 marginal 효과 미미 (PPDU-aware self-exclusion이 CD 역할 대체)
-- AND: prop=1.90 > pnd=1.51 — open-loop 초기 high-τ 선점으로 native BEB 폭증
-- PND native 침해: native_preservation=0.265 (native 단독 대비 26.5%) — 논문 한계로 명시
+| 방법 | util_v | util_n | util_t | prop |
+|---|---|---|---|---|
+| oracle | 0.383 (0.555) | 0.146 (0.206) | 0.530 | 1.38 (1.39) |
+| pnd | **0.377** (0.593) | 0.118 (0.162) | **0.496** | **1.44** (1.51) |
+| dcf_self_excl | 0.228 (0.354) | **0.192** (0.293) | 0.420 | 0.99 (1.00) |
+
+- **PACE total +18%** (0.496 vs dcf 0.420) — CD(+17%) 대비 유지. visitor util pnd +65% (0.377 vs 0.228).
+- native tradeoff 동일: pnd nat_pres=0.271, dcf=0.439 (dcf가 native에 공정). 논문 한계로 명시.
+- AND: nocd에서 붕괴 (util_v≈0).
+- pnd_cd는 METHODS_21에서 제외됨(plotted set = oracle/pnd/dcf).
 
 ### Fig 22: Initial τ₀ sensitivity (PND Fig 2 대응, uniform PPDU U[3,12])
 
@@ -125,6 +132,24 @@ RQ: PND은 무한 horizon에서 init τ₀ 무관 (randomized≈optimal, 빠른 
 - 유한 창 = 붕괴 증폭 (τ 낮출 시간 없음, W20 최악)
 
 → PND의 "init 무관" 주장은 scale-matched 조건부. PACE 유한창+이질 PPDU가 infinite-horizon 분석이 숨긴 regime 노출.
+
+### Fig 23: Collision-cost model — ideal CD vs no-CD (bimodal {4,12}, W_eff=50)
+
+RQ: 시뮬레이터는 collision을 1 slot으로 청구 (ideal CD / RTS-CTS식 짧은 경쟁 전제). CD 없으면 collision = colliding STA들의 max L_i (success와 유사). CD 가정이 결과에 얼마나 영향? PACE 이득 유지되나?
+
+| N | CD PACE/DCF | no-CD PACE/DCF |
+|---|---|---|
+| 10 | 1.161 | 1.104 |
+| 20 | 1.154 | 1.064 |
+| 30 | 1.156 | 1.041 |
+| 50 | 1.162 | 1.037 |
+
+- **PACE는 두 regime 모두 DCF 이김** (역전 아님 — 초기 1-seed 반전은 노이즈였음).
+- CD면 +15~16% 안정, no-CD면 +4~10%로 축소 (N↑ 하면 1로 수렴).
+- collision rate (no-CD): pnd 0.24~0.27 > dcf 0.16~0.17, oracle 0.28, **and ~1.0(붕괴)**. PACE(τ*=1/viable)는 success 확률 최대화하려 충돌 감수 → 비싼 충돌에 더 손해 → 이득 축소.
+- 전 기법 util 급락: oracle/pnd 0.77→0.47, dcf 0.66→0.44, and→0.
+
+핵심: **1-slot collision 가정은 PACE에 보수적이 아니라 유리(advantage 증폭).** τ*=1/|V|가 optimal인 건 충돌 쌀 때만. **PACE는 RTS/CTS식 짧은 경쟁(충돌≈1slot)을 본질적으로 전제** — 논문에 assumption 명시 필요. 단 PACE 우위는 pessimistic no-CD에서도 살아남음(robustness).
 
 ---
 

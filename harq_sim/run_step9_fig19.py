@@ -145,7 +145,7 @@ def plot(rows: list, traj_data: dict, out_dir: str, fig_dir: str) -> None:
         fontsize=11,
     )
 
-    fig_name = "fig19_dcf_benchmark"
+    fig_name = "fig19_dcf_benchmark_"
     for ext, kwargs in [
         ("eps", dict(format="eps", bbox_inches="tight")),
         ("png", dict(format="png", bbox_inches="tight", dpi=300)),

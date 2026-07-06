@@ -544,6 +544,11 @@ def plot(rows, traj, out_dir, fig_dir) -> None:
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # This figure's local visit functions charge a collision one slot, so pin the
+    # shared oracle helper to the same model for internal consistency and to
+    # reproduce the published fig22 numbers. (Base family default is now "nocd".)
+    _f17.COLLISION_MODE = "cd"
+
     parser = argparse.ArgumentParser(
         description="Figure 22 — Initial transmission probability sensitivity of PACE")
     parser.add_argument("--fast", action="store_true",
