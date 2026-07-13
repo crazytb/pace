@@ -480,7 +480,7 @@ A slot is a success when exactly one viable STA transmits and its frame fits the
 \subsection{Feedback-based Adaptation}
 \label{subsec:adaptive_control}
 
-Every viable STA that listened in the slot updates $\tau_i$ from the slot outcome $|\mathcal{D}(t)|$ using the multiplicative-increase and multiplicative-decrease (MIMD) rule inherited from neighbor discovery:
+Every viable STA that listened in the slot updates $\tau_i$ from the slot outcome $|\mathcal{D}(t)|$ using the multiplicative-increase and multiplicative-decrease (MIMD) rule inherited from neighbor discovery as
 \begin{equation}
 \tau_i \leftarrow
 \begin{cases}
@@ -490,22 +490,12 @@ Every viable STA that listened in the slot updates $\tau_i$ from the slot outcom
 \end{cases}
 \label{eq:mimd}
 \end{equation}
-with $c_\mathrm{idle},c_\mathrm{coll}>1$. An idle slot signals that the
-population has been overestimated and the attempt rate is raised; a collision
-signals the opposite and lowers it. The middle case is the key term for a finite
-window: on a solo success every listener copies the advertised $\tau_\mathrm{sender}$,
-so a single successful slot propagates the winning operating point to the whole
-contending set at once, giving PACE the fast intra-visit consensus that pure
-increase/decrease cannot.
+with $c_\mathrm{idle},c_\mathrm{coll}>1$. 
 
-None of the three updates counts the viable STAs. Instead, the idle and
-collision statistics move each $\tau_i$ toward the operating point implicitly,
-and solo-copy pulls the population onto a common value, so the ensemble
-approximately tracks the time-varying optimum $\tau^*(t)$ of~\eqref{eq:tau_opt}
-without ever estimating $|\mathcal{V}(t)|$. Convergence is not instantaneous---a
-few slots of adaptation lag remain after each change in the viable set---which is
-why PACE approaches, but does not exactly attain, the oracle in the tightest
-windows.
+An idle slot signals that the
+population has been overestimated and the attempt rate is raised by the factor of $c_\mathrm{idle}$. On the other hand, a collision signals the opposite, hence, once STAs detect a collision, the attempt rate is divided by $c_\mathrm{coll}$ to reduce the contention. On a solo success, every listener copies the advertised $\tau_\mathrm{sender}$, so a single successful slot propagates the winning operating point to the whole contending set at once, giving PACE the fast intra-visit consensus.
+
+None of the three updates counts the viable STAs. Instead, the idle and collision statistics move each $\tau_i$ toward the operating point implicitly, and solo-copy pulls the population onto a common value, so the ensemble approximately tracks the time-varying optimum $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt} without estimating $|\mathcal{V}(t)|$. 
 
 The direction of this adaptation is what separates PACE from legacy Binary
 Exponential Backoff. Because the viable set only shrinks over a visit---STAs
@@ -566,7 +556,156 @@ Section~\ref{sec:performance_evaluation}.
 
 \section{Performance Evaluation}
 \label{sec:performance_evaluation}
-\blindtext
+
+\begin{table}[t]
+\centering
+\caption{Simulation Parameters}
+\label{tab:sim_params}
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Contending STAs $N$              & $\{10, 20, 30, 50\}$ \\
+Effective window $W_\mathrm{eff}$ & $\{20, 50, 100, 200\}$ slots \\
+Slot time $\sigma$               & $9~\mu$s \\
+PPDU length (homo / uniform / bimodal) & $6$ / $\mathcal{U}[3,12]$ / $\{4,12\}$ slots \\
+Native STAs $M$ (mixed setting)  & $\{0, 5, 10, 20\}$ \\
+Initial probability $\tau_0$     & $1/W_\mathrm{eff}$ \\
+MIMD factors $c_\mathrm{coll},c_\mathrm{idle}$ & $1.2$ \\
+DCF window $\mathrm{CW}_0$ / $\mathrm{CW}_{\max}$ & $N$ / $1023$ \\
+Collision cost                   & $\max_{i\in\mathcal{D}(t)} L_i$ \\
+Visits per point / seeds         & $1000$ / $5$ \\
+\hline
+\end{tabular}
+\end{table}
+
+We evaluate PACE in the slotted NPCA contention model of
+Section~\ref{subsec:npca_window}; Table~\ref{tab:sim_params} summarizes the
+parameters. Unless stated otherwise, a visit is contended
+by $N\in\{10,20,30,50\}$ stations over an effective window
+$W_\mathrm{eff}\in\{20,50,100,200\}$ slots, PPDU lengths are drawn from a
+homogeneous, uniform $\mathcal{U}[3,12]$, or bimodal $\{4,12\}$ distribution, and
+each data point averages $1000$ visits over five seeds. PACE uses
+$\tau_0=1/W_\mathrm{eff}$ and $c_\mathrm{coll}=c_\mathrm{idle}=1.2$. A collision
+is charged the full length of the longest colliding frame,
+eq.~\eqref{eq:lmax}. We compare PACE against standard DCF with binary exponential
+backoff, the open-loop AND schedule~\cite{vasudevan2013efficient}, and an oracle
+that transmits at $\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the
+viable set. Performance is reported as the window utilization
+$\sum_i L_i\,\mathbf{1}[\text{success}]/W_\mathrm{eff}$, its ratio to the oracle
+(efficiency), and, for fairness, Jain's index and a native-versus-visitor
+proportionality index.
+
+\subsection{Utilization Gain in the Tight-Window Regime}
+\label{subsec:eval_tightwindow}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig15_mfg_npca.pdf}
+    \caption{Window utilization of the throughput-optimal policy and DCF versus
+    window tightness.}
+    \label{fig:eval_tightwindow}
+\end{figure}
+
+Fig.~\ref{fig:eval_tightwindow} isolates the regime in which adaptive access
+matters. As the window tightens toward $W_\mathrm{eff}\!\approx\!N$, the fixed
+backoff of DCF leaves a growing share of the window idle, and the gap to the
+time-varying optimum widens to over $70\%$; once $W_\mathrm{eff}\!\gg\!N$ the
+window is no longer the binding constraint and DCF recovers. This identifies the
+tight window as the operating point that the rest of the evaluation targets.
+
+\subsection{Tracking the Time-Varying Optimum}
+\label{subsec:eval_tracking}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig19_dcf_benchmark_.pdf}
+    \caption{Per-slot attempt probability over a visit and window utilization
+    versus $N$, for PACE, DCF, AND, and the oracle.}
+    \label{fig:eval_tracking}
+\end{figure}
+
+Fig.~\ref{fig:eval_tracking} shows why PACE closes this gap. Over a single visit
+its ensemble attempt probability rises along the oracle's $\tau^*(t)$ track as
+the viable set drains, whereas DCF sawtooths in the opposite direction, halving
+its rate on every collision, and AND follows a fixed open-loop schedule blind to
+the deadline. The resulting utilization keeps PACE close to the oracle across
+$N$, ahead of DCF, while AND collapses in the finite window.
+
+\subsection{Self-Exclusion under Heterogeneous Frame Lengths}
+\label{subsec:eval_selfexcl}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig17_ppdu_aware_tau_.pdf}
+    \caption{Efficiency relative to the oracle under heterogeneous PPDU lengths,
+    with and without PPDU-aware self-exclusion.}
+    \label{fig:eval_selfexcl}
+\end{figure}
+
+Fig.~\ref{fig:eval_selfexcl} isolates the contribution of the self-exclusion
+rule. When frame lengths are heterogeneous, silencing stations whose frame no
+longer fits the remaining window recovers the slots they would otherwise waste on
+doomed attempts, lifting efficiency toward the oracle; adding the MIMD feedback
+on top closes most of the residual gap. The ordering is preserved across the
+PPDU distributions and confirms that both components of PACE are needed.
+
+\subsection{Throughput--Fairness Trade-off}
+\label{subsec:eval_fairness}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig20_fairness_.pdf}
+    \caption{Aggregate throughput versus Jain's fairness index across PPDU
+    classes for PACE, DCF, and AND.}
+    \label{fig:eval_fairness}
+\end{figure}
+
+Fig.~\ref{fig:eval_fairness} examines whether the utilization gain comes at the
+expense of fairness across frame-length classes. PACE Pareto-dominates DCF,
+achieving both higher aggregate throughput and a higher Jain index, while AND
+sacrifices throughput almost entirely. PACE thus improves efficiency without
+trading away inter-class fairness.
+
+\subsection{Coexistence with Native Stations}
+\label{subsec:eval_coexistence}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig21_native_visitor_fairness_.pdf}
+    \caption{Visitor and native window utilization when NPCA visitors share the
+    channel with permanent native DCF stations.}
+    \label{fig:eval_coexistence}
+\end{figure}
+
+Fig.~\ref{fig:eval_coexistence} evaluates the mixed setting in which NPCA
+visitors contend against the native stations that own the channel. PACE raises
+visitor throughput and total channel utilization well above DCF, recovering idle
+airtime that would otherwise be lost. This gain does come at a cost in native
+airtime, which we report rather than hide: because PACE is more aggressive than
+the collision-averse DCF, it preserves less of the native throughput, a trade-off
+we return to in the discussion.
+
+\subsection{Robustness to the Collision-Cost Model}
+\label{subsec:eval_collision}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figure/fig23_collision_cost.pdf}
+    \caption{PACE and DCF utilization under an ideal collision detection model
+    (collision costs one slot) and the no-detection model (collision costs the
+    longest colliding frame).}
+    \label{fig:eval_collision}
+\end{figure}
+
+Finally, Fig.~\ref{fig:eval_collision} tests whether the advantage of PACE is an
+artifact of the collision-cost assumption. Charging a collision one slot, as an
+ideal collision detection would, amplifies the gain of PACE over DCF; charging it
+the full frame length, as standard IEEE 802.11 does, reduces every scheme's
+utilization but preserves the ordering, with PACE still ahead of DCF. The
+benefit of PACE therefore holds across the full range of collision-cost models,
+and is only enhanced when a bounded-collision mechanism such as CSMA/CN is
+available~\cite{sen2010csma}.
 
 \section{Conclusion}
 \label{sec:conclusion}
