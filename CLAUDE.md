@@ -151,6 +151,29 @@ RQ: 시뮬레이터는 collision을 1 slot으로 청구 (ideal CD / RTS-CTS식 �
 
 핵심: **1-slot collision 가정은 PACE에 보수적이 아니라 유리(advantage 증폭).** τ*=1/|V|가 optimal인 건 충돌 쌀 때만. **PACE는 RTS/CTS식 짧은 경쟁(충돌≈1slot)을 본질적으로 전제** — 논문에 assumption 명시 필요. 단 PACE 우위는 pessimistic no-CD에서도 살아남음(robustness).
 
+### Fig 24: τ warm-start across NPCA transitions — mixed native/visitor (v2, nocd)
+
+RQ: 매 transition마다 visitor τ₀ cold 리셋은 지식 가정 내포 — fig21은 τ₀=1/N_total(**native 수까지 아는 genie**). 실제 visitor는 자기 그룹(N_v)만 앎. 동일 집단 반복 방문 → 이전 방문 τ carry(warm)가 genie 대체하나? 모델 = fig21 mixed(visitor 10 PACE + native DCF ppdu=6, N_nat∈{0,5,10,20}), V=50 연속 transition, visitor만 carry(성공=성공 직전 τ, 미성공=종료 τ), native solo 승리는 visitor τ 무갱신(외부 이벤트). 효율 = Σvisitor succ/Σoracle succ (ratio-of-means). v1(visitor-only)은 비현실적이라 폐기.
+
+Steady-state visitor efficiency (transition≥25, churn=0):
+
+| method | nat0 | nat10 | nat20 |
+|---|---|---|---|
+| cold_genie (1/N_total) | 0.952 | 0.947 | 0.971 |
+| cold_nv (1/N_visitor) | 0.954 | 0.947 | 1.099 |
+| cold_high (0.5, 무기억) | 0.132 | 0.162 | 0.201 |
+| warm_nv / warm_high | ~0.75 | ~0.86 | ~1.03 |
+
+- **핵심 (H2)**: warm_high 0.866 vs cold_high 0.162 = **×5.3** — 무지식 init도 기억으로 ~5 transition 내 근-genie 회복. warm_nv ≈ warm_high 전 구간 (기억이 init 지움 = init-free).
+- **H1 부분**: warm은 cold_nv 역전 못함, 단 격차 native 부하와 단조 축소 (Δ -0.20 nat0 → -0.07 nat20).
+- **carry 인플레이션 (v1보다 심함)**: warm τ₀ 고정점 0.128~0.167 (1/N_total 0.033~0.10 대비 상방). 원인: 종료 τ = 잔존 viable≪N 반영 + native 승리 슬롯은 solo-copy 보정 기회 없음. shrink 보정 = future work.
+- **churn 비대칭 (H4)**: warm_nv는 churn↑ 개선(교체=1/N_v 재주입=인플레이션 리셋), warm_high는 ρ=0.1에서 0.50 급락(신규 τ=0.5 오염 — fig22 메커니즘).
+- **주의**: efficiency>1 가능 — oracle은 전 STA 공평 기준선. cold_nv nat20의 1.099는 native 억압에 의한 탈취 (util_n: oracle 0.15 vs cold_nv 0.05). fairness는 fig21 지표 병행.
+- **채널 효율/공정성 (panel e/f, nat10)**: total util = oracle 0.54 / genie 0.50 / nv 0.43 / warm 0.38 / high 0.05, airtime prop = 1.44/1.53/1.76/1.81/무의미. ① native-count 지식의 수혜자는 visitor가 아니라 **채널**(visitor 효율 동일, total +16%, native 몫 2배) ② 기억은 그룹-지식 수준까지만 회복(prop≈cold_nv) ③ oracle도 prop 1.44>1 = 구조적(visitor PPDU 길고 native DCF는 idle에만 backoff 감소) — prop=1 달성 불가, oracle이 실질 공정 기준 ④ cold_high는 채널 전체 파괴(util_n≈0).
+- **conventional NPCA 대비 (dcf_conv = 표준 CSMA/CA visitor, CW_min=16 BEB)**: visitor 효율 nat0 0.99 → nat10 0.60 (BEB sawtooth 유한창 붕괴, fig19 재현). 대신 **최공정**: prop 1.01~1.65 (oracle보다 낮음), util_n 0.155 ≈ oracle. **PACE warm vs 표준 = 효율-공정 trade-off**: visitor +45% (0.866 vs 0.597), 대가 native 몫 1/4 + prop 1.81 vs 1.22. PACE 이득에 native 억압분 포함 — 논문에 명시, fairness 보정(τ cap) = future work.
+
+→ 논문 포지셔닝: cold 성능은 τ₀의 지식량에 비례(genie 0.95/무지식 0.16) — **warm-start는 지식 축을 기억으로 대체** (무지식→0.87). 코드: `run_step9_fig24.py`, 상세: `guidelines/step9/fig24.md`.
+
 ---
 
 ## 파일 구조
