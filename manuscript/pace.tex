@@ -596,14 +596,14 @@ $\sum_i L_i\,\mathbf{1}[\text{success}]/W_\mathrm{eff}$, its ratio to the oracle
 (efficiency), and, for fairness, Jain's index and a native-versus-visitor
 proportionality index.
 
-\subsection{Why PACE: Visitor Airtime under Native Load}
+\subsection{Why PACE: Channel Airtime under Mixed Contention}
 \label{subsec:eval_whypace}
 
 \begin{figure}[t]
     \centering
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figure/fig1-1.pdf}
+        \includegraphics[width=\linewidth]{figure/fig1-1_total.pdf}
         \caption{Basic access (no RTS/CTS).}
         \label{fig:why_pace_basic}
     \end{subfigure}
@@ -611,52 +611,63 @@ proportionality index.
 
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=\linewidth]{figure/fig1-2.pdf}
+        \includegraphics[width=\linewidth]{figure/fig1-2_total.pdf}
         \caption{Mandatory RTS/CTS.}
         \label{fig:why_pace_rts}
     \end{subfigure}
-    \caption{Visitor useful airtime versus the number of visitor STAs $N$ for
-    standard-compliant NPCA (CSMA/CA visitors), PACE, and the oracle, in the
-    mixed native/visitor channel with $M=10$ native DCF stations, under
-    IEEE~802.11 timing ($W_\mathrm{eff}=3.78$~ms, visitor PPDU
-    $225$--$900~\mu$s, native PPDU $450~\mu$s).}
+    \caption{Total useful airtime (visitor and native combined) versus the
+    number of visitor STAs $N$ for standard-compliant NPCA (CSMA/CA
+    visitors), PACE, and the oracle, in the mixed native/visitor channel
+    with $M=10$ native DCF stations, under IEEE~802.11 timing
+    ($W_\mathrm{eff}=3.78$~ms, visitor PPDU $225$--$900~\mu$s, native PPDU
+    $450~\mu$s).}
     \label{fig:why_pace}
 \end{figure}
 
 We first ask the question that motivates this work: what does PACE buy over
 simply running the standard access procedure on the non-primary channel?
-Fig.~\ref{fig:why_pace} compares $N\in\{5,\dots,50\}$ visitor STAs operating
-either standard CSMA/CA ($\mathrm{CW}_{\min}=16$, binary exponential
-backoff, with the NPCA minimum-duration check) or PACE with $\tau$ carried
-across transitions, sharing the channel with $M=10$ native DCF stations,
-using IEEE~802.11 OFDM timing ($\sigma=9~\mu$s).
+The design objective of PACE is not visitor throughput per se, but to keep
+the shared NPCA channel \emph{efficient and fair}: the oracle
+$\tau^*(t)=1/|\mathcal{V}(t)|$, computed over \emph{all} contenders, is
+precisely the embodiment of that objective, and the evaluation therefore
+reports the \emph{total} useful airtime of the channel.
+Fig.~\ref{fig:why_pace} compares $N\in\{5,\dots,50\}$ visitor STAs
+operating either standard CSMA/CA ($\mathrm{CW}_{\min}=16$, binary
+exponential backoff, with the NPCA minimum-duration check) or PACE with
+$\tau$ carried across transitions, sharing the channel with $M=10$ native
+DCF stations, using IEEE~802.11 OFDM timing ($\sigma=9~\mu$s).
 
-Under basic access (Fig.~\ref{fig:why_pace_basic}), the standard visitor
-fails at both ends of the range, for two different reasons. When visitors
-are few ($N=5$), they are outnumbered by natives whose traffic keeps the
-channel busy; since the DCF countdown advances only in idle slots, the
-visitors' backoff is frozen for most of the visit and their airtime stalls
-at $0.18$. When visitors are many ($N=50$), the fixed
-$\mathrm{CW}_{\min}=16$ is far below the contention level: collisions
-cascade, each charged the full length of the longest colliding frame, and
-the standard visitors not only fall to $0.14$ but drag the whole channel
-down with them (total utilization $0.14$). PACE instead grows
-monotonically from $0.29$ to $0.41$---its initialization
-$\tau_0=1/N$ scales with the group size, the MIMD feedback absorbs the
-residual contention, and PPDU-aware self-exclusion silences stations whose
-frames no longer fit---delivering up to $2.9\times$ the standard visitor
-airtime at $N=50$.
+Under basic access (Fig.~\ref{fig:why_pace_basic}), the channel under
+standard-compliant visitors degrades monotonically as the visitor
+population grows, from $0.51$ at $N=5$ to $0.14$ at $N=50$: the fixed
+$\mathrm{CW}_{\min}=16$ is far below the contention level, collisions
+cascade---each charged the full length of the longest colliding
+frame---and the visitors drag natives down with them. The standard
+procedure thus does not merely starve the visitors; it destroys the
+channel. PACE moves in the opposite direction, growing from $0.33$ to
+$0.43$: its initialization $\tau_0=1/N$ scales with the group size, the
+MIMD feedback absorbs the residual contention, and PPDU-aware
+self-exclusion silences stations whose frames no longer fit, preserving
+$3\times$ the channel airtime of the standard procedure at $N=50$. At low
+visitor counts the ordering reverses ($0.33$ vs.\ $0.51$ at $N=5$): the
+starved standard visitors leave the channel to the natives, whereas the
+warm-started $\tau$ of PACE overshoots the sparse visitor population and
+suppresses native access without enough visitor demand to reuse the freed
+airtime---a convergence bias of the warm start that we quantify, together
+with its fairness cost, in the coexistence analysis.
 
 Mandatory RTS/CTS (Fig.~\ref{fig:why_pace_rts}) caps the collision cost at
 the RTS exchange ($78~\mu$s) at the price of an $88~\mu$s handshake on
 every success. This removes the dominant loss term of PACE---collision
 airtime---while it cannot repair the frozen-backoff idling of the standard
-visitor, whose airtime still peaks at $N=20$ and declines beyond it. PACE
-tracks the oracle over the whole range ($0.63$--$0.69$ for $N\ge 10$),
-exceeding the standard visitor by $53\%$ at $N=10$ and $41\%$ at $N=50$;
-the oracle transmits at the joint fair-share rate $1/|\mathcal{V}(t)|$ over
-\emph{all} contenders and is therefore a fairness reference rather than a
-visitor-throughput maximum, a point we return to in the fairness analysis.
+visitor, so the channel under standard visitors still declines from $0.69$
+to $0.51$ as $N$ grows. PACE instead tracks the oracle over the whole
+range $N\ge 10$ ($0.69$--$0.72$, within $3\%$ of the oracle), sustaining
+$41\%$ more channel airtime than the standard procedure at $N=50$. Taken
+together, the two panels justify PACE's premise: inside a finite NPCA
+window shared with natives, probabilistic deadline-aware access keeps the
+channel near its efficient-and-fair operating point where the standard
+backoff either idles or collides it away.
 
 \section{Conclusion}
 \label{sec:conclusion}

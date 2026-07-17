@@ -175,18 +175,20 @@ def _mean26(rows, metric, **kw) -> float:
 def _plot_one(rows, access: str, nat_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str,
               xkey: str = "N_native",
-              xlabel: str = "Number of native STAs $M$") -> None:
+              xlabel: str = "Number of native STAs $M$",
+              ykey: str = "succ_v",
+              ylabel: str = "Visitor airtime / $W_\\mathrm{eff}$") -> None:
     # Sized for a full-\columnwidth IEEE subfigure (stacked vertically) —
     # rendered ≈1:1, so use print-scale fonts (~9-10pt).
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
     for m in METHODS_26:
-        ys = [_mean26(rows, "succ_v", access=access, method=m, **{xkey: n})
+        ys = [_mean26(rows, ykey, access=access, method=m, **{xkey: n})
               for n in nat_list]
         ax.plot(nat_list, ys, label=_LABEL_26[m], **_STYLE_26[m])
     ax.set_xticks(nat_list)
     ax.tick_params(labelsize=8)
     ax.set_xlabel(xlabel, fontsize=9)
-    ax.set_ylabel("Visitor airtime / $W_\\mathrm{eff}$", fontsize=9)
+    ax.set_ylabel(ylabel, fontsize=9)
     ax.set_ylim(*ylim)
     ax.legend(fontsize=8, frameon=True, loc="best",
               handlelength=2.0, borderpad=0.35, labelspacing=0.35)
@@ -215,11 +217,19 @@ def plot(rows, nat_list: list, out_dir: str, fig_dir: str) -> None:
               "fig1-2_native_sweep")
 
 
-def plot_v(rows, nv_list: list, out_dir: str, fig_dir: str) -> None:
+def plot_v(rows, nv_list: list, out_dir: str, fig_dir: str,
+           total: bool = False) -> None:
     # Visitor sweep is the paper figure (Subsection A) → unsuffixed names.
+    xl = "Number of visitor STAs $N$"
+    if total:
+        ymax = max(r["useful"] for r in rows) * 1.12
+        for access, name in [("basic", "fig1-1_total"), ("rts", "fig1-2_total")]:
+            _plot_one(rows, access, nv_list, (0.0, ymax), fig_dir, out_dir,
+                      name, xkey="N_visitor", xlabel=xl, ykey="useful",
+                      ylabel="Total airtime / $W_\\mathrm{eff}$")
+        return
     ymax = max(r["succ_v"] for r in rows) * 1.12
     ylim = (0.0, ymax)
-    xl = "Number of visitor STAs $N$"
     _plot_one(rows, "basic", nv_list, ylim, fig_dir, out_dir,
               "fig1-1", xkey="N_visitor", xlabel=xl)
     _plot_one(rows, "rts",   nv_list, ylim, fig_dir, out_dir,
@@ -280,6 +290,9 @@ def main() -> None:
     parser.add_argument("--fast", action="store_true")
     parser.add_argument("--visitor-sweep", action="store_true",
                         help=f"fix M={VIS_M_FIX}, sweep N_visitor {VIS_NV_LIST}")
+    parser.add_argument("--total", action="store_true",
+                        help="visitor-sweep only: plot total (native+visitor) "
+                             "airtime as fig1-{1,2}_total")
     parser.add_argument("--out-dir", default=None)
     parser.add_argument("--base-csv", default=None, metavar="PATH")
     args = parser.parse_args()
@@ -307,8 +320,8 @@ def main() -> None:
         save_csv(rows, os.path.join(out_dir, "data.csv"))
         summary(rows, nv_list, xkey="N_visitor", xtag="N")
         print("\nPlotting ...")
-        plot_v(rows, nv_list, out_dir, fig_dir)
-        print("\nDone → results/figure/fig1-{1,2}_visitor_sweep.*")
+        plot_v(rows, nv_list, out_dir, fig_dir, total=args.total)
+        print("\nDone.")
         return
 
     nat_list = FAST_NATS if args.fast else N_NATIVE_LIST

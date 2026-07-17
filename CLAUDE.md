@@ -14,6 +14,13 @@ IEEE 802.11bn **NPCA(Non-Primary Channel Access)** 저널 논문용 시뮬레이
 
 ## 핵심 알고리즘: PACE
 
+> **⚠️ PACE의 목적 (평가 프레임의 기준)**: 단순 visitor 성능 극대화가 **아니라**,
+> **fairness를 최대한 보장하면서 channel airtime(총 효율)을 높이는 것**.
+> 구현 목표 = oracle τ*=1/|V(t)| (전 STA 공평 + 채널 효율 최적) 추적.
+> 따라서 평가 축은 (total airtime, fairness) vs oracle이 1차이고 visitor airtime은
+> 보조 지표. visitor 이득이 native 억압에서 나오면 목적 미달로 간주 —
+> "trade-off 정당화"가 아니라 "수렴 오차(τ 인플레이션)"로 서술하고 보정할 것.
+
 ### 원래 PND (Song et al., 2014)
 
 무선 애드혹 이웃 발견: N개 디바이스가 각자 광고 메시지 전송확률 τ를 MIMD로 조정 → τ → 1/N 수렴.
