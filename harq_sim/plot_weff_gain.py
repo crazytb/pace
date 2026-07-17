@@ -153,7 +153,7 @@ def plot(rows: list[dict], out_dir: str) -> None:
 
 def _save(fig, out_dir: str, name: str) -> None:
     repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ms   = os.path.join(repo, "manuscript", "figure")
+    ms   = os.path.join(repo, "results", "figure")
     os.makedirs(ms, exist_ok=True)
 
     for ext, kw in [

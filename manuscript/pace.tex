@@ -596,116 +596,67 @@ $\sum_i L_i\,\mathbf{1}[\text{success}]/W_\mathrm{eff}$, its ratio to the oracle
 (efficiency), and, for fairness, Jain's index and a native-versus-visitor
 proportionality index.
 
-\subsection{Utilization Gain in the Tight-Window Regime}
-\label{subsec:eval_tightwindow}
+\subsection{Why PACE: Visitor Airtime under Native Load}
+\label{subsec:eval_whypace}
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{figure/fig15_mfg_npca.pdf}
-    \caption{Window utilization of the throughput-optimal policy and DCF versus
-    window tightness.}
-    \label{fig:eval_tightwindow}
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig1-1.pdf}
+        \caption{Basic access (no RTS/CTS).}
+        \label{fig:why_pace_basic}
+    \end{subfigure}
+    \vspace{0.6em}
+
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/fig1-2.pdf}
+        \caption{Mandatory RTS/CTS.}
+        \label{fig:why_pace_rts}
+    \end{subfigure}
+    \caption{Visitor useful airtime versus the number of visitor STAs $N$ for
+    standard-compliant NPCA (CSMA/CA visitors), PACE, and the oracle, in the
+    mixed native/visitor channel with $M=10$ native DCF stations, under
+    IEEE~802.11 timing ($W_\mathrm{eff}=3.78$~ms, visitor PPDU
+    $225$--$900~\mu$s, native PPDU $450~\mu$s).}
+    \label{fig:why_pace}
 \end{figure}
 
-Fig.~\ref{fig:eval_tightwindow} isolates the regime in which adaptive access
-matters. As the window tightens toward $W_\mathrm{eff}\!\approx\!N$, the fixed
-backoff of DCF leaves a growing share of the window idle, and the gap to the
-time-varying optimum widens to over $70\%$; once $W_\mathrm{eff}\!\gg\!N$ the
-window is no longer the binding constraint and DCF recovers. This identifies the
-tight window as the operating point that the rest of the evaluation targets.
+We first ask the question that motivates this work: what does PACE buy over
+simply running the standard access procedure on the non-primary channel?
+Fig.~\ref{fig:why_pace} compares $N\in\{5,\dots,50\}$ visitor STAs operating
+either standard CSMA/CA ($\mathrm{CW}_{\min}=16$, binary exponential
+backoff, with the NPCA minimum-duration check) or PACE with $\tau$ carried
+across transitions, sharing the channel with $M=10$ native DCF stations,
+using IEEE~802.11 OFDM timing ($\sigma=9~\mu$s).
 
-\subsection{Tracking the Time-Varying Optimum}
-\label{subsec:eval_tracking}
+Under basic access (Fig.~\ref{fig:why_pace_basic}), the standard visitor
+fails at both ends of the range, for two different reasons. When visitors
+are few ($N=5$), they are outnumbered by natives whose traffic keeps the
+channel busy; since the DCF countdown advances only in idle slots, the
+visitors' backoff is frozen for most of the visit and their airtime stalls
+at $0.18$. When visitors are many ($N=50$), the fixed
+$\mathrm{CW}_{\min}=16$ is far below the contention level: collisions
+cascade, each charged the full length of the longest colliding frame, and
+the standard visitors not only fall to $0.14$ but drag the whole channel
+down with them (total utilization $0.14$). PACE instead grows
+monotonically from $0.29$ to $0.41$---its initialization
+$\tau_0=1/N$ scales with the group size, the MIMD feedback absorbs the
+residual contention, and PPDU-aware self-exclusion silences stations whose
+frames no longer fit---delivering up to $2.9\times$ the standard visitor
+airtime at $N=50$.
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{figure/fig19_dcf_benchmark_.pdf}
-    \caption{Per-slot attempt probability over a visit and window utilization
-    versus $N$, for PACE, DCF, AND, and the oracle.}
-    \label{fig:eval_tracking}
-\end{figure}
-
-Fig.~\ref{fig:eval_tracking} shows why PACE closes this gap. Over a single visit
-its ensemble attempt probability rises along the oracle's $\tau^*(t)$ track as
-the viable set drains, whereas DCF sawtooths in the opposite direction, halving
-its rate on every collision, and AND follows a fixed open-loop schedule blind to
-the deadline. The resulting utilization keeps PACE close to the oracle across
-$N$, ahead of DCF, while AND collapses in the finite window.
-
-\subsection{Self-Exclusion under Heterogeneous Frame Lengths}
-\label{subsec:eval_selfexcl}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{figure/fig17_ppdu_aware_tau_.pdf}
-    \caption{Efficiency relative to the oracle under heterogeneous PPDU lengths,
-    with and without PPDU-aware self-exclusion.}
-    \label{fig:eval_selfexcl}
-\end{figure}
-
-Fig.~\ref{fig:eval_selfexcl} isolates the contribution of the self-exclusion
-rule. When frame lengths are heterogeneous, silencing stations whose frame no
-longer fits the remaining window recovers the slots they would otherwise waste on
-doomed attempts, lifting efficiency toward the oracle; adding the MIMD feedback
-on top closes most of the residual gap. The ordering is preserved across the
-PPDU distributions and confirms that both components of PACE are needed.
-
-\subsection{Throughput--Fairness Trade-off}
-\label{subsec:eval_fairness}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{figure/fig20_fairness_.pdf}
-    \caption{Aggregate throughput versus Jain's fairness index across PPDU
-    classes for PACE, DCF, and AND.}
-    \label{fig:eval_fairness}
-\end{figure}
-
-Fig.~\ref{fig:eval_fairness} examines whether the utilization gain comes at the
-expense of fairness across frame-length classes. PACE Pareto-dominates DCF,
-achieving both higher aggregate throughput and a higher Jain index, while AND
-sacrifices throughput almost entirely. PACE thus improves efficiency without
-trading away inter-class fairness.
-
-\subsection{Coexistence with Native Stations}
-\label{subsec:eval_coexistence}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{figure/fig21_native_visitor_fairness_.pdf}
-    \caption{Visitor and native window utilization when NPCA visitors share the
-    channel with permanent native DCF stations.}
-    \label{fig:eval_coexistence}
-\end{figure}
-
-Fig.~\ref{fig:eval_coexistence} evaluates the mixed setting in which NPCA
-visitors contend against the native stations that own the channel. PACE raises
-visitor throughput and total channel utilization well above DCF, recovering idle
-airtime that would otherwise be lost. This gain does come at a cost in native
-airtime, which we report rather than hide: because PACE is more aggressive than
-the collision-averse DCF, it preserves less of the native throughput, a trade-off
-we return to in the discussion.
-
-\subsection{Robustness to the Collision-Cost Model}
-\label{subsec:eval_collision}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\columnwidth]{figure/fig23_collision_cost.pdf}
-    \caption{PACE and DCF utilization under an ideal collision detection model
-    (collision costs one slot) and the no-detection model (collision costs the
-    longest colliding frame).}
-    \label{fig:eval_collision}
-\end{figure}
-
-Finally, Fig.~\ref{fig:eval_collision} tests whether the advantage of PACE is an
-artifact of the collision-cost assumption. Charging a collision one slot, as an
-ideal collision detection would, amplifies the gain of PACE over DCF; charging it
-the full frame length, as standard IEEE 802.11 does, reduces every scheme's
-utilization but preserves the ordering, with PACE still ahead of DCF. The
-benefit of PACE therefore holds across the full range of collision-cost models,
-and is only enhanced when a bounded-collision mechanism such as CSMA/CN is
-available~\cite{sen2010csma}.
+Mandatory RTS/CTS (Fig.~\ref{fig:why_pace_rts}) caps the collision cost at
+the RTS exchange ($78~\mu$s) at the price of an $88~\mu$s handshake on
+every success. This removes the dominant loss term of PACE---collision
+airtime---while it cannot repair the frozen-backoff idling of the standard
+visitor, whose airtime still peaks at $N=20$ and declines beyond it. PACE
+tracks the oracle over the whole range ($0.63$--$0.69$ for $N\ge 10$),
+exceeding the standard visitor by $53\%$ at $N=10$ and $41\%$ at $N=50$;
+the oracle transmits at the joint fair-share rate $1/|\mathcal{V}(t)|$ over
+\emph{all} contenders and is therefore a fairness reference rather than a
+visitor-throughput maximum, a point we return to in the fairness analysis.
 
 \section{Conclusion}
 \label{sec:conclusion}

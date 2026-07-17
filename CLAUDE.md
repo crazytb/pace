@@ -171,6 +171,15 @@ Steady-state visitor efficiency (transition≥25, churn=0):
 - **주의**: efficiency>1 가능 — oracle은 전 STA 공평 기준선. cold_nv nat20의 1.099는 native 억압에 의한 탈취 (util_n: oracle 0.15 vs cold_nv 0.05). fairness는 fig21 지표 병행.
 - **채널 효율/공정성 (panel e/f, nat10)**: total util = oracle 0.54 / genie 0.50 / nv 0.43 / warm 0.38 / high 0.05, airtime prop = 1.44/1.53/1.76/1.81/무의미. ① native-count 지식의 수혜자는 visitor가 아니라 **채널**(visitor 효율 동일, total +16%, native 몫 2배) ② 기억은 그룹-지식 수준까지만 회복(prop≈cold_nv) ③ oracle도 prop 1.44>1 = 구조적(visitor PPDU 길고 native DCF는 idle에만 backoff 감소) — prop=1 달성 불가, oracle이 실질 공정 기준 ④ cold_high는 채널 전체 파괴(util_n≈0).
 - **conventional NPCA 대비 (dcf_conv = 표준 CSMA/CA visitor, CW_min=16 BEB)**: visitor 효율 nat0 0.99 → nat10 0.60 (BEB sawtooth 유한창 붕괴, fig19 재현). 대신 **최공정**: prop 1.01~1.65 (oracle보다 낮음), util_n 0.155 ≈ oracle. **PACE warm vs 표준 = 효율-공정 trade-off**: visitor +45% (0.866 vs 0.597), 대가 native 몫 1/4 + prop 1.81 vs 1.22. PACE 이득에 native 억압분 포함 — 논문에 명시, fairness 보정(τ cap) = future work.
+- **airtime 분해 (nat10, nocd)**: dcf 낭비 = 충돌 42%+idle 15%(frozen backoff), PACE 낭비 = 충돌 53%+idle 5%. Jain 이중 구조: 그룹간 dcf 승(J_all 0.77 vs 0.53), **visitor 내부는 PACE 승**(J_vis 0.89 vs 0.82 — solo-copy 균등화 vs BEB 로터리).
+
+### Fig 25: Collision-cost 민감도 + 의무 RTS/CTS — **표준 단위** (mixed, N_v=10+N_nat=10)
+
+RQ: 충돌 비용↑ 시 PACE 열화? RTS/CTS 의무화 영향? **모든 시간 = 802.11 표준 파라미터 유도** (σ=aSlotTime 9µs, SIFS 16, DIFS 34, RTS/CTS@24Mbps 28µs → 성공 OH 88µs=10σ, RTS 충돌 78µs=9σ; @6Mbps OH 136µs=15σ/충돌 102µs=11σ). 프레임 현실화: visitor PPDU 225–900µs(E[L]=562µs), native 450µs, W_eff=3.78ms(TXOP급). v1(추상 슬롯 OH=2/3)은 폐기.
+
+- **충돌비용 스윕 (basic)**: PACE 단조 감소(C=81µs: 0.74 → C=1.13ms: 0.25), visitor 우위 ×1.54→×1.21 축소되나 **전 구간 생존**. **채널 효율은 전 구간 dcf ≥ pace** (최저 실현가능 충돌비용에서 동률) — v1의 "C≈E[L] 교차" 주장은 표준 단위에서 성립 안 함(정정).
+- **의무 RTS/CTS @24Mbps**: PACE visitor +80%(0.36→0.64)/채널 +78% vs dcf +47%/+49% — 비대칭(×1.7) 유지, 단 dcf도 대폭 이득(basic 충돌=max Lᵢ≈700µs라 절감 큼). **PACE 채널 열세 해소**(0.697≈0.691 동률), visitor 우위 ×1.25→×1.53. @6Mbps도 순이득(PACE +61%/dcf +35%).
+- 논문: "PACE의 낭비(충돌)는 RTS/CTS로 치유 가능, conventional의 낭비(frozen backoff)는 불치" — 단 v1보다 온건하게(채널 효율은 동률까지). 한계: native도 RTS/CTS, fairness 축 불변, ACK 미모델. 코드: `run_step9_fig25.py`, 상세: `guidelines/step9/fig25.md`.
 
 → 논문 포지셔닝: cold 성능은 τ₀의 지식량에 비례(genie 0.95/무지식 0.16) — **warm-start는 지식 축을 기억으로 대체** (무지식→0.87). 코드: `run_step9_fig24.py`, 상세: `guidelines/step9/fig24.md`.
 
@@ -184,7 +193,7 @@ pace/
 ├── manuscript/
 │   ├── pace.tex                     ← 논문 본문 (PACE)
 │   ├── pace.bib                     ← 참고문헌
-│   ├── figure/                      ← figN_*.{eps,png,pdf}
+│   ├── figure/                      ← **논문에 포함할 figure만** (선별 복사)
 │   └── ref/
 │       ├── A_Probabilistic_Neighbor_Discovery_Algorithm_in_Wireless_Ad_Hoc_Networks.pdf  ← PND 원본
 │       └── Draft P802.11bn_D1.2_NPCA.pdf   ← 표준 문서
@@ -195,7 +204,9 @@ pace/
 │   ├── step9_index.md               ← Figure 인덱스 및 상태
 │   ├── step9/fig{N}.md              ← 각 Figure 상세 계획
 │   └── mfg_algorithm.md            ← MFG 알고리즘 상세
-└── results/step9/fig{N}/data.csv   ← 실험 데이터
+└── results/
+    ├── figure/                      ← 스크립트 생성 figure 전체 (구 manuscript/figure)
+    └── step9/fig{N}/data.csv        ← 실험 데이터
 ```
 
 ---
@@ -218,14 +229,16 @@ pace/
 
 ## Figure 생성 규칙
 
-모든 스크립트는 3포맷 동시 저장:
+모든 스크립트는 **`results/figure/`**에 3포맷 동시 저장 (manuscript/figure 직접 저장 금지):
 
 ```python
-FIG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "manuscript", "figure")
+FIG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "figure")
 fig.savefig(os.path.join(FIG_DIR, f"{fig_name}.eps"), format="eps", bbox_inches="tight")
 fig.savefig(os.path.join(FIG_DIR, f"{fig_name}.png"), format="png", dpi=300, bbox_inches="tight")
 fig.savefig(os.path.join(FIG_DIR, f"{fig_name}.pdf"), format="pdf", bbox_inches="tight")
 ```
+
+`manuscript/figure/`에는 논문에 실을 figure만 `results/figure/`에서 선별 복사.
 
 ---
 

@@ -336,7 +336,7 @@ def _panel_heatmap(
 
 def _save_figure(fig, fig_dir: str, name: str) -> None:
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ms_fig = os.path.join(repo_root, "manuscript", "figure")
+    ms_fig = os.path.join(repo_root, "results", "figure")
     os.makedirs(ms_fig, exist_ok=True)
     for ext, kwargs in [
         ("eps", dict(format="eps",  bbox_inches="tight")),

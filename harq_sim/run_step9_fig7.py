@@ -291,7 +291,7 @@ def main() -> None:
     script_dir  = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.dirname(script_dir)
     out_dir     = os.path.join(project_dir, "results", "step9", "fig7_v2")
-    fig_dir     = os.path.join(project_dir, "manuscript", "figure")
+    fig_dir     = os.path.join(project_dir, "results", "figure")
 
     import argparse
     parser = argparse.ArgumentParser()

@@ -568,7 +568,7 @@ def main() -> None:
     os.makedirs(out_dir, exist_ok=True)
 
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    fig_dir   = os.path.join(repo_root, "manuscript", "figure")
+    fig_dir   = os.path.join(repo_root, "results", "figure")
     os.makedirs(fig_dir, exist_ok=True)
 
     if args.base_csv:
