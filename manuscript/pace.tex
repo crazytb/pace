@@ -224,6 +224,31 @@ Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel ass
 Channel~\#1 is also used by an overlapping BSS (OBSS) operating on the same channel, whose transmissions intermittently render it busy. In standards prior to IEEE 802.11bn, a STA could not initiate a transmission whenever its designated primary channel was busy, even if the secondary channel was idle.
 In IEEE 802.11bn, however, the AP can designate a separate channel as the NPCA primary channel, used by the visitors during NPCA operation, named as Channel~\#2 in Fig.~\ref{fig:topology_and_channel}. We use the qualifier ``BSS'' to distinguish the original primary channel from the NPCA primary channel, consistent with P802.11bn Draft terminology~\cite{ieee80211bn}.
 
+The NPCA primary channel is not unused spectrum reserved for the target
+BSS: Channel~\#2 is itself the BSS primary channel of the neighboring BSS,
+comprising its own AP and a set $\mathcal{M}=\{1,2,\dots,M\}$ of native
+STAs that contend on it with standard DCF/EDCA at all times. The visitors,
+by contrast, use Channel~\#2 only opportunistically, during NPCA visits.
+Two contention disciplines therefore coexist on the NPCA primary channel:
+the native STAs' persistent DCF and the visitors' bounded, window-limited
+access.
+
+Because the two BSSs only partially overlap in coverage
+(Fig.~\ref{fig:topology_and_channel}), the native contention a visitor
+experiences on the NPCA primary channel depends on its location. A visitor
+inside the overlap region senses, defers to, and competes with the native
+STAs, whereas a visitor outside the neighboring BSS coverage encounters no
+native traffic there and effectively reuses the channel without contending
+with natives. The coexistence cost to the neighboring BSS is thus greatest
+when every visitor lies within its coverage. Unless otherwise stated we
+adopt this full-overlap configuration---a single collision domain in which
+all visitors and native STAs are mutually within carrier-sensing
+range---since it upper-bounds the impact on native airtime; the
+partial-overlap regime, in which non-overlapping visitors enjoy
+interference-free spatial reuse, is left to future work. The resulting
+impact on native airtime is evaluated in
+Section~\ref{sec:performance_evaluation}.
+
 \begin{figure}
     \centering
     \includegraphics[width=0.48\textwidth]{figure/channel_access.pdf}
@@ -495,64 +520,33 @@ with $c_\mathrm{idle},c_\mathrm{coll}>1$.
 An idle slot signals that the
 population has been overestimated and the attempt rate is raised by the factor of $c_\mathrm{idle}$. On the other hand, a collision signals the opposite, hence, once STAs detect a collision, the attempt rate is divided by $c_\mathrm{coll}$ to reduce the contention. On a solo success, every listener copies the advertised $\tau_\mathrm{sender}$, so a single successful slot propagates the winning operating point to the whole contending set at once, giving PACE the fast intra-visit consensus.
 
-None of the three updates counts the viable STAs. Instead, the idle and collision statistics move each $\tau_i$ toward the operating point implicitly, and solo-copy pulls the population onto a common value, so the ensemble approximately tracks the time-varying optimum $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt} without estimating $|\mathcal{V}(t)|$. 
+None of the three updates counts the viable STAs. Instead, the idle and collision statistics move each $\tau_i$ toward the operating point implicitly, and solo-copy pulls the population onto a common value, so the ensemble approximately tracks the time-varying optimum $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt} without estimating the number of contending STAs $|\mathcal{V}(t)|$. 
 
-The direction of this adaptation is what separates PACE from legacy Binary
-Exponential Backoff. Because the viable set only shrinks over a visit---STAs
-depart on success or self-exclude when their frame no longer fits---the optimal
-target $\tau^*(t)=1/|\mathcal{V}(t)|$ of~\eqref{eq:tau_opt} rises as the
-deadline approaches. BEB moves the opposite way: a collision doubles the
-contention window and halves the attempt rate, so the access probability falls
-exactly when it should climb. The mismatch is twofold. First, the adaptation is
-backwards---BEB retreats on congestion while the window's diminishing population
-calls for a more aggressive attempt rate---so late slots are left idle. Second,
-the doubled backoff can exceed the remaining window $W_\mathrm{rem}(t)$,
-silencing the STA for the rest of the visit and wasting those slots
-outright; unlike PACE's self-exclusion, which silences only STAs that
-provably cannot finish, this dead time falls on STAs that could still have
-succeeded. PACE's idle-increase and solo-copy instead move $\tau_i$ along the
-rising $\tau^*(t)$ trajectory, matching the sign of the optimal policy rather
-than fighting it.
+The direction of this adaptation is what separates PACE from legacy binary exponential backoff (BEB). Because the viable set only shrinks over a visit, the optimal target $\tau^*(t)=1/|\mathcal{V}(t)|$ of~\eqref{eq:tau_opt} rises as the deadline approaches. BEB moves the opposite way: a collision doubles the contention window and halves the attempt rate, so the access probability falls exactly when it should climb.
 
-\subsection{Coexistence with Native STAs}
-\label{subsec:native_coexistence}
+Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate
+alongside the native STAs of Section~\ref{subsec:network_model}. Because
+the slot outcome $\mathcal{D}(t)$ is measured at the channel level, native
+activity enters a visitor's feedback directly: a slot in which two or more
+frames overlap is a collision whether the extra transmitter is a visitor
+or a native, so a native transmission that clashes with a visitor lowers
+that visitor's $\tau_i$, and a slot with no transmission at all, native or
+visitor, is idle and raises it. The solo case is the one exception. The
+copy $\tau_i \leftarrow \tau_\mathrm{sender}$ requires the successful
+frame to advertise a probability, which only a PACE visitor does; when a
+native transmits alone, its frame carries no such value, so a listening
+visitor keeps $\tau_i$ unchanged and simply observes the busy slot while
+the window continues to shrink.
 
-The NPCA primary channel is not unused spectrum reserved for the target BSS:
-Channel~\#2 is itself the BSS primary channel of a neighboring BSS,
-comprising its own AP and a set $\mathcal{M}=\{1,2,\dots,M\}$ of native
-STAs that contend on it with standard DCF/EDCA at all times. The
-visitors, by contrast, use Channel~\#2 only opportunistically, during NPCA
-visits. Two contention disciplines therefore coexist on the NPCA primary
-channel: the native STAs' persistent DCF and the visitors' bounded
-PACE-driven access.
-
-Because the slot outcome $\mathcal{D}(t)$ is measured on the channel, native
-activity enters a visitor's feedback directly. A slot in which two or more
-frames overlap is a collision whether the extra transmitter is a visitor or a
-native, so a native transmission that clashes with a visitor lowers that
-visitor's $\tau_i$ through~\eqref{eq:mimd}, and a slot with no transmission at
-all, native or visitor, is idle and raises it. The solo case is the one
-exception. The copy $\tau_i \leftarrow \tau_\mathrm{sender}$ requires the
-successful frame to advertise a probability, which only a PACE visitor does.
-When a native transmits alone its frame carries no such value, so a listening
-visitor keeps $\tau_i$ unchanged and simply observes the busy slot while the
-window continues to shrink.
-
-Because the two BSSs only partially overlap in coverage
-(Fig.~\ref{fig:topology_and_channel}), the native contention a visitor
-experiences on the NPCA primary channel depends on its location. A visitor
-inside the overlap region senses, defers to, and competes with the native
-STAs, whereas a visitor outside the neighboring BSS coverage encounters
-no native traffic there and effectively reuses the channel without
-contending with natives. The coexistence cost to the neighboring BSS is thus
-greatest when every visitor lies within its coverage. Unless otherwise
-stated we adopt this full-overlap configuration---a single collision domain
-in which all visitors and native STAs are mutually within
-carrier-sensing range---since it upper-bounds the impact on native airtime;
-the partial-overlap regime, in which non-overlapping visitors enjoy
-interference-free spatial reuse, is left to future work. The resulting
-impact on native airtime under full overlap is evaluated in
-Section~\ref{sec:performance_evaluation}.
+% The mismatch is twofold. First, the adaptation is backwards---BEB retreats on congestion while the window's diminishing population
+% calls for a more aggressive attempt rate---so late slots are left idle. Second,
+% the doubled backoff can exceed the remaining window $W_\mathrm{rem}(t)$,
+% silencing the STA for the rest of the visit and wasting those slots
+% outright; unlike PACE's self-exclusion, which silences only STAs that
+% provably cannot finish, this dead time falls on STAs that could still have
+% succeeded. PACE's idle-increase and solo-copy instead move $\tau_i$ along the
+% rising $\tau^*(t)$ trajectory, matching the sign of the optimal policy rather
+% than fighting it.
 
 \section{Performance Evaluation}
 \label{sec:performance_evaluation}
