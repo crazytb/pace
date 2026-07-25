@@ -104,7 +104,11 @@ def run_config(method: str, n_native: int, coll_cost, succ_oh: int,
 
 def run_config_v(method: str, n_visitor: int, coll_cost, succ_oh: int,
                  seed: int, reps: int, visits: int) -> dict:
-    """Visitor-sweep variant: patches N_VISITOR too (M fixed at VIS_M_FIX)."""
+    """Visitor-sweep variant: patches N_VISITOR too (M fixed at VIS_M_FIX).
+
+    PACE follows Algorithm alg:pace exactly: every visit starts cold from
+    τ0 = 1/W_eff (Phase a), no state carried between visits.
+    """
     _f25.N_VISITOR = n_visitor
     _f25.N_NATIVE = VIS_M_FIX
     m_idx = METHODS_26.index(method)
@@ -113,13 +117,12 @@ def run_config_v(method: str, n_visitor: int, coll_cost, succ_oh: int,
         rng_p = np.random.default_rng(seed * 10001 + r * 71 + 7)
         rng = np.random.default_rng(seed * 200003 + r * 3163 + m_idx * 29
                                     + n_visitor * 211)
-        tau_c = np.full(n_visitor, 1.0 / n_visitor) if method == "pace" else None
         for v in range(visits):
             ppdus = _f25._sample_ppdus25(rng_p)
-            air, _c, _i, _o, carry = _f25._run_visit25(
-                ppdus, rng, method, tau_c, coll_cost, succ_oh)
-            if method == "pace":
-                tau_c = carry
+            tau0 = np.full(n_visitor, 1.0 / _f25.W_REF) \
+                if method == "pace" else None
+            air, _c, _i, _o, _carry = _f25._run_visit25(
+                ppdus, rng, method, tau0, coll_cost, succ_oh)
             if v >= visits // 2:
                 sv += air[:n_visitor].sum()
                 sn += air[n_visitor:].sum()
@@ -217,6 +220,48 @@ def plot(rows, nat_list: list, out_dir: str, fig_dir: str) -> None:
               "fig1-2_native_sweep")
 
 
+def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
+                   out_dir: str, fig_name: str) -> None:
+    """Airtime proportionality: (visitor airtime share) / (population share)."""
+    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    for m in METHODS_26:
+        ys = []
+        for n in nv_list:
+            sv = _mean26(rows, "succ_v", access=access, method=m, N_visitor=n)
+            tot = _mean26(rows, "useful", access=access, method=m, N_visitor=n)
+            pop = n / (n + VIS_M_FIX)
+            ys.append((sv / tot) / pop if tot > 0 else float("nan"))
+        ax.plot(nv_list, ys, label=_LABEL_26[m], **_STYLE_26[m])
+    ax.axhline(1.0, color="gray", ls="--", lw=1.2)
+    ax.set_xticks(nv_list)
+    ax.tick_params(labelsize=8)
+    ax.set_xlabel("Number of visitor STAs $N$", fontsize=9)
+    ax.set_ylabel("Visitor airtime proportionality $\\rho$", fontsize=9)
+    ax.set_ylim(*ylim)
+    ax.legend(fontsize=8, frameon=True, loc="lower right",
+              handlelength=2.0, borderpad=0.35, labelspacing=0.35)
+    ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    fig.tight_layout()
+
+    for ext, kwargs in [
+        ("eps", dict(format="eps", bbox_inches="tight")),
+        ("png", dict(format="png", bbox_inches="tight", dpi=300)),
+        ("pdf", dict(format="pdf", bbox_inches="tight")),
+    ]:
+        dest = os.path.join(fig_dir, f"{fig_name}.{ext}")
+        fig.savefig(dest, **kwargs)
+        print(f"  Figure → {dest}")
+    preview = os.path.join(out_dir, f"{fig_name}_preview.png")
+    fig.savefig(preview, format="png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_v_fairness(rows, nv_list: list, out_dir: str, fig_dir: str) -> None:
+    ylim = (0.0, 1.85)
+    _plot_fair_one(rows, "basic", nv_list, ylim, fig_dir, out_dir, "fig2-1")
+    _plot_fair_one(rows, "rts",   nv_list, ylim, fig_dir, out_dir, "fig2-2")
+
+
 def plot_v(rows, nv_list: list, out_dir: str, fig_dir: str,
            total: bool = False) -> None:
     # Visitor sweep is the paper figure (Subsection A) → unsuffixed names.
@@ -293,6 +338,9 @@ def main() -> None:
     parser.add_argument("--total", action="store_true",
                         help="visitor-sweep only: plot total (native+visitor) "
                              "airtime as fig1-{1,2}_total")
+    parser.add_argument("--fairness", action="store_true",
+                        help="visitor-sweep only: plot airtime proportionality "
+                             "as fig2-{1,2}")
     parser.add_argument("--out-dir", default=None)
     parser.add_argument("--base-csv", default=None, metavar="PATH")
     args = parser.parse_args()
@@ -320,7 +368,10 @@ def main() -> None:
         save_csv(rows, os.path.join(out_dir, "data.csv"))
         summary(rows, nv_list, xkey="N_visitor", xtag="N")
         print("\nPlotting ...")
-        plot_v(rows, nv_list, out_dir, fig_dir, total=args.total)
+        if args.fairness:
+            plot_v_fairness(rows, nv_list, out_dir, fig_dir)
+        else:
+            plot_v(rows, nv_list, out_dir, fig_dir, total=args.total)
         print("\nDone.")
         return
 

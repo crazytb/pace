@@ -83,9 +83,13 @@ DIFS_US   = SIFS_US + 2 * SLOT_US    # 34 µs
 PHY_RX_START_US = 25                 # aPHY-RX-START-Delay (OFDM)
 RTS_US_24M = 28                      # RTS @ 24 Mbps ctrl rate: 20µs preamble + 2 sym
 CTS_US_24M = 28
+ACK_US_24M = 28
 RTS_US_6M  = 52                      # RTS @ 6 Mbps ctrl rate: 20µs preamble + 8 sym
 CTS_US_6M  = 52
-CTS_TIMEOUT_US = SIFS_US + SLOT_US + PHY_RX_START_US   # 50 µs (std CTS timeout)
+ACK_US_6M  = 44
+# EIFS = SIFS + ACKTxTime + DIFS (recovery defer after an undecodable frame)
+EIFS_US_24M = SIFS_US + ACK_US_24M + DIFS_US           # 78 µs
+EIFS_US_6M  = SIFS_US + ACK_US_6M + DIFS_US            # 94 µs
 
 
 def _us2slot(us: float) -> int:
@@ -95,9 +99,9 @@ def _us2slot(us: float) -> int:
 # RTS/CTS handshake overhead on SUCCESS = RTS+SIFS+CTS+SIFS
 OH_SUCC_24M = _us2slot(RTS_US_24M + SIFS_US + CTS_US_24M + SIFS_US)   # 88µs → 10σ
 OH_SUCC_6M  = _us2slot(RTS_US_6M + SIFS_US + CTS_US_6M + SIFS_US)    # 136µs → 15σ
-# RTS collision cost = RTS + CTS_Timeout
-COLL_RTS_24M = _us2slot(RTS_US_24M + CTS_TIMEOUT_US)                  # 78µs → 9σ
-COLL_RTS_6M  = _us2slot(RTS_US_6M + CTS_TIMEOUT_US)                   # 102µs → 11σ
+# RTS collision cost = RTS + EIFS (channel busy for the RTS, then EIFS recovery)
+COLL_RTS_24M = _us2slot(RTS_US_24M + EIFS_US_24M)                     # 106µs → 12σ
+COLL_RTS_6M  = _us2slot(RTS_US_6M + EIFS_US_6M)                       # 146µs → 16σ
 
 # Frame/window scale in σ units (realistic durations):
 #   visitor PPDU U[25,100]σ = 225–900 µs  (≈1500B @65Mbps … small A-MPDU / low MCS)
