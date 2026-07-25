@@ -585,35 +585,44 @@ Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate alongs
 \hline
 \textbf{Parameter} & \textbf{Value} \\
 \hline
-Contending STAs $N$              & $\{10, 20, 30, 50\}$ \\
-Effective window $W_\mathrm{eff}$ & $\{20, 50, 100, 200\}$ slots \\
-Slot time $\sigma$               & $9~\mu$s \\
-PPDU length (homo / uniform / bimodal) & $6$ / $\mathcal{U}[3,12]$ / $\{4,12\}$ slots \\
-Native STAs $M$ (mixed setting)  & $\{0, 5, 10, 20\}$ \\
+Visitor STAs $N$ (scheme under test) & $\{5, 10, 20, 50\}$ \\
+Native STAs $M$ (always standard DCF) & $10$ \\
+Slot time $\sigma$ / SIFS / DIFS  & $9$ / $16$ / $34~\mu$s \\
+Effective window $W_\mathrm{eff}$ & $420$ slots ($3.78$~ms) \\
+Visitor PPDU duration            & $\mathcal{U}[225, 900]~\mu$s \\
+Native PPDU duration             & $450~\mu$s \\
 Initial probability $\tau_0$     & $1/W_\mathrm{eff}$ \\
 MIMD factors $c_\mathrm{coll},c_\mathrm{idle}$ & $1.2$ \\
-DCF window $\mathrm{CW}_0$ / $\mathrm{CW}_{\max}$ & $15$ / $1023$ \\
-% Collision cost $L_\mathrm{col}(t)$ & $\max_{i\in\mathcal{D}(t)} L_i$ (basic) / eq.~\eqref{eq:coll_rts} (RTS/CTS) \\
-Visits per point / seeds         & $1000$ / $5$ \\
+$\mathrm{CW}_{\min}$ / $\mathrm{CW}_{\max}$ for BEB & $15$ / $1023$ \\
+RTS/CTS $L_\mathrm{hs}$ / $L_\mathrm{col}$ (24~Mbps ctrl.) & $88$ / $106~\mu$s \\
+Transitions $\times$ sequences $\times$ seeds & $50 \times 20 \times 5$ \\
 \hline
 \end{tabular}
 \end{table}
 
 We evaluate PACE in the slotted NPCA contention model of
-Section~\ref{subsec:npca_window}; Table~\ref{tab:sim_params} summarizes the
-parameters. Unless stated otherwise, a visit is contended
-by $N\in\{10,20,30,50\}$ stations over an effective window
-$W_\mathrm{eff}\in\{20,50,100,200\}$ slots, PPDU lengths are drawn from a
-homogeneous, uniform $\mathcal{U}[3,12]$, or bimodal $\{4,12\}$ distribution, and
-each data point averages $1000$ visits over five seeds. PACE uses
-$\tau_0=1/W_\mathrm{eff}$ and $c_\mathrm{coll}=c_\mathrm{idle}=1.2$. A collision
-is charged the full length of the longest colliding frame,
-eq.~\eqref{eq:lmax}. We compare PACE against standard DCF with BEB, the open-loop AND schedule~\cite{vasudevan2013efficient}, and an oracle
-that transmits at $\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the
-viable set. Performance is reported as the window utilization
-$\sum_i L_i\,\mathbf{1}[\text{success}]/W_\mathrm{eff}$, its ratio to the oracle
-(efficiency), and, for fairness, Jain's index and a native-versus-visitor
-proportionality index.
+Section~\ref{subsec:npca_window} under IEEE~802.11 OFDM timing;
+Table~\ref{tab:sim_params} summarizes the parameters. A visit spans
+$W_\mathrm{eff}=3.78$~ms ($420$ slots of $\sigma=9~\mu$s), contended by
+$N\in\{5,10,20,50\}$ visitor STAs running the scheme under test alongside
+$M=10$ native STAs that always run standard DCF. Visitor PPDU durations
+are drawn uniformly from $225$--$900~\mu$s and native frames last
+$450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with
+$\tau_0=1/W_\mathrm{eff}$ and $c_\mathrm{coll}=c_\mathrm{idle}=1.2$; the
+standard-compliant baseline contends with CSMA/CA
+($\mathrm{CW}_{\min}=16$, binary exponential backoff, NPCA
+minimum-duration check); and the oracle transmits at
+$\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the viable set.
+Both access modes of Section~\ref{subsec:npca_window} are evaluated:
+basic access, in which a collision is charged the longest colliding
+frame, eq.~\eqref{eq:lmax}, and mandatory RTS/CTS with the
+standard-derived costs $L_\mathrm{hs}=88~\mu$s and
+$L_\mathrm{col}=106~\mu$s. Each data point averages the steady half of
+$50$ consecutive NPCA transitions over $20$ sequences and five seeds.
+Performance is reported as the total useful airtime of the channel
+normalized by $W_\mathrm{eff}$, its split between visitors and natives,
+and the visitor airtime proportionality index defined in
+Section~\ref{subsec:eval_fairness}.
 
 \subsection{Why PACE: Channel Airtime under Mixed Contention}
 \label{subsec:eval_whypace}
