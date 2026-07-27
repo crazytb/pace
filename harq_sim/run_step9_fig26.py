@@ -72,7 +72,7 @@ _STYLE_26 = {
 _LABEL_26 = {
     "dcf_conv": "Standard NPCA (CSMA/CA)",
     "pace":     "PACE",
-    "oracle":   "Oracle",
+    "oracle":   "Fair share ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
 }
 
 
@@ -178,7 +178,7 @@ def _mean26(rows, metric, **kw) -> float:
 def _plot_one(rows, access: str, nat_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str,
               xkey: str = "N_native",
-              xlabel: str = "Number of native STAs $M$",
+              xlabel: str = "Number of native STAs $N_\\mathrm{nat}$",
               ykey: str = "succ_v",
               ylabel: str = "Visitor airtime / $W_\\mathrm{eff}$") -> None:
     # Sized for a full-\columnwidth IEEE subfigure (stacked vertically) —
@@ -235,7 +235,7 @@ def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
     ax.axhline(1.0, color="gray", ls="--", lw=1.2)
     ax.set_xticks(nv_list)
     ax.tick_params(labelsize=8)
-    ax.set_xlabel("Number of visitor STAs $N$", fontsize=9)
+    ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$", fontsize=9)
     ax.set_ylabel("Visitor airtime proportionality $\\rho$", fontsize=9)
     ax.set_ylim(*ylim)
     ax.legend(fontsize=8, frameon=True, loc="lower right",
@@ -265,7 +265,7 @@ def plot_v_fairness(rows, nv_list: list, out_dir: str, fig_dir: str) -> None:
 def plot_v(rows, nv_list: list, out_dir: str, fig_dir: str,
            total: bool = False) -> None:
     # Visitor sweep is the paper figure (Subsection A) → unsuffixed names.
-    xl = "Number of visitor STAs $N$"
+    xl = "Number of visitor STAs $N_\\mathrm{vis}$"
     if total:
         ymax = max(r["useful"] for r in rows) * 1.12
         for access, name in [("basic", "fig1-1_total"), ("rts", "fig1-2_total")]:

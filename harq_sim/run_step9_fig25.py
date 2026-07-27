@@ -186,13 +186,23 @@ def _run_visit25(
     cw_n = np.full(N_NATIVE, N_total, dtype=np.int64)
     bo_n = rng.integers(0, N_total, size=N_NATIVE).astype(np.int64)
 
-    while True:
-        # Min Duration Threshold includes the handshake overhead
-        viable = (~succeeded) & (ppdus + succ_oh <= W_rem)
-        k = int(viable.sum())
+    while W_rem > 0:
+        # Visitor eligibility:
+        #  - pace / oracle (FS): PPDU-aware self-exclusion incl. handshake
+        #    (Phase b of Algorithm 1 / definition of V(t)).
+        #  - dcf_conv: standard-faithful — 802.11bn D1.2 has NO per-frame fit
+        #    check (Min Duration Threshold gates only the switch, 37.18.3);
+        #    the STA contends until NPCA_TIMER expiry (37.18.4/5).
+        if mode == "dcf_conv":
+            vv = ~succeeded[:N_VISITOR]
+        else:
+            vv = (~succeeded[:N_VISITOR]) & (ppdus[:N_VISITOR] + succ_oh <= W_rem)
+        # Natives: standard DCF on their own primary channel — they neither
+        # know nor care about the visitors' window; no fit check.
+        vn = ~succeeded[N_VISITOR:]
+        k = int(vv.sum() + vn.sum())
         if k == 0:
             break
-        vv, vn = viable[:N_VISITOR], viable[N_VISITOR:]
 
         if mode == "oracle":
             tx_v = rng.random(N_VISITOR) < np.where(vv, 1.0 / k, 0.0)
@@ -207,21 +217,39 @@ def _run_visit25(
 
         if solo:
             i = int(np.where(tx)[0][0])
-            if mode == "pace" and i < N_VISITOR:
-                _solo = float(tau[i])
-                carry[i] = float(tau[i])
-                tau[i] = 0.0
-            succeeded[i] = True
-            W_rem -= int(ppdus[i]) + succ_oh
-            airtime[i] += int(ppdus[i])
-            oh_air += succ_oh
-            if mode == "dcf_conv" and i < N_VISITOR:
-                bo_v[i] = W_REF + 1
-            if i >= N_VISITOR:
+            need = int(ppdus[i]) + succ_oh
+            if i < N_VISITOR:
+                if need <= W_rem:
+                    # completed visitor exchange
+                    if mode == "pace":
+                        _solo = float(tau[i])
+                        carry[i] = float(tau[i])
+                        tau[i] = 0.0
+                    succeeded[i] = True
+                    W_rem -= need
+                    airtime[i] += int(ppdus[i])
+                    oh_air += succ_oh
+                    if mode == "dcf_conv":
+                        bo_v[i] = W_REF + 1
+                else:
+                    # dcf_conv only: frame does not fit — transmission starts
+                    # anyway and is cut off at NPCA_TIMER expiry; wasted busy.
+                    coll_air += W_rem
+                    W_rem = 0
+            else:
+                # native frame may straddle the window end: it completes on
+                # the channel, but only the in-window portion is accounted.
+                occupy = min(need, W_rem)
+                oh_part = min(succ_oh, occupy)
+                airtime[i] += occupy - oh_part
+                oh_air += oh_part
+                succeeded[i] = True
                 bo_n[i - N_VISITOR] = W_REF + 1
+                W_rem -= occupy
         elif coll:
             c = int(ppdus[np.where(tx)[0]].max()) if coll_cost == "nocd" \
                 else int(coll_cost)
+            c = min(c, W_rem)
             W_rem -= c
             coll_air += c
         else:
