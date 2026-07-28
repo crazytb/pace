@@ -6,8 +6,8 @@ Subsections A/B (N=20 visitors, M=10 natives, W_eff=420σ=3.78ms):
 
   FS target        τ*(t) = 1/|V(t)|   — rises as the viable set drains
   PACE             mean τ_i over viable visitors (Algorithm 1, τ0=1/W_eff)
-  Standard NPCA    effective attempt probability 1/⟨CW_i⟩ over viable
-                   visitors (BEB: CW doubles on collision, no in-visit reset)
+  Standard NPCA    measured per-slot transmission frequency of viable
+                   visitors (deferring implementation, per-frame fit check)
 
 Curves are averaged over many visits, binned by elapsed time; log-y.
 Two single-panel figures (basic / RTS) for the LaTeX subfigure pair.
@@ -47,12 +47,12 @@ ACCESS_CONFIGS = [
 ]
 
 _STYLE = {
-    "dcf_conv": dict(_f26._STYLE_26["dcf_conv"]),
+    "dcf_excl": dict(_f26._STYLE_26["dcf_excl"]),
     "pace":     dict(_f26._STYLE_26["pace"]),
     "oracle":   dict(_f26._STYLE_26["oracle"]),
 }
 _LABEL = {
-    "dcf_conv": "Standard NPCA (measured)",
+    "dcf_excl": "Standard NPCA (measured)",
     "pace":     "PACE (measured)",
     "oracle":   "FS target ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
 }
@@ -63,7 +63,7 @@ _LABEL = {
 def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
                 coll_cost, succ_oh: int) -> list[tuple[int, float]]:
     """Returns [(elapsed_slots, tracked_value)] at every decision epoch.
-    mode: 'pace' | 'oracle' | 'dcf_conv'. Natives always DCF."""
+    mode: 'pace' | 'oracle' | 'dcf_excl'. Natives always DCF."""
     N_total = N_V + M
     succeeded = np.zeros(N_total, dtype=bool)
     W_rem = W
@@ -76,11 +76,9 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
     out = []
 
     while W_rem > 0:
-        # standard-faithful eligibility (see _run_visit25 in run_step9_fig25)
-        if mode == "dcf_conv":
-            vv = ~succeeded[:N_V]
-        else:
-            vv = (~succeeded[:N_V]) & (ppdus[:N_V] + succ_oh <= W_rem)
+        # dcf_excl: deferring standard implementation — per-frame fit check
+        # (the draft leaves the unfittable case unspecified; see fig25 engine)
+        vv = (~succeeded[:N_V]) & (ppdus[:N_V] + succ_oh <= W_rem)
         vn = ~succeeded[N_V:]
         k = int(vv.sum() + vn.sum())
         if k == 0:
@@ -95,7 +93,7 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
             if vv.any():
                 # measured per-slot transmission frequency of viable visitors
                 out.append((t, float(tx_v[vv].mean())))
-        else:  # dcf_conv
+        else:  # dcf_excl
             tx_v = (bo_v == 0) & vv
             if vv.any():
                 out.append((t, float(tx_v[vv].mean())))
@@ -109,12 +107,12 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
             if i < N_V:
                 if need <= W_rem:
                     _solo = float(tau[i]); tau[i] = 0.0
-                    if mode == "dcf_conv":
+                    if mode == "dcf_excl":
                         bo_v[i] = W + 1
                     succeeded[i] = True
                     W_rem -= need
                 else:
-                    W_rem = 0          # dcf_conv: truncated at timer expiry
+                    W_rem = 0          # unreachable under fit-checked modes
             else:
                 succeeded[i] = True
                 bo_n[i - N_V] = W + 1
@@ -142,7 +140,7 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
             for kk in range(N_V):
                 if not succeeded[kk]:
                     tau[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
-        elif mode == "dcf_conv":
+        elif mode == "dcf_excl":
             if n_tx > 1:
                 for j in np.where(tx_v)[0]:
                     j = int(j)
@@ -188,7 +186,7 @@ def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
 def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
              fig_dir: str, out_dir: str, fig_name: str) -> None:
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
-    for mode in ["dcf_conv", "pace", "oracle"]:
+    for mode in ["dcf_excl", "pace", "oracle"]:
         xs, ys = binned(mode, coll_cost, succ_oh, visits)
         st = dict(_STYLE[mode])
         st["marker"] = None

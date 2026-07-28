@@ -62,6 +62,8 @@ NPCA 방문에서의 throughput-optimal τ*(t) (classical slotted ALOHA 확장):
 
 ## 시뮬레이션 결과 요약
 
+> **⚠️ Baseline 교체 (2026-07-28): dcf_conv → dcf_excl.** D1.2는 unfittable frame 처리 미규정 → "전송 후 truncation"(dcf_conv)과 "defer"(dcf_excl) 둘 다 표준 부합. strongest-baseline 원칙으로 **dcf_excl(fit check로 defer, PACE Phase b와 동일 로컬 정보) 채택**. fig26/27/28/29·Table III 전부 재생성, 논문 수치 갱신. 핵심 변화: 기준창 이득 92%→**63%**(rts N=50), 5.9×→**4.5×**(basic N=50); 단창(0.9ms) rts 이득 +85%→**+10%**(truncation이 단창 손실 주범이었음), basic은 1.65~2.0× 유지; Table III truncation 열 소멸, 시도당 성공 표준 19~21%(구 15~16%), PACE 3× yield(구 4×). dcf_conv 수치는 참고용으로 아래 구 기록에 잔존 — 논문은 dcf_excl 기준. 엔진: `_run_visit25` mode `dcf_excl`/`dcf_conv`/`pace_noexcl` 지원.
+
 > **⚠️ Collision-cost 모델 변경 (base = no-CD)**: fig17/19/20/21은 collision 비용을 **최장 충돌 프레임 길이**(`max L_i`, 표준 802.11 CSMA/CA)로 청구하도록 재생성됨. 이전엔 collision=1 slot(ideal CD). 코드: `run_step9_fig17.py`의 `COLLISION_MODE`(`nocd`/`cd`/`cn`) + `collision_cost()`. 재생성본 파일명 = trailing `_` (원본 보존). fig15는 unit-frame 모델이라 무관, fig22는 `cd` pin, fig23은 cd/cn/nocd 비교 전용.
 >
 > **핵심**: no-CD에서 절대 util ~40%↓지만 **PACE 상대 우위 전부 보존** — fig17 pnd>dcf 순서, fig20 Pareto-dominant(TP+Jain), fig21 total +18%. 즉 PACE 이득은 cheap-collision 가정의 artifact 아님(robustness). 아래 표는 **no-CD 재생성 수치**(괄호 안 = 이전 CD 값).
@@ -189,6 +191,27 @@ RQ: 충돌 비용↑ 시 PACE 열화? RTS/CTS 의무화 영향? **모든 시간 
 - 논문: "PACE의 낭비(충돌)는 RTS/CTS로 치유 가능, conventional의 낭비(frozen backoff)는 불치" — 단 v1보다 온건하게(채널 효율은 동률까지). 한계: native도 RTS/CTS, fairness 축 불변, ACK 미모델. 코드: `run_step9_fig25.py`, 상세: `guidelines/step9/fig25.md`.
 
 → 논문 포지셔닝: cold 성능은 τ₀의 지식량에 비례(genie 0.95/무지식 0.16) — **warm-start는 지식 축을 기억으로 대체** (무지식→0.87). 코드: `run_step9_fig24.py`, 상세: `guidelines/step9/fig24.md`.
+
+
+### Fig 29: Ablation study — init & self-exclusion (paper Subsec V-E, fig5-1/5-2)
+
+RQ: PACE 두 기능(one-probe init τ₀=1/W_eff, PPDU-aware self-exclusion) 각각 필요한가? 환경 = fig26 동일 (visitor sweep N_vis∈{5,10,20,50}, N_nat=10, 표준 단위, basic/RTS 양 모드). 변형: pace(full) / pace_noexcl(Phase b 제거 — unfittable도 경쟁, truncation) / pace_high(τ₀=0.5) / dcf_conv. 엔진: `_run_visit25`에 `pace_noexcl` 모드 추가.
+
+Total useful airtime:
+
+| 변형 | basic N=5→50 | rts N=5→50 |
+|---|---|---|
+| pace | 0.657→0.692 | 0.726→0.760 |
+| pace_noexcl | 0.644→0.635 | 0.711→0.705 |
+| pace_high (τ₀=0.5) | 0.238→0.027 | 0.650→0.318 |
+| **pace_rand (τ₀~U(0,1))** | 0.175→0.026 | 0.451→0.122 |
+| dcf_excl (현행 baseline) | 0.525→0.162 | 0.701→0.463 |
+| dcf_conv (구, truncate) | 0.500→0.117 | 0.678→0.400 |
+
+- **init ablation = 파국**: 논문 채택 = **U(0,1)** (무지식 자연 prior, strawman 비판 회피). U(0,1)이 0.5보다 더 악질 — rts에서도 전 구간 standard 이하 (0.45→0.12): storm 비용 + high-τ tail이 solo success 차단 → solo-copy 합의 붕괴 (fig22 rand U(0,1) 메커니즘 재확인). 0.5는 동질 시작이라 lockstep 하강으로 rts에서 부분 회복. fairness도 파괴 (N=5 rts: visitor 0.40 vs native 0.05). → "init은 최적화가 아니라 전제조건".
+- **self-exclusion ablation = 온건·체계적**: −2%(N=5)→−8%(N=50, basic 0.635 vs 0.692), rts −7%@N=50. 손실원 = 잔존 unfittable STA의 충돌 인플레이션 + truncation(표준과 동일 병리). ablated도 standard 압도 → MIMD가 주 기여, self-excl은 deadline 가드.
+- 서사: 두 기능은 방문의 양 끝 보호 — init=시작(storm), self-excl=끝(truncation).
+- 코드: `run_step9_fig29.py`, 데이터: `results/step9/fig29/data.csv`.
 
 ---
 

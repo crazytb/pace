@@ -193,9 +193,14 @@ def _run_visit25(
         #  - dcf_conv: standard-faithful — 802.11bn D1.2 has NO per-frame fit
         #    check (Min Duration Threshold gates only the switch, 37.18.3);
         #    the STA contends until NPCA_TIMER expiry (37.18.4/5).
-        if mode == "dcf_conv":
+        if mode in ("dcf_conv", "pace_noexcl"):
+            # pace_noexcl: ablation — PACE MIMD without Phase (b); an
+            # unfittable frame keeps contending and truncates like dcf_conv.
             vv = ~succeeded[:N_VISITOR]
         else:
+            # dcf_excl: best-case compliant CSMA/CA — the standard leaves the
+            # unfittable-frame case unspecified, so a deferring implementation
+            # (per-frame fit check) is equally standard-conformant.
             vv = (~succeeded[:N_VISITOR]) & (ppdus[:N_VISITOR] + succ_oh <= W_rem)
         # Natives: standard DCF on their own primary channel — they neither
         # know nor care about the visitors' window; no fit check.
@@ -206,7 +211,7 @@ def _run_visit25(
 
         if mode == "oracle":
             tx_v = rng.random(N_VISITOR) < np.where(vv, 1.0 / k, 0.0)
-        elif mode == "dcf_conv":
+        elif mode in ("dcf_conv", "dcf_excl"):
             tx_v = (bo_v == 0) & vv
         else:  # pace
             tx_v = rng.random(N_VISITOR) < np.where(vv, tau.clip(1e-4, 1.0), 0.0)
@@ -221,7 +226,7 @@ def _run_visit25(
             if i < N_VISITOR:
                 if need <= W_rem:
                     # completed visitor exchange
-                    if mode == "pace":
+                    if mode.startswith("pace"):
                         _solo = float(tau[i])
                         carry[i] = float(tau[i])
                         tau[i] = 0.0
@@ -229,11 +234,13 @@ def _run_visit25(
                     W_rem -= need
                     airtime[i] += int(ppdus[i])
                     oh_air += succ_oh
-                    if mode == "dcf_conv":
+                    if mode.startswith("dcf"):
                         bo_v[i] = W_REF + 1
                 else:
-                    # dcf_conv only: frame does not fit — transmission starts
-                    # anyway and is cut off at NPCA_TIMER expiry; wasted busy.
+                    # dcf_conv / pace_noexcl: frame does not fit — transmission
+                    # starts anyway and is cut off at NPCA_TIMER expiry.
+                    if mode.startswith("pace"):
+                        _solo = float(tau[i])
                     coll_air += W_rem
                     W_rem = 0
             else:
@@ -257,7 +264,7 @@ def _run_visit25(
             idle += 1
 
         # visitor state update
-        if mode == "dcf_conv":
+        if mode.startswith("dcf"):
             if coll:
                 for j in np.where(tx_v)[0]:
                     j = int(j)
@@ -266,7 +273,7 @@ def _run_visit25(
             elif idle_o:
                 m = (~succeeded[:N_VISITOR]) & vv & (bo_v > 0)
                 bo_v[m] -= 1
-        elif mode == "pace":
+        elif mode.startswith("pace"):
             if solo:
                 w_i = int(np.where(tx)[0][0])
                 if w_i < N_VISITOR:
@@ -295,7 +302,7 @@ def _run_visit25(
             m = (~succeeded[N_VISITOR:]) & vn & (bo_n > 0)
             bo_n[m] -= 1
 
-    if mode == "pace":
+    if mode.startswith("pace"):
         for kk in range(N_VISITOR):
             if not succeeded[kk]:
                 carry[kk] = float(np.clip(tau[kk], 1e-4, 1.0))

@@ -11,7 +11,7 @@ Two single-panel figures for a LaTeX subfigure pair:
   fig1-1  basic access (no RTS/CTS; collision = max Lᵢ of colliders)
   fig1-2  mandatory RTS/CTS @ 24 Mbps control rate
 Each: visitor useful airtime vs N_native for
-  conventional NPCA (standard CSMA/CA visitor, CW_min=16 BEB),
+  standard NPCA (CSMA/CA visitor, deferring implementation),
   PACE (warm, τ carried across transitions), oracle.
 
 Run:
@@ -39,7 +39,7 @@ import run_step9_fig25 as _f25
 
 # ─── Parameters ───────────────────────────────────────────────────────────────
 
-METHODS_26 = ["dcf_conv", "pace", "oracle"]
+METHODS_26 = ["dcf_excl", "pace", "oracle"]
 N_NATIVE_LIST = [0, 5, 10, 20]
 
 # --visitor-sweep mode: fix natives, sweep visitor group size
@@ -65,14 +65,14 @@ FIELDS_26 = ["access", "N_native", "method", "seed",
              "succ_v", "succ_n", "useful"]
 
 _STYLE_26 = {
-    "dcf_conv": dict(color="#525252", ls="-.", lw=1.9, marker="x", ms=7),
+    "dcf_excl": dict(color="#525252", ls="-.", lw=1.9, marker="x", ms=7),
     "pace":     dict(color="#ff7f0e", ls="-",  lw=2.2, marker="^", ms=7),
     "oracle":   dict(color="#2ca02c", ls="--", lw=1.8, marker="D", ms=6),
 }
 _LABEL_26 = {
-    "dcf_conv": "Standard NPCA (CSMA/CA)",
+    "dcf_excl": "Standard NPCA (CSMA/CA)",
     "pace":     "PACE",
-    "oracle":   "Fair share ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
+    "oracle":   "Fair share (FS)",
 }
 
 
@@ -294,7 +294,7 @@ def summary(rows, nat_list: list, xkey: str = "N_native",
                 f"{_mean26(rows, 'succ_v', access=access, method=m, **{xkey: n}):>9.3f}"
                 for n in nat_list))
         print(f"  pace/dcf  " + "".join(
-            f"{_mean26(rows, 'succ_v', access=access, method='pace', **{xkey: n}) / _mean26(rows, 'succ_v', access=access, method='dcf_conv', **{xkey: n}):>9.2f}"
+            f"{_mean26(rows, 'succ_v', access=access, method='pace', **{xkey: n}) / _mean26(rows, 'succ_v', access=access, method='dcf_excl', **{xkey: n}):>9.2f}"
             for n in nat_list))
         print(f"\n  channel useful (total):")
         for m in METHODS_26:

@@ -10,7 +10,7 @@ so the window an NPCA visit gets is the environmental variable here.
   (E[L_visitor] = 62.5 slots → W/E[L] ≈ 1.6 … 27)
 
 N visitors (fixed, chosen via --pick-n fast sweep), M=10 natives.
-Methods: dcf_conv (standard NPCA), pace (Algorithm 1, cold τ0=1/W_eff per
+Methods: dcf_excl (standard NPCA, deferring impl.), pace (Algorithm 1, cold τ0=1/W_eff per
 visit), oracle key = fair-share reference FS (τ*=1/|V(t)|).
 
 Two single-panel figures for the LaTeX subfigure pair:
@@ -43,7 +43,7 @@ import run_step9_fig26 as _f26
 
 # ─── Parameters ───────────────────────────────────────────────────────────────
 
-METHODS_27 = ["dcf_conv", "pace", "oracle"]
+METHODS_27 = ["dcf_excl", "pace", "oracle"]
 
 W_LIST   = [100, 200, 420, 840, 1680]        # slots (σ=9µs) → 0.9–15.12 ms
 N_REF    = 20                                 # visitors (see --pick-n)
@@ -82,7 +82,7 @@ def run_config(method: str, n_visitor: int, w_eff: int, coll_cost, succ_oh: int,
         for v in range(visits):
             ppdus = _f25._sample_ppdus25(rng_p)
             tau0 = np.full(n_visitor, 1.0 / w_eff) if method == "pace" else None
-            mode = {"dcf_conv": "dcf_conv", "pace": "pace",
+            mode = {"dcf_excl": "dcf_excl", "pace": "pace",
                     "oracle": "oracle"}[method]
             air, _c, _i, _o, _carry = _f25._run_visit25(
                 ppdus, rng, mode, tau0, coll_cost, succ_oh)
@@ -141,14 +141,14 @@ def summary(rows, w_list: list) -> None:
             f"{_mean27(rows, 'succ_v', access=access, W_eff=w, method='pace'):>10.3f}"
             for w in w_list))
         print(f"  {'dcf sv':<10}" + "".join(
-            f"{_mean27(rows, 'succ_v', access=access, W_eff=w, method='dcf_conv'):>10.3f}"
+            f"{_mean27(rows, 'succ_v', access=access, W_eff=w, method='dcf_excl'):>10.3f}"
             for w in w_list))
 
 
 # ─── Plot ─────────────────────────────────────────────────────────────────────
 
 def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
-              out_dir: str, fig_name: str) -> None:
+              out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
     xs = [w * 9 / 1000 for w in w_list]      # ms
     for m in METHODS_27:
@@ -162,9 +162,10 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
     ax.tick_params(labelsize=8)
     ax.set_xlabel("Visiting duration $W_\\mathrm{eff}$ (ms)", fontsize=9)
     ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$", fontsize=9)
-    ax.set_ylim(*ylim)
-    ax.legend(fontsize=8, frameon=True, loc="lower right",
-              handlelength=2.0, borderpad=0.35, labelspacing=0.35)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+    ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
+              handlelength=1.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     fig.tight_layout()
 
@@ -182,10 +183,11 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
 
 
 def plot(rows, w_list: list, out_dir: str, fig_dir: str) -> None:
-    ymax = max(r["useful"] for r in rows) * 1.12
-    ylim = (0.0, ymax)
-    _plot_one(rows, "basic", w_list, ylim, fig_dir, out_dir, "fig3-1")
-    _plot_one(rows, "rts",   w_list, ylim, fig_dir, out_dir, "fig3-2")
+    # y-range auto per panel so the inter-scheme differences stay visible
+    _plot_one(rows, "basic", w_list, None, fig_dir, out_dir, "fig3-1",
+              leg_loc="center left")
+    _plot_one(rows, "rts",   w_list, (0.60, 0.785), fig_dir, out_dir, "fig3-2",
+              leg_loc="lower right")
 
 
 # ─── CSV ──────────────────────────────────────────────────────────────────────
