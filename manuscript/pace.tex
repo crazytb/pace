@@ -27,22 +27,25 @@
 
 \title{PACE: Probabilistic Adaptive Contention Control for Non-Primary Channel Access in IEEE 802.11bn}
 
-\author{
-\IEEEauthorblockN{Taewon Song}
-\IEEEauthorblockA{\textit{Division of Electronics and Electrical Engineering} \\
-\textit{Dongguk University}\\
-Seoul, Republic of Korea \\
-twsong@dongguk.edu}
+\author{Taewon Song and Yeunwoong Kyung
+% \IEEEauthorblockA{\textit{Division of Electronics and Electrical Engineering} \\
+% \textit{Dongguk University}\\
+% Seoul, Republic of Korea \\
+% twsong@dongguk.edu}%
+
+\thanks{T. Song is with the Division of Electronics and Electrical Engineering, College of Engineering, Dongguk University, 30, Pildong-ro 1-gil, Jung-gu, Seoul 04620, Republic of Korea (e-mail: twsong@dongguk.edu) and Y. Kyung is with the Department of Electronic Engineering, Seoul National University of Science and Technology,
+Korea. (e-mail: ywkyung@seoultech.ac.kr), Corresponding author: Y. Kyung}%
+
+\thanks{This work was supported in part by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (No. RS-2026-25481311), in part by Institute of Information \& Communications Technology Planning \& Evaluation (IITP) grant funded by the Korea government (MSIT) (No. RS-2026-25523610), and in part by the Dongguk University Research Fund of 2026.}
 }
 
 \maketitle
 
 \begin{abstract}
-Modern Wi-Fi deployments increasingly suffer from spectrum underutilization. While an overlapping basic service set (OBSS) transmission occupies the primary channel, adjacent non-primary channels often sit idle since the conventional IEEE 802.11 mandates that the primary channel be included in every channel access. 
-Hence, IEEE 802.11bn introduces non-primary channel access (NPCA) to exploit these idle intervals. The standard contention mechanism, however, is not well suited to NPCA's constrained transmission windows, as its collision-triggered backoff growth synchronizes stations into repeated collisions or pushes their counters beyond the remaining opportunity, wasting time that could otherwise carry data.
-We propose PACE, a probabilistic adaptive contention control scheme that enables stations to collectively track the time-varying fair-share transmission probability of the depleting window without central coordination. PACE combines a deadline-scaled initialization and a distributed multiplicative feedback rule---copying the successful sender's probability on solo receptions---with a prospective self-exclusion mechanism that silences stations whose frame length exceeds the remaining window.
-We evaluate PACE in IEEE 802.11 standard timing on a non-primary channel shared with native stations, against the standard-compliant NPCA baseline and a genie-aided fair-share reference. Across $5$--$50$ visiting stations, PACE keeps the total useful airtime of the shared channel within $2\%$ of the fair-share reference under RTS/CTS-protected access---up to $63\%$ above the standard procedure, and up to $4.5\times$ under basic access---while holding the visitors' airtime at or below their population-proportional share. The advantage holds across visit durations from one to fifteen milliseconds and grows with the visitor population, where the standard backoff idles behind frozen counters and collides in synchronized bursts; PACE delivers this with a fraction of the baseline's transmission attempts and a three-fold higher per-attempt success ratio. An ablation study confirms that both the deadline-scaled initialization and the self-exclusion rule are necessary for these gains.
-These results establish probabilistic, deadline-aware contention as a practical design reference for non-primary channel access in next-generation Wi-Fi networks.
+Modern Wi-Fi deployments suffer from spectrum underutilization. While an overlapping basic service set (OBSS) transmission occupies the primary channel, adjacent non-primary channels sit idle because conventional IEEE 802.11 mandates that the primary channel be included in every access. IEEE 802.11bn introduces non-primary channel access (NPCA) to exploit these idle intervals. The standard contention mechanism, however, is ill-suited to NPCA's constrained transmission windows, as its collision-triggered backoff growth synchronizes stations into repeated collisions or pushes their counters beyond the remaining opportunity, wasting airtime that could carry data.
+We propose PACE, a probabilistic adaptive contention control scheme that lets stations track the time-varying fair-share transmission probability of the depleting window without central coordination. PACE combines a deadline-scaled initialization and a distributed multiplicative feedback rule that copies the successful sender's probability on solo receptions, together with a prospective self-exclusion mechanism that silences stations whose frame length exceeds the remaining window.
+We evaluate PACE under IEEE 802.11 standard timing on a non-primary channel shared with native stations, against the standard-compliant NPCA baseline and a genie-aided fair-share reference. Across $5$--$50$ visiting stations, PACE keeps the total useful airtime within $2\%$ of the fair-share reference under RTS/CTS-protected access, up to $63\%$ above the standard procedure and up to $4.5\times$ under basic access, while holding the visitors' airtime at or below their population-proportional share. The advantage grows with the visitor population, where standard backoff idles behind frozen counters and collides in synchronized bursts.
+These results establish probabilistic, deadline-aware contention as a design reference for non-primary channel access in next-generation Wi-Fi.
 \end{abstract}
 
 
