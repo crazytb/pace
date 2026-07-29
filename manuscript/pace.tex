@@ -59,20 +59,19 @@ Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, OBSS, A
 \section{Introduction}
 \label{sec:introduction}
 
-Spectrum efficiency in next-generation Wi-Fi networks depends critically on how effectively stations (STAs) exploit available channel time. In dense deployments, overlapping basic service sets (OBSSs) routinely occupy the primary channel while adjacent channels remain idle, creating a persistent underutilization problem. IEEE 802.11bn addresses this gap by introducing non-primary channel access (NPCA), which allows STAs to transmit opportunistically on non-primary channels during ongoing OBSS intervals~\cite{ieee80211bn,wei2024non}.
+Spectrum efficiency in next-generation Wi-Fi networks depends critically on how effectively stations (STAs) exploit available channel time. In dense deployments, overlapping basic service sets (OBSSs) routinely occupy the primary channel while adjacent channels remain idle, creating a persistent underutilization problem. Hence, IEEE 802.11bn addresses this gap by introducing non-primary channel access (NPCA), which allows STAs to transmit opportunistically on non-primary channels during ongoing OBSS intervals~\cite{ieee80211bn,wei2024non}.
 
-NPCA, however, presents a contention challenge distinct from conventional channel access. Each NPCA opportunity has a finite duration bounded by the ongoing OBSS transmission, and competing STAs must coordinate their access within this constrained window. The binary exponential backoff (BEB) mechanism was designed for open-ended contention. Each collision doubles the backoff window, and the resulting delay frequently exceeds the remaining NPCA window duration. Affected STAs are effectively silenced for the rest of the interval, leaving the channel idle even when other STAs could have transmitted. In heterogeneous deployments where STAs carry frames of varying lengths, the problem is further compounded. The draft leaves unspecified what a STA does when its frame no longer fits the remaining window, so a compliant STA may keep contending, or even transmit and be cut off at timer expiry, despite having no viable
-transmission opportunity.
+NPCA, however, presents a contention challenge distinct from conventional channel access. Each opportunity lasts only as long as the ongoing OBSS transmission, so competing STAs must resolve their access within a finite, depleting window. To govern this access, the IEEE 802.11bn draft has STAs on the non-primary channel reuse the same binary exponential backoff (BEB) mechanism that the distributed coordination function employs on the primary channel~\cite{ieee80211bn}, yet BEB was designed for open-ended contention. On the primary channel, doubling the backoff window after each collision harmlessly spreads out retransmissions; within a bounded NPCA window the same growth turns harmful, as the inflated backoff frequently exceeds the time remaining. STAs whose counters overshoot the deadline are silenced for the rest of the interval, leaving the channel idle even when they still have data to send. Heterogeneous frame lengths compound the problem, since the draft leaves unspecified what a STA should do when its frame no longer fits the remaining window; a compliant STA may keep contending, or transmit only to be cut off at timer expiry, despite having no viable transmission opportunity.
 
-Consider a dense office environment where multiple STAs detect an OBSS transmission
-and attempt to use the secondary channel concurrently. Early collisions trigger
-exponential backoff growth; within a few rounds, a large fraction of STAs have
-accumulated backoff counts that exceed the remaining window duration. The channel
-spends the final slots idle, not because no STA wanted to transmit, but because
-the contention mechanism pushed every backoff counter beyond the opportunity horizon.
+% Consider a dense office environment where multiple STAs detect an OBSS transmission
+% and attempt to use the secondary channel concurrently. Early collisions trigger
+% exponential backoff growth; within a few rounds, a large fraction of STAs have
+% accumulated backoff counts that exceed the remaining window duration. The channel
+% spends the final slots idle, not because no STA wanted to transmit, but because
+% the contention mechanism pushed every backoff counter beyond the opportunity horizon.
 
 Existing work on NPCA has focused on characterizing aggregate throughput and delay
-under the standard switching rule, taking Binary Exponential Backoff within the
+under the standard switching rule, taking BEB within the
 non-primary channel as given \cite{wei2024non,bellalta2025performance,wei2024optimized}.
 The contention dynamics within the finite NPCA window, and the mismatch between
 BEB's infinite-horizon design and the window's bounded duration, have not been
@@ -82,7 +81,7 @@ discovery, such as the ALOHA-like Neighbor Discovery (AND) algorithm
 but their stationary-population assumption makes them ill-suited to a window that
 depletes over time. BEB's infinite-horizon design and AND's open-loop phase structure
 both fail to track the time-varying optimal access probability as the window shrinks
-and the set of viable STAs changes (see Table~\ref{tab:comparison}).
+and the set of viable STAs changes.
 
 In this paper, we propose PACE, a Probabilistic Adaptive Contention control scheme
 for NPCA that enables STAs to collectively track the time-varying fair-share
@@ -96,13 +95,8 @@ PPDU-aware self-exclusion rule that silences STAs whose frame length exceeds the
 remaining window, eliminating a class of futile contention attempts that BEB would
 otherwise sustain.
 
-The design of PACE is motivated by two requirements that are unique to
-NPCA's bounded-window structure. \textit{(i)} the fair-share transmission
-probability is time-varying and must track the depleting window rather than
-converge to a static equilibrium, and \textit{(ii)} STAs whose frame
-length exceeds the remaining window must proactively self-exclude to prevent
-futile contention that wastes viable slots. The main contributions of this
-paper are as follows.
+The design of PACE is motivated by two requirements that are unique to NPCA's bounded-window structure: 1) the fair-share transmission probability is time-varying and must track the depleting window rather than converge to a static equilibrium, and 2) STAs whose frame length exceeds the remaining window must proactively self-exclude to prevent futile contention that wastes viable slots. The main contributions of this paper are as follows.
+
 \begin{itemize}
   \item We characterize the fair-share transmission probability
         $\tau^*(t)=1/|\mathcal{V}(t)|$ for finite-window NPCA, showing that
@@ -113,9 +107,9 @@ paper are as follows.
   \item We propose PACE, a fully distributed algorithm that addresses both
         requirements simultaneously. A deadline-scaled initialization and
         MIMD feedback drive the transmission probability toward the
-        time-varying target~\textit{(i)}, while PPDU-aware self-exclusion
+        time-varying target~\textit{(i)}:, while PPDU-aware self-exclusion
         eliminates futile contention by silencing STAs that cannot complete
-        a frame within the remaining window~\textit{(ii)}, all without
+        a frame within the remaining window~\textit{(ii)}:, all without
         inter-STA signaling or knowledge of the total STA count.
   \item Through simulation in IEEE~802.11 standard timing on a channel
         shared with native DCF stations, we demonstrate that PACE keeps the
@@ -178,8 +172,11 @@ is shared. Lee and Song~\cite{lee2024impact} further showed that PPDU frame
 duration has a nonlinear effect on inter-BSS coexistence, and Song~\cite{song2026adaptive}
 applied deep reinforcement learning to the NPCA channel-activation decision.
 
-Across these studies, however, the contention mechanism within the NPCA
-window is held fixed at Binary Exponential Backoff. How STAs should
+Across these studies, however, efforts to improve NPCA performance target
+the decision of \emph{when} to switch to the non-primary channel, through
+occupancy-based threshold policies~\cite{wei2024optimized} or learned
+activation rules~\cite{song2026adaptive}, while the contention mechanism
+exercised \emph{within} the window is left fixed at BEB. How STAs should
 adapt their access probability as the window depletes and viable STAs
 drop out has not been studied.
 
@@ -394,7 +391,7 @@ Section~\ref{subsec:eval_whypace}.
     \begin{subfigure}{\linewidth}
         \centering
         \includegraphics[width=\linewidth]{figure/transition_npca.pdf}
-        \caption{NPCA baseline (binary exponential backoff).}
+        \caption{NPCA baseline (BEB).}
         \label{fig:transition_npca}
     \end{subfigure}
     \\[1.5ex]
@@ -543,7 +540,7 @@ population has been overestimated and the attempt rate is raised by the factor o
 
 None of the three updates counts the viable STAs. Instead, the idle and collision statistics move each $\tau_i$ toward the operating point implicitly, and solo-copy pulls the population onto a common value, so the ensemble approximately tracks the time-varying optimum $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt} without estimating the number of contending STAs $|\mathcal{V}(t)|$. 
 
-The direction of this adaptation is what separates PACE from legacy binary exponential backoff (BEB). Because the viable set only shrinks over a visit, the optimal target $\tau^*(t)=1/|\mathcal{V}(t)|$ of~\eqref{eq:tau_opt} rises as the deadline approaches. On the other hand, the BEB moves the opposite way, that is, a collision doubles the contention window and halves the attempt rate, so the access probability falls exactly when it should climb.
+The direction of this adaptation is what separates PACE from legacy BEB. Because the viable set only shrinks over a visit, the optimal target $\tau^*(t)=1/|\mathcal{V}(t)|$ of~\eqref{eq:tau_opt} rises as the deadline approaches. On the other hand, the BEB moves the opposite way, that is, a collision doubles the contention window and halves the attempt rate, so the access probability falls exactly when it should climb.
 
 Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate alongside the native STAs of Section~\ref{subsec:network_model}. Because the slot outcome $\mathcal{D}(t)$ is measured at the channel level, native activity enters a visitor's feedback directly. A slot in which two or more frames overlap is a collision whether the extra transmitter is a visitor or a native, so a native transmission that clashes with a visitor lowers that visitor's $\tau_i$, and a slot with no transmission at all, native or visitor, is idle and raises it. The solo case is the one exception. The copy $\tau_i \leftarrow \tau_\mathrm{sender}$ requires the successful frame to advertise a probability, which only a PACE visitor does; when a native transmits alone, its frame carries no such value, so a listening visitor keeps $\tau_i$ unchanged and simply observes the busy slot while the window continues to shrink.
 
@@ -593,7 +590,7 @@ are drawn uniformly from $225$--$900~\mu$s and native frames last
 $450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with
 $\tau_0=1/W_\mathrm{eff}$ and $c_\mathrm{coll}=c_\mathrm{idle}=1.2$. The
 standard-compliant baseline contends with CSMA/CA
-($\mathrm{CW}_{\min}=16$, binary exponential backoff) as Draft~1.2
+($\mathrm{CW}_{\min}=16$, BEB) as Draft~1.2
 specifies it~\cite{ieee80211bn}. The NPCA Minimum Duration Threshold
 gates only the decision to switch, and the draft leaves unspecified what
 a visitor does when its pending frame no longer fits the remaining
@@ -1009,7 +1006,7 @@ complementary guard that keeps its gains from eroding at the deadline.
 
 This paper presented PACE, a probabilistic adaptive contention control
 scheme for non-primary channel access in IEEE~802.11bn. The bounded NPCA
-visit inverts the premise of binary exponential backoff. As the window
+visit inverts the premise of BEB. As the window
 drains and the viable population shrinks, the fair operating point
 $\tau^*(t)=1/|\mathcal{V}(t)|$ rises, yet BEB retreats on every
 collision, idles behind frozen counters, and bunches its expirations
