@@ -160,7 +160,7 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
     ax.set_xticklabels([f"{x:.1f}" if x < 10 else f"{x:.0f}" for x in xs])
     ax.minorticks_off()
     ax.tick_params(labelsize=8)
-    ax.set_xlabel("Visiting duration $W_\\mathrm{eff}$ (ms)", fontsize=9)
+    ax.set_xlabel("Visiting duration (ms)", fontsize=9)
     ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$", fontsize=9)
     if ylim is not None:
         ax.set_ylim(*ylim)
@@ -183,10 +183,13 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
 
 
 def plot(rows, w_list: list, out_dir: str, fig_dir: str) -> None:
-    # y-range auto per panel so the inter-scheme differences stay visible
-    _plot_one(rows, "basic", w_list, None, fig_dir, out_dir, "fig3-1",
-              leg_loc="center left")
-    _plot_one(rows, "rts",   w_list, (0.60, 0.785), fig_dir, out_dir, "fig3-2",
+    # shared y-range across both panels for direct comparability
+    vals = [r["useful"] for r in rows]
+    pad = (max(vals) - min(vals)) * 0.06
+    ylim = (min(vals) - pad, max(vals) + pad)
+    _plot_one(rows, "basic", w_list, ylim, fig_dir, out_dir, "fig3-1",
+              leg_loc="upper right")
+    _plot_one(rows, "rts",   w_list, ylim, fig_dir, out_dir, "fig3-2",
               leg_loc="lower right")
 
 

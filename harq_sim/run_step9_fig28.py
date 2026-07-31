@@ -65,21 +65,20 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
     """Returns [(elapsed_slots, tracked_value)] at every decision epoch.
     mode: 'pace' | 'oracle' | 'dcf_excl'. Natives always DCF."""
     N_total = N_V + M
-    succeeded = np.zeros(N_total, dtype=bool)
     W_rem = W
     tau = np.full(N_V, 1.0 / W)
     _solo = 0.0
     cw_v = np.full(N_V, 16, dtype=np.int64)
     bo_v = rng.integers(0, 16, size=N_V).astype(np.int64)
-    cw_n = np.full(M, N_total, dtype=np.int64)
-    bo_n = rng.integers(0, N_total, size=M).astype(np.int64)
+    cw_n = np.full(M, 16, dtype=np.int64)
+    bo_n = rng.integers(0, 16, size=M).astype(np.int64)
     out = []
 
     while W_rem > 0:
         # dcf_excl: deferring standard implementation — per-frame fit check
         # (the draft leaves the unfittable case unspecified; see fig25 engine)
-        vv = (~succeeded[:N_V]) & (ppdus[:N_V] + succ_oh <= W_rem)
-        vn = ~succeeded[N_V:]
+        vv = ppdus[:N_V] + succ_oh <= W_rem
+        vn = np.ones(M, dtype=bool)
         k = int(vv.sum() + vn.sum())
         if k == 0:
             break
@@ -106,16 +105,19 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
             need = int(ppdus[i]) + succ_oh
             if i < N_V:
                 if need <= W_rem:
-                    _solo = float(tau[i]); tau[i] = 0.0
+                    # saturated: winner draws next frame, keeps contending
+                    _solo = float(tau[i])
                     if mode == "dcf_excl":
-                        bo_v[i] = W + 1
-                    succeeded[i] = True
+                        cw_v[i] = 16
+                        bo_v[i] = int(rng.integers(0, 16))
                     W_rem -= need
+                    ppdus[i] = int(rng.integers(_f25.PPDU_V_LO,
+                                                _f25.PPDU_V_HI + 1))
                 else:
                     W_rem = 0          # unreachable under fit-checked modes
             else:
-                succeeded[i] = True
-                bo_n[i - N_V] = W + 1
+                cw_n[i - N_V] = 16
+                bo_n[i - N_V] = int(rng.integers(0, 16))
                 W_rem -= min(need, W_rem)
         elif n_tx > 1:
             c = int(ppdus[np.where(tx)[0]].max()) if coll_cost == "nocd" \
@@ -127,19 +129,18 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
         if mode == "pace":
             if n_tx == 1 and int(np.where(tx)[0][0]) < N_V:
                 for kk in range(N_V):
-                    if not tx_v[kk] and not succeeded[kk] and vv[kk]:
+                    if not tx_v[kk] and vv[kk]:
                         tau[kk] = _solo
             elif n_tx > 1:
                 for kk in range(N_V):
-                    if not succeeded[kk] and vv[kk] and not tx_v[kk]:
+                    if vv[kk] and not tx_v[kk]:
                         tau[kk] /= _f17.PND_C_COLL
             elif n_tx == 0:
                 for kk in range(N_V):
-                    if not tx_v[kk] and not succeeded[kk] and vv[kk]:
+                    if not tx_v[kk] and vv[kk]:
                         tau[kk] *= _f17.PND_C_IDLE
             for kk in range(N_V):
-                if not succeeded[kk]:
-                    tau[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
+                tau[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
         elif mode == "dcf_excl":
             if n_tx > 1:
                 for j in np.where(tx_v)[0]:
@@ -147,7 +148,7 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
                     cw_v[j] = min(int(cw_v[j]) * 2, _f17.DCF_CW_MAX)
                     bo_v[j] = int(rng.integers(0, max(int(cw_v[j]), 1)))
             elif n_tx == 0:
-                mask = (~succeeded[:N_V]) & vv & (bo_v > 0)
+                mask = vv & (bo_v > 0)
                 bo_v[mask] -= 1
         # natives
         if n_tx > 1:
@@ -156,7 +157,7 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
                 cw_n[j] = min(int(cw_n[j]) * 2, _f17.DCF_CW_MAX)
                 bo_n[j] = int(rng.integers(0, max(int(cw_n[j]), 1)))
         elif n_tx == 0:
-            mask = (~succeeded[N_V:]) & vn & (bo_n > 0)
+            mask = vn & (bo_n > 0)
             bo_n[mask] -= 1
     return out
 

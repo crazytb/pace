@@ -167,11 +167,14 @@ def _run_visit25(
     ppdus: np.ndarray, rng: np.random.Generator, mode: str,
     tau_init: np.ndarray | None, coll_cost, succ_oh: int,
 ) -> tuple[np.ndarray, int, int, int, np.ndarray | None]:
-    """One mixed visit. coll_cost: int slots or "nocd" (max Lᵢ of colliders).
+    """One mixed visit under SATURATED traffic: every STA always holds a
+    pending PPDU. A visitor that completes an exchange draws a fresh frame
+    (U{PPDU_V_LO..PPDU_V_HI}) and keeps contending; PACE winners keep their
+    τ, DCF winners reset CW to CW_min per the standard. Natives likewise.
+    coll_cost: int slots or "nocd" (max Lᵢ of colliders).
     succ_oh: handshake slots added to every successful exchange.
     Returns (per-STA useful airtime, coll_air, idle_slots, oh_air, carry τ)."""
     N_total = N_VISITOR + N_NATIVE
-    succeeded = np.zeros(N_total, dtype=bool)
     W_rem = W_REF
     airtime = np.zeros(N_total)
     coll_air = 0
@@ -183,8 +186,8 @@ def _run_visit25(
     _solo = 0.0
     cw_v = np.full(N_VISITOR, _f24.DCF_CW_MIN_STD, dtype=np.int64)
     bo_v = rng.integers(0, _f24.DCF_CW_MIN_STD, size=N_VISITOR).astype(np.int64)
-    cw_n = np.full(N_NATIVE, N_total, dtype=np.int64)
-    bo_n = rng.integers(0, N_total, size=N_NATIVE).astype(np.int64)
+    cw_n = np.full(N_NATIVE, _f24.DCF_CW_MIN_STD, dtype=np.int64)
+    bo_n = rng.integers(0, _f24.DCF_CW_MIN_STD, size=N_NATIVE).astype(np.int64)
 
     while W_rem > 0:
         # Visitor eligibility:
@@ -196,15 +199,15 @@ def _run_visit25(
         if mode in ("dcf_conv", "pace_noexcl"):
             # pace_noexcl: ablation — PACE MIMD without Phase (b); an
             # unfittable frame keeps contending and truncates like dcf_conv.
-            vv = ~succeeded[:N_VISITOR]
+            vv = np.ones(N_VISITOR, dtype=bool)
         else:
             # dcf_excl: best-case compliant CSMA/CA — the standard leaves the
             # unfittable-frame case unspecified, so a deferring implementation
             # (per-frame fit check) is equally standard-conformant.
-            vv = (~succeeded[:N_VISITOR]) & (ppdus[:N_VISITOR] + succ_oh <= W_rem)
+            vv = ppdus[:N_VISITOR] + succ_oh <= W_rem
         # Natives: standard DCF on their own primary channel — they neither
         # know nor care about the visitors' window; no fit check.
-        vn = ~succeeded[N_VISITOR:]
+        vn = np.ones(N_NATIVE, dtype=bool)
         k = int(vv.sum() + vn.sum())
         if k == 0:
             break
@@ -225,17 +228,19 @@ def _run_visit25(
             need = int(ppdus[i]) + succ_oh
             if i < N_VISITOR:
                 if need <= W_rem:
-                    # completed visitor exchange
+                    # completed visitor exchange — saturated: draw the next
+                    # frame and keep contending (PACE keeps its τ; DCF
+                    # resets CW to CW_min per the standard)
                     if mode.startswith("pace"):
                         _solo = float(tau[i])
                         carry[i] = float(tau[i])
-                        tau[i] = 0.0
-                    succeeded[i] = True
                     W_rem -= need
                     airtime[i] += int(ppdus[i])
                     oh_air += succ_oh
+                    ppdus[i] = int(rng.integers(PPDU_V_LO, PPDU_V_HI + 1))
                     if mode.startswith("dcf"):
-                        bo_v[i] = W_REF + 1
+                        cw_v[i] = _f24.DCF_CW_MIN_STD
+                        bo_v[i] = int(rng.integers(0, _f24.DCF_CW_MIN_STD))
                 else:
                     # dcf_conv / pace_noexcl: frame does not fit — transmission
                     # starts anyway and is cut off at NPCA_TIMER expiry.
@@ -250,8 +255,8 @@ def _run_visit25(
                 oh_part = min(succ_oh, occupy)
                 airtime[i] += occupy - oh_part
                 oh_air += oh_part
-                succeeded[i] = True
-                bo_n[i - N_VISITOR] = W_REF + 1
+                cw_n[i - N_VISITOR] = _f24.DCF_CW_MIN_STD
+                bo_n[i - N_VISITOR] = int(rng.integers(0, _f24.DCF_CW_MIN_STD))
                 W_rem -= occupy
         elif coll:
             c = int(ppdus[np.where(tx)[0]].max()) if coll_cost == "nocd" \
@@ -271,26 +276,25 @@ def _run_visit25(
                     cw_v[j] = min(int(cw_v[j]) * 2, _f17.DCF_CW_MAX)
                     bo_v[j] = int(rng.integers(0, max(int(cw_v[j]), 1)))
             elif idle_o:
-                m = (~succeeded[:N_VISITOR]) & vv & (bo_v > 0)
+                m = vv & (bo_v > 0)
                 bo_v[m] -= 1
         elif mode.startswith("pace"):
             if solo:
                 w_i = int(np.where(tx)[0][0])
                 if w_i < N_VISITOR:
                     for kk in range(N_VISITOR):
-                        if not tx_v[kk] and not succeeded[kk] and vv[kk]:
+                        if not tx_v[kk] and vv[kk]:
                             tau[kk] = _solo
             elif coll:
                 for kk in range(N_VISITOR):
-                    if not succeeded[kk] and vv[kk] and not tx_v[kk]:
+                    if vv[kk] and not tx_v[kk]:
                         tau[kk] /= _f17.PND_C_COLL
             elif idle_o:
                 for kk in range(N_VISITOR):
-                    if not tx_v[kk] and not succeeded[kk] and vv[kk]:
+                    if not tx_v[kk] and vv[kk]:
                         tau[kk] *= _f17.PND_C_IDLE
             for kk in range(N_VISITOR):
-                if not succeeded[kk]:
-                    tau[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
+                tau[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
 
         # native DCF update
         if coll:
@@ -299,13 +303,12 @@ def _run_visit25(
                 cw_n[j] = min(int(cw_n[j]) * 2, _f17.DCF_CW_MAX)
                 bo_n[j] = int(rng.integers(0, max(int(cw_n[j]), 1)))
         elif idle_o:
-            m = (~succeeded[N_VISITOR:]) & vn & (bo_n > 0)
+            m = vn & (bo_n > 0)
             bo_n[m] -= 1
 
     if mode.startswith("pace"):
         for kk in range(N_VISITOR):
-            if not succeeded[kk]:
-                carry[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
+            carry[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
     return airtime, coll_air, idle, oh_air, carry
 
 
