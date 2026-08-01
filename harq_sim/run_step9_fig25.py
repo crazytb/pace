@@ -166,6 +166,7 @@ def _sample_ppdus25(rng: np.random.Generator) -> np.ndarray:
 def _run_visit25(
     ppdus: np.ndarray, rng: np.random.Generator, mode: str,
     tau_init: np.ndarray | None, coll_cost, succ_oh: int,
+    native_init: tuple | None = None,
 ) -> tuple[np.ndarray, int, int, int, np.ndarray | None]:
     """One mixed visit under SATURATED traffic: every STA always holds a
     pending PPDU. A visitor that completes an exchange draws a fresh frame
@@ -186,8 +187,13 @@ def _run_visit25(
     _solo = 0.0
     cw_v = np.full(N_VISITOR, _f24.DCF_CW_MIN_STD, dtype=np.int64)
     bo_v = rng.integers(0, _f24.DCF_CW_MIN_STD, size=N_VISITOR).astype(np.int64)
-    cw_n = np.full(N_NATIVE, _f24.DCF_CW_MIN_STD, dtype=np.int64)
-    bo_n = rng.integers(0, _f24.DCF_CW_MIN_STD, size=N_NATIVE).astype(np.int64)
+    if native_init is None:
+        cw_n = np.full(N_NATIVE, _f24.DCF_CW_MIN_STD, dtype=np.int64)
+        bo_n = rng.integers(0, _f24.DCF_CW_MIN_STD, size=N_NATIVE).astype(np.int64)
+    else:
+        # steady-state native contention state (e.g., from a burn-in phase)
+        cw_n = native_init[0].copy()
+        bo_n = native_init[1].copy()
 
     while W_rem > 0:
         # Visitor eligibility:

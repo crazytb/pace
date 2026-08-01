@@ -193,8 +193,8 @@ def _plot_one(rows, access: str, nat_list: list, ylim, fig_dir: str,
     ax.set_xlabel(xlabel, fontsize=9)
     ax.set_ylabel(ylabel, fontsize=9)
     ax.set_ylim(*ylim)
-    ax.legend(fontsize=8, frameon=True, loc="best",
-              handlelength=2.0, borderpad=0.35, labelspacing=0.35)
+    ax.legend(fontsize=7.5, frameon=True, loc="best",
+              handlelength=1.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     fig.tight_layout()
 
@@ -238,8 +238,8 @@ def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
     ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$", fontsize=9)
     ax.set_ylabel("Visitor airtime proportionality $\\rho$", fontsize=9)
     ax.set_ylim(*ylim)
-    ax.legend(fontsize=8, frameon=True, loc="lower right",
-              handlelength=2.0, borderpad=0.35, labelspacing=0.35)
+    ax.legend(fontsize=7.5, frameon=True, loc="best",
+              handlelength=1.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     fig.tight_layout()
 

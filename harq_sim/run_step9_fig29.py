@@ -75,11 +75,11 @@ _STYLE_29 = {
     "dcf_excl":    dict(color="#525252", ls="-.", lw=1.9, marker="x", ms=7),
 }
 _LABEL_29 = {
-    "pace":        "PACE (full)",
-    "pace_noexcl": "PACE w/o self-exclusion",
-    "pace_high":   "PACE w/ naive $\\tau_0{=}0.5$",
-    "pace_rand":   "PACE w/ naive $\\tau_0{\\sim}\\mathcal{U}(0,1)$",
-    "dcf_excl":    "Standard NPCA (CSMA/CA)",
+    "pace":        "PACE",
+    "pace_noexcl": "No self-exclusion",
+    "pace_high":   "Naive $\\tau_0{=}0.5$",
+    "pace_rand":   "Naive $\\tau_0{\\sim}\\mathcal{U}(0,1)$",
+    "dcf_excl":    "Standard NPCA",
 }
 
 
@@ -146,7 +146,7 @@ def _mean29(rows, metric, **kw) -> float:
 # ─── Plot ─────────────────────────────────────────────────────────────────────
 
 def _plot_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
-              out_dir: str, fig_name: str) -> None:
+              out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
     for m in PLOT_METHODS:
         ys = [_mean29(rows, "useful", access=access, method=m, N_visitor=n)
@@ -157,8 +157,8 @@ def _plot_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
     ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$", fontsize=9)
     ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$", fontsize=9)
     ax.set_ylim(*ylim)
-    ax.legend(fontsize=7.5, frameon=True, loc="best",
-              handlelength=2.0, borderpad=0.35, labelspacing=0.3)
+    ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
+              handlelength=1.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, ls=":", lw=0.6, alpha=0.7)
     fig.tight_layout()
 
@@ -178,8 +178,12 @@ def _plot_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
 def plot(rows, nv_list: list, out_dir: str, fig_dir: str) -> None:
     ymax = max(r["useful"] for r in rows) * 1.12
     ylim = (0.0, ymax)
-    _plot_one(rows, "basic", nv_list, ylim, fig_dir, out_dir, "fig5-1")
-    _plot_one(rows, "rts",   nv_list, ylim, fig_dir, out_dir, "fig5-2")
+    # legend spots picked manually: with four curves spanning the panel,
+    # loc="best" still lands on the standard-NPCA curve in the RTS panel
+    _plot_one(rows, "basic", nv_list, ylim, fig_dir, out_dir, "fig5-1",
+              leg_loc="center right")
+    _plot_one(rows, "rts",   nv_list, ylim, fig_dir, out_dir, "fig5-2",
+              leg_loc="center left")
 
 
 # ─── Summary / CSV ────────────────────────────────────────────────────────────

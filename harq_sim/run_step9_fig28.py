@@ -185,7 +185,8 @@ def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
 # ─── Plot ─────────────────────────────────────────────────────────────────────
 
 def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
-             fig_dir: str, out_dir: str, fig_name: str) -> None:
+             fig_dir: str, out_dir: str, fig_name: str,
+             leg_loc: str = "best") -> None:
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
     for mode in ["dcf_excl", "pace", "oracle"]:
         xs, ys = binned(mode, coll_cost, succ_oh, visits)
@@ -194,11 +195,12 @@ def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
         ax.plot(xs, ys, label=_LABEL[mode], **{k: v for k, v in st.items()
                                                if k not in ("marker", "ms")})
     ax.set_yscale("log")
+    ax.set_ylim(top=0.4)   # empty top band reserved for the legend
     ax.tick_params(labelsize=8)
     ax.set_xlabel("Elapsed time in the visit (ms)", fontsize=9)
     ax.set_ylabel("Per-slot transmission rate", fontsize=9)
-    ax.legend(fontsize=8, frameon=True, loc="best",
-              handlelength=2.0, borderpad=0.35, labelspacing=0.35)
+    ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
+              handlelength=1.5, borderpad=0.3, labelspacing=0.3)
     ax.grid(True, ls=":", lw=0.6, alpha=0.7, which="both")
     fig.tight_layout()
 
@@ -227,9 +229,11 @@ def main() -> None:
     os.makedirs(fig_dir, exist_ok=True)
 
     visits = FAST_VISITS if args.fast else FULL_VISITS
+    locs = {"fig4-1": "upper left", "fig4-2": "upper left"}
     for (access, cc, oh), name in zip(ACCESS_CONFIGS, ["fig4-1", "fig4-2"]):
         print(f"--- {access} ({visits} visits) ---")
-        plot_one(access, cc, oh, visits, fig_dir, args.out_dir, name)
+        plot_one(access, cc, oh, visits, fig_dir, args.out_dir, name,
+                 leg_loc=locs[name])
     print("\nDone → results/figure/fig4-{1,2}.*")
 
 
