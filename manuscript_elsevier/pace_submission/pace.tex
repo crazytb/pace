@@ -37,7 +37,7 @@
 \ead{twsong@dongguk.edu}
 \credit{Conceptualization, Methodology, Software, Validation, Visualization, Writing -- original draft}
 \affiliation[1]{organization={Division of Electronics and Electrical Engineering, College of Engineering, Dongguk University},
-            addressline={30 Pildong-ro 1-gil, Jung-gu},
+            addressline={30, Pildong-ro 1-gil, Jung-gu},
             city={Seoul},
             postcode={04620},
             country={Republic of Korea}}
@@ -47,7 +47,6 @@
 \ead{ywkyung@seoultech.ac.kr}
 \credit{Conceptualization, Formal analysis, Supervision, Funding acquisition, Writing -- review and editing}
 \affiliation[2]{organization={Department of Electronic Engineering, Seoul National University of Science and Technology},
-            addressline={232 Gongneung-ro, Nowon-gu},
             city={Seoul},
             country={Republic of Korea}}
 
@@ -60,11 +59,11 @@ We evaluate PACE under IEEE 802.11 standard timing on a non-primary channel shar
 \end{abstract}
 
 \begin{highlights}
-\item Wi-Fi 8 devices may use a non-primary channel while a neighbor holds the main one
-\item These visits are short, and standard backoff often outgrows the time available
-\item Devices learn a fair transmit probability from what they hear in each time slot
-\item A device whose frame no longer fits the time left stops competing and stays quiet
-\item Useful airtime rises up to 4.3 times, within 3\% of an ideal all-knowing scheduler
+\item Bounded NPCA windows break the backoff rule the 802.11bn draft reuses there
+\item PACE tracks the fair-share attempt probability from local slot feedback only
+\item Stations whose frame exceeds the remaining window withdraw from contention
+\item Total useful airtime stays within 3\% of a genie-aided fair-share reference
+\item Up to 4.3x the standard NPCA baseline with the natives' airtime share intact
 \end{highlights}
 
 \begin{keywords}
@@ -112,13 +111,24 @@ closes by contrasting them with PACE.
 
 \subsection{Non-Primary Channel Access in IEEE 802.11bn}
 
-IEEE 802.11bn introduces NPCA as a core mechanism for exploiting idle secondary channels during OBSS transmissions~\citep{ieee80211bn,galati2024will}. \citet{wei2024non} extended Bianchi's DCF model to a multi-channel setting, establishing analytically that NPCA always outperforms the non-NPCA mode; a follow-up study~\citep{wei2024optimized} incorporated switching overhead and proposed a threshold policy to toggle between NPCA and legacy modes based on primary channel occupancy. \citet{bellalta2025performance} developed a Continuous-Time Markov Chain model for a multi-BSS topology, identifying a secondary-channel contention trade-off that can limit NPCA gains when the secondary channel is shared. \citet{lee2024impact} further showed that PPDU frame duration has a nonlinear effect on inter-BSS coexistence, and \citet{song2026adaptive} applied deep reinforcement learning to the NPCA channel-activation decision.
+IEEE 802.11bn introduces NPCA as a core mechanism for exploiting idle
+secondary channels during OBSS transmissions~\citep{ieee80211bn,galati2024will}.
+\citet{wei2024non} extended Bianchi's DCF model to a
+multi-channel setting, establishing analytically that NPCA always outperforms
+the non-NPCA mode; a follow-up study~\citep{wei2024optimized} incorporated
+switching overhead and proposed a threshold policy to toggle between NPCA
+and legacy modes based on primary channel occupancy. \citet{bellalta2025performance} developed a Continuous-Time
+Markov Chain model for a multi-BSS topology, identifying a secondary-channel
+contention trade-off that can limit NPCA gains when the secondary channel
+is shared. \citet{lee2024impact} further showed that PPDU frame
+duration has a nonlinear effect on inter-BSS coexistence, and \citet{song2026adaptive}
+applied deep reinforcement learning to the NPCA channel-activation decision.
 
 Across these studies, however, efforts to improve NPCA performance target
-the decision of when to switch to the non-primary channel, through
+the decision of \emph{when} to switch to the non-primary channel, through
 occupancy-based threshold policies~\citep{wei2024optimized} or learned
 activation rules~\citep{song2026adaptive}, while the contention mechanism
-exercised within the window is left fixed at BEB. How STAs should
+exercised \emph{within} the window is left fixed at BEB. How STAs should
 adapt their access probability as the window depletes and viable STAs
 drop out has not been studied.
 
@@ -524,7 +534,7 @@ Native STAs, which neither know nor observe the visitors' window, keep their sta
     \label{fig:why_pace}
 \end{figure}
 
-We first ask the question that motivates this work. What does PACE buy over simply running the standard access procedure on the non-primary channel? The design objective of PACE is not visitor throughput per se, but to keep the shared NPCA channel efficient and fair. The FS policy $\tau^*(t)=1/|\mathcal{V}(t)|$, computed over all contenders, is
+We first ask the question that motivates this work. What does PACE buy over simply running the standard access procedure on the non-primary channel? The design objective of PACE is not visitor throughput per se, but to keep the shared NPCA channel efficient and fair. The FS policy $\tau^*(t)=1/|\mathcal{V}(t)|$, computed over \emph{all} contenders, is
 precisely the embodiment of that objective, and the evaluation therefore reports the total useful airtime of the channel.
 
 Fig.~\ref{fig:why_pace} compares $\Nvis\in\{5,\dots,50\}$ visitor STAs operating either standard CSMA/CA or PACE exactly as specified in Algorithm~\ref{alg:pace}, every visit starts cold from $\tau_0=1/W_\mathrm{eff}$, sharing the channel with $\Nnat=10$ native DCF stations, using IEEE~802.11 OFDM timing. Under basic access in~Fig.~\ref{fig:why_pace_basic}, the channel under standard-compliant visitors degrades monotonically as the visitor population grows. When tens of STAs draw their backoff from the same fixed $\mathrm{CW}_{\min}=16$, several counters reach zero in the same slot, and the resulting collision occupies the channel for the full duration of the longest colliding frame. Over an unbounded horizon this would be a transient, since BEB keeps doubling the windows until the attempt rate settles near a level the population can sustain. An NPCA visit, however, ends within a few milliseconds, and the adjustment BEB needs grows with the contending population while the time available for it stays fixed. The larger $\Nvis$ becomes, the greater the fraction of the window that is spent on collisions before BEB has adjusted, so the standard procedure degrades not only the visitors' own throughput but the total useful airtime of the shared channel, which falls to $0.14$ at $\Nvis=50$.
@@ -650,7 +660,7 @@ at every duration.
     \caption{Within-visit transmission dynamics in the reference setting
     of Fig.~\ref{fig:why_pace} ($\Nvis=20$, $\Nnat=10$,
     $W_\mathrm{eff}=420$ slots, $3.78$~ms). The analytic FS target
-    $\tau^*(t)=1/|\mathcal{V}(t)|$ and the measured per-slot
+    $\tau^*(t)=1/|\mathcal{V}(t)|$ and the \emph{measured} per-slot
     transmission rate of viable visitors under PACE and under the
     standard procedure, averaged over $500$ visits.}
     \label{fig:tracking}
