@@ -167,6 +167,7 @@ def _run_visit25(
     ppdus: np.ndarray, rng: np.random.Generator, mode: str,
     tau_init: np.ndarray | None, coll_cost, succ_oh: int,
     native_init: tuple | None = None,
+    stats: dict | None = None,
 ) -> tuple[np.ndarray, int, int, int, np.ndarray | None]:
     """One mixed visit under SATURATED traffic: every STA always holds a
     pending PPDU. A visitor that completes an exchange draws a fresh frame
@@ -174,6 +175,9 @@ def _run_visit25(
     τ, DCF winners reset CW to CW_min per the standard. Natives likewise.
     coll_cost: int slots or "nocd" (max Lᵢ of colliders).
     succ_oh: handshake slots added to every successful exchange.
+    stats: optional counter dict; accumulates per-contention-epoch tallies for
+    the drift analysis (epochs, nat_tx, vis_viable, outcome counts, Στ). Purely
+    passive — consumes no rng, so results are bit-identical with or without it.
     Returns (per-STA useful airtime, coll_air, idle_slots, oh_air, carry τ)."""
     N_total = N_VISITOR + N_NATIVE
     W_rem = W_REF
@@ -228,6 +232,50 @@ def _run_visit25(
         tx = np.concatenate([tx_v, tx_n])
         n_tx = int(tx.sum())
         solo, coll, idle_o = n_tx == 1, n_tx > 1, n_tx == 0
+
+        if stats is not None:
+            # One loop pass = one contention epoch = the unit the drift
+            # equation is written in (a slot's *cost* varies, its decision
+            # does not).
+            stats["epochs"] = stats.get("epochs", 0) + 1
+            stats["nat_tx"] = stats.get("nat_tx", 0) + int(tx_n.sum())
+            stats["nat_slots"] = stats.get("nat_slots", 0) + int(vn.sum())
+            stats["vis_viable"] = stats.get("vis_viable", 0) + int(vv.sum())
+            key = "idle" if idle_o else "coll" if coll else \
+                ("solo_vis" if int(np.where(tx)[0][0]) < N_VISITOR
+                 else "solo_nat")
+            stats[key] = stats.get(key, 0) + 1
+            if tau is not None and vv.any():
+                stats["tau_sum"] = stats.get("tau_sum", 0.0) \
+                    + float(tau[vv].sum())
+                stats["tau_cnt"] = stats.get("tau_cnt", 0) + int(vv.sum())
+                # Within-epoch spread of τ across viable visitors. The analysis
+                # assumes a homogeneous population (solo-copy re-synchronises
+                # them); this measures how far that holds instead of taking it
+                # on faith.
+                if int(vv.sum()) > 1:
+                    _m = float(tau[vv].mean())
+                    if _m > 0.0:
+                        stats["tau_cv_sum"] = stats.get("tau_cv_sum", 0.0) \
+                            + float(tau[vv].std()) / _m
+                        stats["tau_cv_cnt"] = stats.get("tau_cv_cnt", 0) + 1
+            # Opt-in per-epoch trace: pass stats={"trace": []} to collect the
+            # within-visit trajectory as (W_rem, n_viable, k, rate). W_rem is
+            # the state the analysis indexes on: viability and the FS target
+            # are functions of the remaining window, not of the epoch number.
+            # For DCF the rate proxy is BEB's 2/(CW+1).
+            tr = stats.get("trace")
+            if tr is not None:
+                nvv = int(vv.sum())
+                if nvv == 0:
+                    rate = 0.0
+                elif tau is not None:
+                    rate = float(tau[vv].mean())
+                elif mode.startswith("dcf"):
+                    rate = float(np.mean(2.0 / (cw_v[vv] + 1.0)))
+                else:
+                    rate = 1.0 / k
+                tr.append((int(W_rem), nvv, k, rate))
 
         if solo:
             i = int(np.where(tx)[0][0])

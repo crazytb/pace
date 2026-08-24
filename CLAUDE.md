@@ -4,11 +4,36 @@
 
 IEEE 802.11bn **NPCA(Non-Primary Channel Access)** 저널 논문용 시뮬레이션 코드.
 
-**논문**: `manuscript/pace.tex`  
+**논문**: `manuscript_ieee_twc/pace.tex` (현행 · IEEEtran journal)  
 **제목**: PACE: Probabilistic Adaptive Contention Control for Non-Primary Channel Access in IEEE 802.11bn  
 **기반 알고리즘**: PND (Song et al., IEEE 2014) → NPCA 전환 결정에 적용
 
 > LLM-DRL 방향(vNPCA 저널)은 별도 논문으로 분리됨.
+
+---
+
+## 🔴 현재 작업: IEEE TWC 재투고 — 해석 모델 추가
+
+> **매 세션 시작 시 · 매 compact 직후 반드시 수행할 것.**
+> 이 블록은 진행 상태를 담지 않는다. 상태는 아래 지침서 안에만 있다.
+
+**지침서 (단일 진실 공급원)**: `manuscript_ieee_twc/PACE_TWC_ANALYSIS.md`  
+**진행 상태**: 같은 파일 **§10 수용 기준 체크리스트** (`[ ]`/`[x]`)  
+**진행 로그**: 같은 파일 **§12** (최신 항목이 맨 위)
+
+### 작업 재개 절차
+
+1. `manuscript_ieee_twc/PACE_TWC_ANALYSIS.md`를 **읽는다**. §12 로그 맨 위 = 마지막 중단 지점, §10 체크리스트 = 남은 일.
+2. §7 작업 순서를 지킨다. **RTS/CTS 케이스 먼저** (`L_col=12` 슬롯 상수라 정확히 풀림), basic access는 순서통계량이 들어가므로 확장으로.
+3. §7 "하지 말 것" 3항목을 지킨다. 균질 근사는 검증 완료(CV 0.4~1.3%), 다차원 정확 체인은 여전히 금지.
+4. 항목 하나를 끝낼 때마다 **§10 체크박스를 `[x]`로 바꾸고 §12에 한 줄 추가**한다. 이것을 미루면 다음 compact에서 진도가 사라진다.
+
+### 배경 (재설명 불필요)
+
+- JNCA desk reject 사유 = 스코프 불일치. TWC 재투고는 **"insufficient analytical depth"** 방어가 목적.
+- 원고는 현재 시뮬레이션 전용. 식 (9) `τ*(t)=1/|V(t)|` 외 해석 결과 없음.
+- 목표 산출물 = Analysis 절 신설 (4절과 5절 사이, 3~4쪽) + 검증 그림 2개 + `pace-analysis/` 재현 코드.
+- 원고 포맷은 이미 IEEEtran journal로 변환 완료 (12쪽 / 초고 한도 13쪽, 개정 한도 16쪽).
 
 ---
 
@@ -44,7 +69,11 @@ MIMD 규칙은 동일하게 적용. 핵심 추가:
 - 원래 PND의 CD(성공 후 탈퇴)와 동일한 역할
 - W_eff 창에서 실패 확정 STA가 슬롯 낭비 방지
 
-**파라미터**: c_coll = 1.2 (fig17 최적 튜닝), c_idle = 1.5
+**파라미터**: c_coll = c_idle = **1.2** (`run_step9_fig17.py:66-67`)
+
+> 이 문서에 c_idle = 1.5로 적혀 있었으나 코드는 1.2다 (2026-08-24 정정).
+> 두 계수가 같아야 τ가 1차원 격자 `τ₀·1.2^k` 위에 놓이고, 해석 모델의
+> 로그 영역 랜덤워크 논증이 성립한다. `PACE_TWC_ANALYSIS.md` §3.1 참조.
 
 ### 이론적 최적해
 
@@ -224,13 +253,25 @@ Total useful airtime:
 ```
 pace/
 ├── CLAUDE.md                        ← 이 파일
-├── manuscript/
-│   ├── pace.tex                     ← 논문 본문 (PACE)
+├── manuscript_ieee_twc/             ← **현행 원고 (TWC 투고 대상)**
+│   ├── pace.tex                     ← 논문 본문 · IEEEtran journal
+│   ├── PACE_TWC_ANALYSIS.md         ← **해석 모델 지침서 + 진행 상태(§10/§12)**
 │   ├── pace.bib                     ← 참고문헌
-│   ├── figure/                      ← **논문에 포함할 figure만** (선별 복사)
+│   ├── IEEEtran.cls / IEEEtran.bst  ← IEEE 템플릿
+│   └── figure/                      ← **논문에 포함할 figure만** (선별 복사)
+├── manuscript_elsevier/             ← JNCA 투고본 (desk reject). 내용은 TWC본에 반영 완료
+├── manuscript_ieee/                 ← 구 IEEE 변환본 + `ref/` 참고문헌 PDF
 │   └── ref/
-│       ├── A_Probabilistic_Neighbor_Discovery_Algorithm_in_Wireless_Ad_Hoc_Networks.pdf  ← PND 원본
-│       └── Draft P802.11bn_D1.2_NPCA.pdf   ← 표준 문서
+│       ├── Draft P802.11bn_D1.2_NPCA.pdf   ← 표준 문서
+│       └── (PND 원본 등)
+├── pace-analysis/                   ← 해석 모델 코드 (PACE_TWC_ANALYSIS.md §8)
+│   ├── params.py                    ← **단일 진실 공급원** (엔진 파생 + 불변식 가드)
+│   ├── drift.py                     ← 드리프트 방정식·τ* 수치해 (단독 실행 시 자기검증)
+│   ├── measure_engine.py            ← 엔진 실측 τ_nat·epoch 예산
+│   ├── beb_divergence.py            ← §4.4 BEB 진입 과공격 보조정리
+│   ├── viability.py                 ← E|V(t)| 닫힌형태·사구간 8.3%
+│   ├── dp.py                        ← Phase 2 역방향 재귀 (0.750 vs 실측 0.723)
+│   └── validate.py                  ← Phase 3 검증 그림 fig6-*/fig7-* + 민감도
 ├── harq_sim/
 │   ├── run_step9_fig{N}.py          ← Fig 1–21 생성 스크립트
 │   └── mfg_npca_sim.py              ← 핵심 시뮬레이터
@@ -239,7 +280,7 @@ pace/
 │   ├── step9/fig{N}.md              ← 각 Figure 상세 계획
 │   └── mfg_algorithm.md            ← MFG 알고리즘 상세
 └── results/
-    ├── figure/                      ← 스크립트 생성 figure 전체 (구 manuscript/figure)
+    ├── figure/                      ← 스크립트 생성 figure 전체 (원고용은 여기서 선별 복사)
     └── step9/fig{N}/data.csv        ← 실험 데이터
 ```
 
@@ -263,7 +304,7 @@ pace/
 
 ## Figure 생성 규칙
 
-모든 스크립트는 **`results/figure/`**에 3포맷 동시 저장 (manuscript/figure 직접 저장 금지):
+모든 스크립트는 **`results/figure/`**에 3포맷 동시 저장 (원고 figure 폴더 직접 저장 금지):
 
 ```python
 FIG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "figure")
@@ -272,7 +313,7 @@ fig.savefig(os.path.join(FIG_DIR, f"{fig_name}.png"), format="png", dpi=300, bbo
 fig.savefig(os.path.join(FIG_DIR, f"{fig_name}.pdf"), format="pdf", bbox_inches="tight")
 ```
 
-`manuscript/figure/`에는 논문에 실을 figure만 `results/figure/`에서 선별 복사.
+`manuscript_ieee_twc/figure/`에는 논문에 실을 figure만 `results/figure/`에서 선별 복사.
 
 ---
 
