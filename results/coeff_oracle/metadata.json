@@ -1,0 +1,203 @@
+{
+  "commit": "1fa9fd25c7e3ae46b069a1eb22c52eb927c79cbb",
+  "dirty": true,
+  "objective": "J = ln max(T,delta) - alpha * (ln max(rho,delta))^2",
+  "delta": 1e-09,
+  "T": "(A_vis + A_nat) / (n_visits * W_eff), useful airtime only (handshake overhead excluded, as in the engine)",
+  "rho": "(A_vis/(A_vis+A_nat)) / (N_vis/(N_vis+N_nat))",
+  "aggregation": "pooled over all evaluation sequences, then J once",
+  "G_J": "exp(J_A - J_O), both from the SAME evaluation simulator",
+  "cores": [
+    {
+      "n_vis": 10,
+      "n_nat": 10,
+      "w_eff": 420,
+      "access": "rts"
+    },
+    {
+      "n_vis": 10,
+      "n_nat": 10,
+      "w_eff": 420,
+      "access": "basic"
+    },
+    {
+      "n_vis": 50,
+      "n_nat": 10,
+      "w_eff": 420,
+      "access": "rts"
+    },
+    {
+      "n_vis": 10,
+      "n_nat": 10,
+      "w_eff": 105,
+      "access": "rts"
+    },
+    {
+      "n_vis": 10,
+      "n_nat": 10,
+      "w_eff": 1680,
+      "access": "rts"
+    },
+    {
+      "n_vis": 10,
+      "n_nat": 0,
+      "w_eff": 420,
+      "access": "rts"
+    },
+    {
+      "n_vis": 20,
+      "n_nat": 20,
+      "w_eff": 840,
+      "access": "basic"
+    },
+    {
+      "n_vis": 5,
+      "n_nat": 5,
+      "w_eff": 210,
+      "access": "rts"
+    }
+  ],
+  "alphas": [
+    0.0,
+    0.05,
+    0.1,
+    0.2,
+    0.5
+  ],
+  "seeds": {
+    "tuning": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "evaluation": [
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160
+    ],
+    "dev": [
+      9001,
+      9002,
+      9003,
+      9004,
+      9005,
+      9006,
+      9007,
+      9008,
+      9009
+    ],
+    "bootstrap": 20260828
+  },
+  "visits": {
+    "tuning_per_seed": 40,
+    "evaluation_per_seed": 30
+  },
+  "search": {
+    "box_eps": [
+      0.05,
+      0.8
+    ],
+    "cap_eps": [
+      0.009950330853168092,
+      1.3862943611198906
+    ],
+    "coarse": 6,
+    "fine": 5,
+    "max_expand": 3,
+    "note": "log-spaced in eps = ln c; expansion is shared across alphas, refinement is per alpha"
+  },
+  "n_boot": 2000,
+  "F_L": {
+    "visitor": "U[25,100] slots",
+    "native": "50 slots",
+    "slot_us": 9
+  },
+  "engine": {
+    "module": "harq_sim/run_step9_fig25.py",
+    "entry": "_run_visit25",
+    "mode": "pace",
+    "tau_0": "1/W_eff",
+    "tau_clip": [
+      0.0001,
+      1.0
+    ],
+    "traffic": "saturated"
+  },
+  "analytical_model": {
+    "module": "pace-analysis/dp.py",
+    "native_approximation": "exogenous constant tau_nat = 0.052 per contention epoch; the engine instead runs standard DCF natives with frozen backoff, so the DP does not see native backoff freezing",
+    "population": "homogeneous in tau (one tau per DP state); the engine carries N_vis independent tau values",
+    "lattice": "(c_coll, r) with r rationally approximated; the ACHIEVED c_idle is reported, not the requested one",
+    "viability": "closed-form E|V(t)| from viability.py"
+  },
+  "known_gaps": [
+    "The DP fixes F_L at the engine's U[25,100]; the F_L axis in the brief is therefore not swept.",
+    "eps_coll is weakly identified within one visit (section 4.5.3/4.5.4): a flat ridge means the reported oracle c_coll is one point of a near-optimal set, and the near_c_coll columns give its width."
+  ]
+}

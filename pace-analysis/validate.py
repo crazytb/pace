@@ -170,6 +170,116 @@ def fig_airtime(access: str, name: str) -> dict:
     return {"max_abs_err": max(err), "model": mod, "sim": sim}
 
 
+# ─── the coefficient scaling law ─────────────────────────────────────────────
+
+def fig_collapse(access: str, name: str, n_vis: int = 10,
+                 alpha: float = 0.2, theta: float = 0.5) -> dict:
+    """Two panels: the raw J curves per window, and the same curves rescaled.
+
+    Left panel shows that the objective's peak moves left as the window grows.
+    Right panel rescales the abscissa by W_eff^theta and asks whether the
+    curves fall on one another. This is the robust form of the scaling claim:
+    it uses every measured point rather than the position of a broad peak.
+    """
+    import optimise as O
+    c = O.collapse(n_vis, alpha, access=access)
+    grid, curves = c["grid"], c["curves"]
+    cmap = plt.get_cmap("viridis")
+    ws = c["windows"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.5))
+    for k, w in enumerate(ws):
+        col = cmap(k / max(len(ws) - 1, 1))
+        kw = dict(color=col, lw=1.5, marker="o", ms=3.0,
+                  label=f"$W_\\mathrm{{eff}}={w}$")
+        axes[0].plot(grid, curves[w], **kw)
+        axes[1].plot(grid * w ** theta, curves[w], **kw)
+
+    axes[0].set_xlabel("Up step $\\varepsilon_\\mathrm{idle}$", fontsize=9)
+    axes[1].set_xlabel("$\\varepsilon_\\mathrm{idle}\\,"
+                       f"W_\\mathrm{{eff}}^{{{theta:g}}}$", fontsize=9)
+    for ax in axes:
+        ax.set_xscale("log")
+        ax.set_ylim(-0.5, 0.05)
+        ax.tick_params(labelsize=8)
+        ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    axes[0].set_ylabel("$J-J_{\\max}$", fontsize=9)
+    axes[0].legend(fontsize=6.5, frameon=True, loc="lower center", ncol=2,
+                   handlelength=1.4, borderpad=0.3, labelspacing=0.2)
+    axes[1].set_title(f"fitted $\\theta={c['theta']:.2f}$ "
+                      f"$[{c['lo']:.2f},{c['hi']:.2f}]$", fontsize=8)
+    fig.tight_layout()
+    _save(fig, name)
+    return c
+
+
+def fig_design(access: str, name: str, n_vis: int = 10, alpha: float = 0.2,
+               w_show: int = 420,
+               windows: tuple = (300, 420, 600, 840, 1190, 1680)) -> dict:
+    """Analysis against simulation for the coefficient design result.
+
+    Left: the objective against the up step at one window, DP and engine.
+    Right: the optimal up step against the window, both sources, with the
+    C/sqrt(W) reference fitted to each.
+
+    The point of the figure is the honest one: the DP reproduces the shape and
+    the trend but sits systematically to the right of the engine, because it
+    carries a single tau per state and so cannot see the dispersion that a
+    large step creates. The constant has to come from simulation.
+    """
+    import optimise as O
+    grid = np.exp(np.linspace(np.log(0.12), np.log(1.6), 15))
+
+    def star(jf, w):
+        # grid holds eps_idle; the objective takes the COEFFICIENT, exp(eps)
+        js = np.array([jf(n_vis, alpha, float(np.exp(e)), 1.4, access=access,
+                          w_eff=w) for e in grid])
+        return grid[int(js.argmax())], js
+
+    e_sim, j_sim = star(O.sim_J, w_show)
+    e_dp, j_dp = star(O.dp_J, w_show)
+    s_stars = [star(O.sim_J, w)[0] for w in windows]
+    d_stars = [star(O.dp_J, w)[0] for w in windows]
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.5))
+    axes[0].plot(grid, j_dp - j_dp.max(), label="Analysis", **_STYLE["model"])
+    axes[0].plot(grid, j_sim - j_sim.max(), label="Simulation", **_STYLE["sim"])
+    axes[0].set_xscale("log")
+    axes[0].set_ylim(-0.6, 0.05)
+    axes[0].set_xlabel("Up step $\\varepsilon_\\mathrm{idle}$", fontsize=9)
+    axes[0].set_ylabel("$J-J_{\\max}$", fontsize=9)
+    axes[0].set_title(f"$W_\\mathrm{{eff}}={w_show}$", fontsize=8)
+    axes[0].legend(fontsize=7, frameon=True, loc="lower center",
+                   handlelength=1.6, borderpad=0.3, labelspacing=0.25)
+
+    ws = np.array(windows, dtype=float)
+    axes[1].plot(ws, d_stars, label="Analysis", **_STYLE["model"])
+    axes[1].plot(ws, s_stars, label="Simulation", **_STYLE["sim"])
+    for vals, col in ((d_stars, "#d62728"), (s_stars, "#1f77b4")):
+        c = float(np.mean([v * np.sqrt(w) for v, w in zip(vals, ws)]))
+        axes[1].plot(ws, c / np.sqrt(ws), color=col, ls=":", lw=1.2,
+                     label=f"$C={c:.1f}/\\sqrt{{W}}$")
+    axes[1].set_xscale("log")
+    axes[1].set_yscale("log")
+    # the default log locator crams 3x10^2, 4x10^2, 6x10^2 into an unreadable run
+    axes[1].set_xticks([300, 600, 1200])
+    axes[1].set_xticklabels(["300", "600", "1200"])
+    axes[1].xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    axes[1].set_xlabel("$W_\\mathrm{eff}$ (slots)", fontsize=9)
+    axes[1].set_ylabel("$\\varepsilon_\\mathrm{idle}^{*}$", fontsize=9)
+    axes[1].legend(fontsize=6.5, frameon=True, loc="lower left",
+                   handlelength=1.6, borderpad=0.3, labelspacing=0.2)
+    for ax in axes:
+        ax.tick_params(labelsize=8)
+        ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    fig.tight_layout()
+    _save(fig, name)
+
+    ratio = [d / s for d, s in zip(d_stars, s_stars)]
+    return {"windows": list(windows), "sim": s_stars, "dp": d_stars,
+            "ratio": ratio, "max_ratio": max(ratio)}
+
+
 # ─── sensitivity ─────────────────────────────────────────────────────────────
 
 def sensitivity(access: str = "rts", n_vis: int = 20) -> list[tuple]:
@@ -195,6 +305,14 @@ def _main() -> None:
     for access, name in (("basic", "fig7-1"), ("rts", "fig7-2")):
         air[access] = fig_airtime(access, name)
         print(f"  {access}: max abs. err {air[access]['max_abs_err']:.3f}")
+
+    print("\n=== Figure 8: coefficient scaling law, data collapse ===")
+    for access, name in (("basic", "fig8-1"), ("rts", "fig8-2")):
+        c = fig_collapse(access, name)
+        print(f"  {access}: theta {c['theta']:.2f} "
+              f"[{c['lo']:.2f}, {c['hi']:.2f}], "
+              f"collapse gain {c['gain']:.2f}x"
+              + (f", dropped {c['dropped']}" if c["dropped"] else ""))
 
     print("\n=== tau_nat sensitivity (N_vis=20, RTS/CTS) ===")
     print(f"{'tau_nat':>9} {'DP total':>9} {'vs base':>9}")

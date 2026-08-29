@@ -60,7 +60,7 @@ def test_lattice_bounds_cover_the_reachable_range():
 
 
 def test_dp_table_is_a_bounded_probability_weighted_sum():
-    tab = dp.solve(20)
+    tab, _k0 = dp.solve(20)
     assert np.all(np.isfinite(tab))
     assert np.all(tab >= 0.0)
     assert np.all(tab[0] == 0.0)

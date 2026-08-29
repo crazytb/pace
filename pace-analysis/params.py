@@ -15,6 +15,7 @@ import rather than quietly reporting wrong numbers.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 
@@ -42,7 +43,8 @@ L_COL = _f25.COLL_RTS_24M                   # 12 slots (106 us), RTS collision
 SLOT_US = 9
 
 # ── PACE MIMD adaptation ─────────────────────────────────────────────────────
-C_MIMD = _f17.PND_C_COLL                    # 1.2, both directions
+C_MIMD = _f17.PND_C_COLL                    # 1.2, the shipped symmetric baseline
+C_IDLE = _f17.PND_C_IDLE                    # 1.2, equal to C_MIMD by default
 TAU_0 = 1.0 / W_EFF                         # deadline-scaled initialisation
 TAU_FLOOR = 1e-4                            # run_step9_fig25.py:303 (unnamed)
 
@@ -75,14 +77,49 @@ def engine():
     return _f25
 
 
+@contextlib.contextmanager
+def coefficients(c_coll: float, c_idle: float = None):
+    """Run the engine with different MIMD coefficients.
+
+    The engine reads run_step9_fig17.PND_C_COLL / PND_C_IDLE on every update
+    (run_step9_fig25.py:345,349), so asymmetric r needs no engine change, only
+    a rebind. Restores on exit so one sweep cannot leak into the next.
+    """
+    c_idle = c_coll if c_idle is None else c_idle
+    old = (_f17.PND_C_COLL, _f17.PND_C_IDLE)
+    _f17.PND_C_COLL, _f17.PND_C_IDLE = c_coll, c_idle
+    try:
+        yield
+    finally:
+        _f17.PND_C_COLL, _f17.PND_C_IDLE = old
+
+
+@contextlib.contextmanager
+def window(w_eff: int):
+    """Run the engine with a different effective window.
+
+    W_REF is read inside _run_visit25 (run_step9_fig25.py:183), so rebinding the
+    module attribute is enough. TAU_0 = 1/W_eff is deadline-scaled, so callers
+    sweeping W_eff must pass the matching tau_0; this only moves the window.
+    """
+    old = _f25.W_REF
+    _f25.W_REF = int(w_eff)
+    try:
+        yield
+    finally:
+        _f25.W_REF = old
+
+
 def _check() -> None:
-    # The log-domain lattice argument (section 3.1) needs a single ratio: with
-    # c_idle != c_coll the reachable set becomes a 2-D lattice and the drift
-    # equation, Theorem 1 and Theorem 2 all lose their meaning.
+    # The engine's SHIPPED defaults must stay symmetric. r = 1 is the paper's
+    # baseline, and drift.k_gap and measure_engine both convert tau ratios to
+    # step counts with log base C_MIMD, which is only meaningful when the two
+    # coefficients agree. Asymmetric r is explored by monkeypatching the engine
+    # at run time through coefficients() below, which leaves these untouched.
     assert _f17.PND_C_COLL == _f17.PND_C_IDLE, (
-        f"c_coll={_f17.PND_C_COLL} != c_idle={_f17.PND_C_IDLE}: the 1-D "
-        "lattice argument in PACE_TWC_ANALYSIS.md section 3.1 no longer holds")
-    assert C_MIMD > 1.0
+        f"c_coll={_f17.PND_C_COLL} != c_idle={_f17.PND_C_IDLE}: the engine's "
+        "default must stay symmetric; sweep asymmetry via params.coefficients()")
+    assert C_MIMD > 1.0 and C_IDLE > 1.0
 
     # Unit sanity: the overheads must be slot counts, not microseconds. This is
     # the exact error the manuscript plan shipped with.
@@ -118,7 +155,7 @@ if __name__ == "__main__":
     print(f"native PPDU      {PPDU_NATIVE} slots")
     print(f"L_hs / L_col     {L_HS} / {L_COL} slots "
           f"(= ceil(88/{SLOT_US}) / ceil(106/{SLOT_US}))")
-    print(f"c_mimd           {C_MIMD}  (c_idle == c_coll, lattice holds)")
+    print(f"c_coll / c_idle  {C_MIMD} / {C_IDLE}  (r = 1 baseline)")
     print(f"tau_0            {TAU_0:.5f} = 1/W_eff")
     print(f"tau_floor        {TAU_FLOOR}")
     print(f"CW_min / CW_max  {CW_MIN} / {CW_MAX}")
