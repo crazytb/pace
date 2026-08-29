@@ -24,7 +24,7 @@ from concurrent.futures import ProcessPoolExecutor
 import coeff_oracle as CO
 
 ALPHAS = (0.0, 0.25, 0.5, 0.75, 1.0)
-CIDLE = (1.0, 1.2, 1.4, 1.6)
+CIDLE = (1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.4)
 CCOLL = (1.02, 1.05, 1.10, 1.15, 1.20, 1.30, 1.40, 1.55, 1.70, 1.85, 2.00)
 N_NAT = 10
 SCEN = [(nv, N_NAT, w, ac) for ac in ("basic", "rts")
