@@ -100,6 +100,16 @@ def test_common_random_numbers_are_shared_across_candidates():
         f25.N_VISITOR, f25.N_NATIVE = old
 
 
+def test_uniform_init_is_a_distinct_arm_on_the_same_workload():
+    """tau_0 ~ U(0,1) must change the run without disturbing the PPDU stream,
+    or the two initialisation arms are not paired (section 4.5.24)."""
+    a = CO.batch(SCN, 1.2, 1.2, CO.DEV_SEEDS[:3], 5)
+    assert a == CO.batch(SCN, 1.2, 1.2, CO.DEV_SEEDS[:3], 5, tau0="one_probe")
+    u = CO.batch(SCN, 1.2, 1.2, CO.DEV_SEEDS[:3], 5, tau0="uniform")
+    assert u != a
+    assert u == CO.batch(SCN, 1.2, 1.2, CO.DEV_SEEDS[:3], 5, tau0="uniform")
+
+
 # ── 14.5  tuning and evaluation seeds are disjoint ───────────────────────────
 
 def test_seed_sets_are_disjoint():

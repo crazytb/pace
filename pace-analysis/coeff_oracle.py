@@ -58,6 +58,8 @@ OUT = os.path.join(ROOT, "results", "coeff_oracle")
 # part of either key, which is what makes the comparison paired: every candidate
 # sees the same PPDU draws and the same initial backoffs.
 STREAM_PPDU, STREAM_ENGINE = 0xA1, 0xB2
+STREAM_INIT = 0xC3          # tau_0 draws, kept off the PPDU stream so the two
+#                             initialisation arms see the same workload
 
 # Search box in log coefficients. The defaults are the brief's; CAP_* are the
 # physical stops the expansion is allowed to reach (c in [1.01, 4]) before the
@@ -108,11 +110,16 @@ def _rngs(scn: Scn, seed: int):
             np.random.default_rng((STREAM_ENGINE,) + key))
 
 
-def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int) -> list:
+def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
+          tau0: str = "one_probe") -> list:
     """Run one candidate over `seeds` sequences of `visits` NPCA transitions.
 
     Returns one row per seed holding SUMS, not means: the pooled aggregation in
-    aggregate() and the paired bootstrap both need additive quantities."""
+    aggregate() and the paired bootstrap both need additive quantities.
+
+    tau0 selects the initial transmission probability: "one_probe" is the
+    shipped 1/W_eff, "uniform" draws U(0,1) per visitor per visit from its own
+    stream so the PPDU sequence stays paired with the one_probe arm."""
     # 1.0 disables that update entirely, which is a legitimate control point
     # (no up step / no down step); anything below 1 inverts the rule.
     assert c_idle >= 1.0 and c_coll >= 1.0, (c_idle, c_coll)
@@ -124,13 +131,17 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int) -> list:
         with P.coefficients(c_coll, c_idle), P.window(scn.w_eff):
             for s in seeds:
                 rng_p, rng = _rngs(scn, s)
+                rng_i = np.random.default_rng(
+                    (STREAM_INIT, s, scn.n_vis, scn.n_nat, scn.w_eff,
+                     len(scn.access)))
                 st: dict = {}
                 av = an = 0.0
                 coll = idle = oh = 0
                 for _ in range(visits):
                     air, c_air, idl, o_air, _ = f25._run_visit25(
                         f25._sample_ppdus25(rng_p), rng, "pace",
-                        np.full(scn.n_vis, 1.0 / scn.w_eff),
+                        (rng_i.random(scn.n_vis) if tau0 == "uniform"
+                         else np.full(scn.n_vis, 1.0 / scn.w_eff)),
                         *P.ACCESS[scn.access], stats=st)
                     av += float(air[:scn.n_vis].sum())
                     an += float(air[scn.n_vis:].sum())
