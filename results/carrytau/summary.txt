@@ -1,0 +1,48 @@
+
+72 scenarios (N_nat 0/5/10/20), each arm judged at its OWN best eps
+
+  alpha = 0.25
+    --- cold_nv vs cold_w (1/W_eff), n = 56 ---
+    exp(J_arm - J_cold_w)              min   0.5027  median   0.8818  max   1.0722
+    T ratio                            min   0.6588  median   0.9173  max   1.0765
+    rho ratio                          min   1.0000  median   1.6883  max   5.3449
+    eps* ratio                         min   0.0249  median   0.1579  max   2.2065
+      arm wins: 12/56
+    --- warm vs cold_w (1/W_eff), n = 38 ---
+    exp(J_arm - J_cold_w)              min   0.5881  median   1.0339  max   1.1463
+    T ratio                            min   0.5881  median   1.0175  max   1.1579
+    rho ratio                          min   0.8713  median   1.1688  max   1.7196
+    eps* ratio                         min   0.0191  median   0.0422  max   1.6940
+      arm wins: 31/38
+    warm tau_0 / cold_w tau_0          min   1.5330  median   6.4685  max 449.4924
+
+  alpha = 0.5
+    --- cold_nv vs cold_w (1/W_eff), n = 53 ---
+    exp(J_arm - J_cold_w)              min   0.2836  median   0.8781  max   1.1287
+    T ratio                            min   0.6588  median   0.9125  max   1.1002
+    rho ratio                          min   1.0000  median   1.4761  max   5.5539
+    eps* ratio                         min   0.0191  median   0.1578  max   2.2065
+      arm wins: 11/53
+    --- warm vs cold_w (1/W_eff), n = 37 ---
+    exp(J_arm - J_cold_w)              min   0.5881  median   1.0429  max   1.1802
+    T ratio                            min   0.5881  median   1.0312  max   1.1168
+    rho ratio                          min   0.8970  median   1.1024  max   1.4521
+    eps* ratio                         min   0.0191  median   0.0324  max   1.6940
+      arm wins: 30/37
+    warm tau_0 / cold_w tau_0          min   1.5330  median   7.2950  max 449.4924
+
+  alpha = 1.0
+    --- cold_nv vs cold_w (1/W_eff), n = 54 ---
+    exp(J_arm - J_cold_w)              min   0.0902  median   0.8837  max   1.2154
+    T ratio                            min   0.6588  median   0.9572  max   1.1002
+    rho ratio                          min   1.0000  median   1.4373  max   5.5539
+    eps* ratio                         min   0.0191  median   0.1396  max   2.2065
+      arm wins: 13/54
+    --- warm vs cold_w (1/W_eff), n = 38 ---
+    exp(J_arm - J_cold_w)              min   0.5881  median   1.0466  max   1.3675
+    T ratio                            min   0.5881  median   1.0297  max   1.1256
+    rho ratio                          min   0.8537  median   1.1305  max   1.4919
+    eps* ratio                         min   0.0249  median   0.0324  max   1.6940
+      arm wins: 30/38
+    warm tau_0 / cold_w tau_0          min   1.9796  median   7.6848  max 449.4924
+
