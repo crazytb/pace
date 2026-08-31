@@ -1,0 +1,62 @@
+
+(a) C = eps* sqrt(W_eff) on the diagonal c_idle = c_coll, N_nat = 10
+
+  alpha = 0.25   (clean peaks: rts 17/20, basic 18/20)
+    rts    C  min   4.77  median  10.74  max  13.29
+    basic  C  min   2.16  median   7.99  max  11.22
+    ratio basic/rts of medians: 0.743
+
+  alpha = 0.5   (clean peaks: rts 16/20, basic 17/20)
+    rts    C  min   4.81  median  12.09  max  15.49
+    basic  C  min   2.33  median   9.74  max  12.83
+    ratio basic/rts of medians: 0.806
+
+  alpha = 1.0   (clean peaks: rts 14/20, basic 16/20)
+    rts    C  min   6.23  median  12.72  max  16.99
+    basic  C  min   7.43  median  11.78  max  14.62
+    ratio basic/rts of medians: 0.926
+
+(b) attribution: rts timing, one cost varied at a time
+
+  alpha = 0.25
+    collision cost sweep (handshake held at 10 slots)
+              1        4       12       30       60      100      150   <- slots
+      W420 v10:     11.40    11.07    11.37    11.73    12.25    14.49    14.83
+      W420 v50:     15.25    13.37    12.80     6.90     7.35     8.55     8.60
+      W1680 v10:      7.89     7.71     7.77     7.82     8.76    10.16    11.99
+      W1680 v50:     21.83    18.21    12.67     8.51     8.18     9.61    10.52
+    handshake sweep (collision held at 12 slots)
+              0        5       10       20   <- slots
+      W420 v10:      9.68    10.53    11.37    12.79
+      W420 v50:      8.09     7.69    12.80    13.82
+      W1680 v10:      6.28     7.06     7.77     9.16
+      W1680 v50:      8.77     9.65    12.67    13.66
+
+  alpha = 0.5
+    collision cost sweep (handshake held at 10 slots)
+              1        4       12       30       60      100      150   <- slots
+      W420 v10:     11.46    11.57    12.03    12.73    13.95    16.01    15.92
+      W420 v50:     16.53    16.84    13.89    12.13    10.97     9.11    14.80
+      W1680 v10:      7.62     7.69     7.99     8.67     9.82    12.16    13.76
+      W1680 v50:     22.13    20.05    14.57    10.56    13.05    11.92    14.43
+    handshake sweep (collision held at 12 slots)
+              0        5       10       20   <- slots
+      W420 v10:     10.51    11.12    12.03    13.49
+      W420 v50:     11.66    12.56    13.89    14.85
+      W1680 v10:      6.64     7.33     7.99     9.41
+      W1680 v50:     10.64    13.26    14.57    15.53
+
+  alpha = 1.0
+    collision cost sweep (handshake held at 10 slots)
+              1        4       12       30       60      100      150   <- slots
+      W420 v10:     11.49    11.89    12.58    13.40    15.20    18.49    16.83
+      W420 v50:     17.53    17.65    15.06    14.38    13.19    10.35    15.63
+      W1680 v10:      7.50     7.67     8.17     9.21    10.89    13.36    16.45
+      W1680 v50:     22.69    21.31    16.33    16.78    14.66    17.08    27.04
+    handshake sweep (collision held at 12 slots)
+              0        5       10       20   <- slots
+      W420 v10:     10.99    11.61    12.58    14.08
+      W420 v50:     13.29    13.94    15.06    15.92
+      W1680 v10:      6.89     7.50     8.17     9.56
+      W1680 v50:     12.80    15.11    16.33    20.56
+

@@ -111,7 +111,8 @@ def _rngs(scn: Scn, seed: int):
 
 
 def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
-          tau0: str = "one_probe", mode: str = "pace") -> list:
+          tau0: str = "one_probe", mode: str = "pace",
+          access: tuple | None = None) -> list:
     """Run one candidate over `seeds` sequences of `visits` NPCA transitions.
 
     Returns one row per seed holding SUMS, not means: the pooled aggregation in
@@ -119,7 +120,11 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
 
     tau0 selects the initial transmission probability: "one_probe" is the
     shipped 1/W_eff, "uniform" draws U(0,1) per visitor per visit from its own
-    stream so the PPDU sequence stays paired with the one_probe arm."""
+    stream so the PPDU sequence stays paired with the one_probe arm.
+
+    access overrides (collision cost, success overhead) so the two can be swept
+    apart from each other; the scenario's own access mode is used when it is
+    None."""
     # 1.0 disables that update entirely, which is a legitimate control point
     # (no up step / no down step); anything below 1 inverts the rule.
     assert c_idle >= 1.0 and c_coll >= 1.0, (c_idle, c_coll)
@@ -142,7 +147,7 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
                         f25._sample_ppdus25(rng_p), rng, mode,
                         (rng_i.random(scn.n_vis) if tau0 == "uniform"
                          else np.full(scn.n_vis, 1.0 / scn.w_eff)),
-                        *P.ACCESS[scn.access], stats=st)
+                        *(access or P.ACCESS[scn.access]), stats=st)
                     av += float(air[:scn.n_vis].sum())
                     an += float(air[scn.n_vis:].sum())
                     coll += int(c_air)
