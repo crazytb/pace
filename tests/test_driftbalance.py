@@ -77,3 +77,43 @@ def test_shipped_equilibrium_sits_above_the_airtime_optimum(n):
     for access, lo, hi in (("rts", 3.0, 3.5), ("basic", 7.0, 8.0)):
         ratio = DB.tau_eq(1.2, 1.2, n) / DB.tau_target(n, access)
         assert lo < ratio < hi
+
+
+# ── section 4.5.27: the objective-targeted rule ──────────────────────────────
+
+@pytest.mark.parametrize("access", ["rts", "basic"])
+@pytest.mark.parametrize("n", [5, 20, 50])
+def test_alpha_lifts_the_target_out_of_the_silence_degeneracy(access, n):
+    """With natives and alpha = 0 under basic access the objective wants the
+    visitors quiet; any alpha > 0 pulls the target back to a real value. This
+    is what makes the J-targeted rule defined where the T-targeted one is not."""
+    if access == "basic":
+        assert DB.tau_J(n, 10, "basic", 0.0) is None
+    for a in (0.25, 0.5, 1.0):
+        t = DB.tau_J(n, 10, access, a)
+        assert t is not None and 1e-4 < t < 0.2
+
+
+@pytest.mark.parametrize("n", [5, 20, 50])
+@pytest.mark.parametrize("alpha", [0.25, 0.5, 1.0])
+def test_r_J_lands_inside_the_swept_grid(n, alpha):
+    """The whole point of targeting J rather than T: the ratio comes back into
+    a range a sweep can resolve, instead of the 14-132 of section 4.5.26."""
+    for access in ("rts", "basic"):
+        r = DB.r_J(n, 10, access, alpha)
+        assert 0.5 < r < 5.0, (access, n, alpha, r)
+
+
+@pytest.mark.parametrize("n", [5, 20, 50])
+def test_r_J_is_robust_to_the_measured_rho_bias(n):
+    """The analytic rho runs a median 0.874 of the engine's. If r_J moved much
+    under that, the rule would be untestable until the native model is fixed."""
+    for access in ("rts", "basic"):
+        vals = [DB.r_J(n, 10, access, 0.5, rho_cal=k)
+                for k in (1.0, 0.874, 0.842)]
+        assert max(vals) / min(vals) < 1.5
+
+
+def test_rho_model_is_one_without_natives():
+    for n in (5, 20):
+        assert DB.rho_model(0.02, n, 0, "rts") == 1.0

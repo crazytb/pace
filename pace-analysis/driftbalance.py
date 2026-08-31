@@ -225,3 +225,75 @@ def _self_check() -> None:
 
 if __name__ == "__main__":
     _self_check()
+
+
+# ─── the objective-targeted rule (section 4.5.27) ───────────────────────────
+#
+# The no-native rule above targets argmax T, which under basic access with
+# natives is visitor silence and under RTS/CTS sits so low that collisions
+# almost never happen (r* in the tens). Targeting J instead keeps the fairness
+# term in play, which pulls tau up into a region where the collision channel
+# actually carries signal: r_J lands in 0.6-4.2 rather than 14-132.
+
+def airtimes(tau: float, n: int, n_nat: int, access: str) -> tuple:
+    """(A_vis, A_nat, T) as fractions of the window, per epoch durations."""
+    oh = P.L_HS if access == "rts" else 0
+    pi = A0(tau, n, n_nat)
+    psv, psn = Psv(tau, n, n_nat), Psn(tau, n, n_nat)
+    pc = 1.0 - pi - psv - psn
+    span = (pi * 1.0 + psv * (E_L + oh) + psn * (L_NAT + oh)
+            + pc * _coll_cost(tau, n, n_nat, access))
+    if span <= 0:
+        return 0.0, 0.0, 0.0
+    av, an = psv * E_L / span, psn * L_NAT / span
+    return av, an, av + an
+
+
+def rho_model(tau: float, n: int, n_nat: int, access: str) -> float:
+    """Visitor airtime share divided by population share. Independent of the
+    epoch duration, so only the collision cost enters through the split."""
+    av, an, _ = airtimes(tau, n, n_nat, access)
+    if av + an <= 0 or av <= 0:
+        return 0.0
+    return (av / (av + an)) / (n / (n + n_nat)) if n_nat else 1.0
+
+
+def J_model(tau: float, n: int, n_nat: int, access: str, alpha: float,
+            rho_cal: float = 1.0) -> float:
+    """ln T - alpha (ln rho)^2 from the analytic model. rho_cal divides the
+    model's rho, for the sensitivity run against the measured bias."""
+    _, _, t = airtimes(tau, n, n_nat, access)
+    r = rho_model(tau, n, n_nat, access) / rho_cal
+    return (math.log(max(t, 1e-12))
+            - alpha * math.log(max(r, 1e-12)) ** 2)
+
+
+def tau_J(n: int, n_nat: int, access: str, alpha: float,
+          rho_cal: float = 1.0) -> float | None:
+    """The operating point the objective wants. None only if it is silence,
+    which happens at alpha = 0 under basic access with natives."""
+    r = minimize_scalar(
+        lambda x: -J_model(math.exp(x), n, n_nat, access, alpha, rho_cal),
+        bounds=(math.log(1e-7), math.log(0.6)), method="bounded")
+    t = math.exp(r.x)
+    return None if t < 1.5e-7 else t
+
+
+def r_J(n: int, n_nat: int, access: str, alpha: float,
+        rho_cal: float = 1.0) -> float | None:
+    """eps_coll / eps_idle that holds the drift at zero on tau_J."""
+    t = tau_J(n, n_nat, access, alpha, rho_cal)
+    if t is None:
+        return None
+    return A0(t, n, n_nat) / Pc_lis(t, n, n_nat)
+
+
+def design(n: int, w_eff: int, access: str, alpha: float, c_m: float,
+           n_nat: int, rho_cal: float = 1.0) -> tuple[float, float] | None:
+    """(c_idle*, c_coll*) = (exp s, exp[r_J s]) with s = c_m / sqrt(W_eff).
+    The ratio is derived; s is calibrated, so this is semi-analytical."""
+    r = r_J(n, n_nat, access, alpha, rho_cal)
+    if r is None:
+        return None
+    s = c_m / math.sqrt(w_eff)
+    return math.exp(s), math.exp(r * s)
