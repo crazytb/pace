@@ -245,7 +245,24 @@ def _run_visit25(
                 ("solo_vis" if int(np.where(tx)[0][0]) < N_VISITOR
                  else "solo_nat")
             stats[key] = stats.get(key, 0) + 1
+            # Which epochs can actually pull two viable visitors apart? Only
+            # ones where they do NOT all receive the same update: a collision
+            # with at least one visitor in it (transmitters hold, listeners
+            # divide). A native-only collision, an idle and a native solo all
+            # act identically on every viable visitor, so they translate the
+            # population without spreading it.
+            if coll:
+                stats["coll_vis" if bool(tx_v.any()) else "coll_nat_only"] = \
+                    stats.get("coll_vis" if bool(tx_v.any())
+                              else "coll_nat_only", 0) + 1
             if tau is not None and vv.any():
+                # Spread of X = ln tau, the state variable the drift equation
+                # is written in. Reported alongside the tau CV because the two
+                # agree only while the population is tight.
+                if int(vv.sum()) > 1:
+                    stats["x_sd_sum"] = stats.get("x_sd_sum", 0.0) \
+                        + float(np.log(tau[vv]).std())
+                    stats["x_sd_cnt"] = stats.get("x_sd_cnt", 0) + 1
                 stats["tau_sum"] = stats.get("tau_sum", 0.0) \
                     + float(tau[vv].sum())
                 stats["tau_cnt"] = stats.get("tau_cnt", 0) + int(vv.sum())
@@ -334,8 +351,13 @@ def _run_visit25(
                 bo_v[m] -= 1
         elif mode.startswith("pace"):
             if solo:
+                # pace_nocopy: diagnostic ablation — listeners take no update
+                # on a visitor solo, exactly as they already do on a native
+                # solo. Isolates how much of the population's homogeneity is
+                # solo-copy and how much is the shared start plus the shared
+                # idle/collision updates. Not a design variant.
                 w_i = int(np.where(tx)[0][0])
-                if w_i < N_VISITOR:
+                if w_i < N_VISITOR and mode != "pace_nocopy":
                     for kk in range(N_VISITOR):
                         if not tx_v[kk] and vv[kk]:
                             tau[kk] = _solo

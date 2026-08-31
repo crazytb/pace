@@ -111,7 +111,7 @@ def _rngs(scn: Scn, seed: int):
 
 
 def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
-          tau0: str = "one_probe") -> list:
+          tau0: str = "one_probe", mode: str = "pace") -> list:
     """Run one candidate over `seeds` sequences of `visits` NPCA transitions.
 
     Returns one row per seed holding SUMS, not means: the pooled aggregation in
@@ -139,7 +139,7 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
                 coll = idle = oh = 0
                 for _ in range(visits):
                     air, c_air, idl, o_air, _ = f25._run_visit25(
-                        f25._sample_ppdus25(rng_p), rng, "pace",
+                        f25._sample_ppdus25(rng_p), rng, mode,
                         (rng_i.random(scn.n_vis) if tau0 == "uniform"
                          else np.full(scn.n_vis, 1.0 / scn.w_eff)),
                         *P.ACCESS[scn.access], stats=st)
@@ -156,8 +156,12 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
                     "n_idle": st.get("idle", 0), "n_coll": st.get("coll", 0),
                     "n_solo_vis": st.get("solo_vis", 0),
                     "n_solo_nat": st.get("solo_nat", 0),
+                    "n_coll_vis": st.get("coll_vis", 0),
+                    "n_coll_nat": st.get("coll_nat_only", 0),
                     "tau_cv_sum": st.get("tau_cv_sum", 0.0),
-                    "tau_cv_cnt": st.get("tau_cv_cnt", 0)})
+                    "tau_cv_cnt": st.get("tau_cv_cnt", 0),
+                    "x_sd_sum": st.get("x_sd_sum", 0.0),
+                    "x_sd_cnt": st.get("x_sd_cnt", 0)})
     finally:
         f25.N_VISITOR, f25.N_NATIVE = old
     return rows
@@ -186,6 +190,13 @@ def aggregate(rows: list, scn: Scn, alpha: float) -> dict:
         "epochs_per_visit": ep / max(n, 1),
         "tau_cv": (sum(r["tau_cv_sum"] for r in rows) / cv_c) if cv_c else
         float("nan"),
+        "x_sd": (sum(r["x_sd_sum"] for r in rows)
+                 / sum(r["x_sd_cnt"] for r in rows))
+        if sum(r["x_sd_cnt"] for r in rows) else float("nan"),
+        "coll_vis_per_ep": sum(r["n_coll_vis"] for r in rows) / max(ep, 1),
+        "coll_nat_per_ep": sum(r["n_coll_nat"] for r in rows) / max(ep, 1),
+        "solo_nat_frac": sum(r["n_solo_nat"] for r in rows) / max(ep, 1),
+        "idle_ep_frac": sum(r["n_idle"] for r in rows) / max(ep, 1),
         "visits": n, "seqs": len(rows)}
 
 
