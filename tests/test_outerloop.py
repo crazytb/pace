@@ -37,8 +37,18 @@ def test_the_observable_needs_nothing_the_station_cannot_count():
 def test_setpoints_are_ordered_by_alpha():
     """A larger fairness weight pulls the target tau up, which means fewer idle
     epochs, so q* must fall as alpha rises."""
-    qs = [OL.Q_STAR[a] for a in (0.25, 0.5, 1.0)]
-    assert qs == sorted(qs, reverse=True)
+    for sig in ("q_self", "q_glob"):
+        qs = [OL.Q_STAR[sig][a] for a in (0.25, 0.5, 1.0)]
+        assert qs == sorted(qs, reverse=True), sig
+
+
+def test_the_default_signal_is_the_locally_countable_one():
+    """section 4.5.30: coll_vis needs to know who was in a collision, which
+    nothing decodes during. coll_self is what BEB already counts."""
+    assert OL.SIGNAL == "q_self"
+    body = open(OL.__file__).read()
+    body = body[body.index("def run_sequence"):body.index("def job")]
+    assert 'st.get("coll_self", 0) if signal == "q_self"' in body
 
 
 def test_c_stays_inside_the_box():

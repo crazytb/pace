@@ -42,7 +42,13 @@ import numpy as np
 import coeff_oracle as CO
 import params as P
 
-Q_STAR = {0.25: 0.761, 0.5: 0.743, 1.0: 0.709}    # section 4.5.28, per alpha
+# section 4.5.30: q_self is built only from what a station can count -- the
+# collisions it was itself in, which standard DCF already tracks to drive its
+# backoff. q_glob's coll_vis needs to know whether ANY visitor was in a
+# collision, which nothing decodes during.
+Q_STAR = {"q_self": {0.25: 0.820, 0.5: 0.816, 1.0: 0.807},
+          "q_glob": {0.25: 0.761, 0.5: 0.743, 1.0: 0.709}}
+SIGNAL = "q_self"
 LAM = 0.15
 C_BOX = (1.02, 4.0)
 N_VISITS = 120
@@ -56,7 +62,8 @@ OUT = os.path.join(ROOT, "results", "outerloop")
 
 
 def run_sequence(scn: CO.Scn, seed: int, alpha: float, c0: float,
-                 lam: float = LAM, n_visits: int = N_VISITS) -> dict:
+                 lam: float = LAM, n_visits: int = N_VISITS,
+                 signal: str = SIGNAL) -> dict:
     """One station sequence: c carried visit to visit, tau reset each visit.
 
     tau_0 stays at 1/W_eff -- it is a given condition, not a knob (section 7).
@@ -64,7 +71,7 @@ def run_sequence(scn: CO.Scn, seed: int, alpha: float, c0: float,
     f25 = P.engine()
     old = (f25.N_VISITOR, f25.N_NATIVE)
     f25.N_VISITOR, f25.N_NATIVE = scn.n_vis, scn.n_nat
-    q_star = Q_STAR[alpha]
+    q_star = Q_STAR[signal][alpha]
     c = float(c0)
     trace, av, an = [], 0.0, 0.0
     try:
@@ -79,7 +86,8 @@ def run_sequence(scn: CO.Scn, seed: int, alpha: float, c0: float,
                         *P.ACCESS[scn.access], stats=st)
                 idle = st.get("idle", 0)
                 sv = st.get("solo_vis", 0)
-                cv = st.get("coll_vis", 0)
+                cv = (st.get("coll_self", 0) if signal == "q_self"
+                      else st.get("coll_vis", 0))
                 den = idle + sv + cv
                 q = idle / den if den else q_star
                 trace.append((c, q))

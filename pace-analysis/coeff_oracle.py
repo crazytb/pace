@@ -163,6 +163,9 @@ def batch(scn: Scn, c_idle: float, c_coll: float, seeds, visits: int,
                     "n_solo_nat": st.get("solo_nat", 0),
                     "n_coll_vis": st.get("coll_vis", 0),
                     "n_coll_nat": st.get("coll_nat_only", 0),
+                    "n_coll_txv": st.get("coll_txv", 0),
+                    "n_coll_self": st.get("coll_self", 0),
+                    "n_solo_self": st.get("solo_self", 0),
                     "tau_cv_sum": st.get("tau_cv_sum", 0.0),
                     "tau_cv_cnt": st.get("tau_cv_cnt", 0),
                     "x_sd_sum": st.get("x_sd_sum", 0.0),
@@ -199,6 +202,11 @@ def aggregate(rows: list, scn: Scn, alpha: float) -> dict:
                  / sum(r["x_sd_cnt"] for r in rows))
         if sum(r["x_sd_cnt"] for r in rows) else float("nan"),
         "coll_vis_per_ep": sum(r["n_coll_vis"] for r in rows) / max(ep, 1),
+        # locally countable substitutes for coll_vis (section 4.5.30)
+        "coll_self_per_ep": sum(r["n_coll_self"] for r in rows) / max(ep, 1),
+        "solo_self_per_ep": sum(r["n_solo_self"] for r in rows) / max(ep, 1),
+        "coll_txv_per_ep": (sum(r["n_coll_txv"] for r in rows)
+                            / max(ep, 1) / scn.n_vis),
         "coll_nat_per_ep": sum(r["n_coll_nat"] for r in rows) / max(ep, 1),
         "solo_nat_frac": sum(r["n_solo_nat"] for r in rows) / max(ep, 1),
         "idle_ep_frac": sum(r["n_idle"] for r in rows) / max(ep, 1),

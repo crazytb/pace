@@ -255,6 +255,16 @@ def _run_visit25(
                 stats["coll_vis" if bool(tx_v.any()) else "coll_nat_only"] = \
                     stats.get("coll_vis" if bool(tx_v.any())
                               else "coll_nat_only", 0) + 1
+                # coll_vis above needs to know whether ANY visitor was in the
+                # collision, which a silent station cannot tell -- nothing
+                # decodes. These two are what a real station can count: the
+                # collisions it was in itself, and (for the population mean)
+                # the number of visitor transmitters involved.
+                stats["coll_txv"] = stats.get("coll_txv", 0) + int(tx_v.sum())
+                if bool(tx_v[0]):
+                    stats["coll_self"] = stats.get("coll_self", 0) + 1
+            if solo and int(np.where(tx)[0][0]) == 0:
+                stats["solo_self"] = stats.get("solo_self", 0) + 1
             if tau is not None and vv.any():
                 # Spread of X = ln tau, the state variable the drift equation
                 # is written in. Reported alongside the tau CV because the two
