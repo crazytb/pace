@@ -1,0 +1,26 @@
+
+GATE re-run under carry: 324 runs (54 scenarios x 6 coefficient points)
+  model fed the engine's epoch-averaged tau and measured tau_nat
+
+  --- n = N_vis ---
+    T model/engine                     min   0.098  median   0.874  max   1.050  within20% 216/324
+    rho model/engine                   min   0.425  median   0.807  max   1.240  within20% 163/324
+
+  --- n = time-averaged E|V| ---
+    T model/engine                     min   0.130  median   0.923  max   1.107  within20% 243/324
+    rho model/engine                   min   0.364  median   0.773  max   1.550  within20% 144/324
+
+  4.5.27(b) reference, fresh natives, N_nat=10:
+    T   0.943 / 1.015 / 1.074      rho 0.842 / 0.874 / 1.124
+
+  by N_nat (n = N_vis):
+    N_nat= 5  T 0.940   rho 0.933
+    N_nat=10  T 0.864   rho 0.792
+    N_nat=20  T 0.688   rho 0.559
+  by access (n = N_vis):
+       rts  T 0.966   rho 0.807
+     basic  T 0.757   rho 0.805
+  by W_eff (n = N_vis):
+    W=  210  T 0.894   rho 0.872
+    W=  420  T 0.876   rho 0.778
+    W= 1680  T 0.858   rho 0.720
