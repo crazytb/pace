@@ -60,11 +60,18 @@ IDLE_TARGET = 1.0 / math.e   # ≈ 0.3679
 # DCF hyperparameters
 DCF_CW_MAX = 1023
 
-# PND hyperparameters — tuned via fig18 parameter study
-# Optimal across N=[20,30,50] W_eff=[50,100,200]: cc=1.2, ci=1.2
-# (was 1.5/1.5 in original PND paper; 1.2/1.2 +1-2% in finite NPCA window)
-PND_C_COLL = 1.2
-PND_C_IDLE = 1.2
+# PND hyperparameters.
+#
+# 1.5/1.5 is the original PND value. An early sweep here (fig18) preferred
+# 1.2/1.2 by 1-2%, but that grid was visitor-only with W_eff in [50,200], which
+# is not the manuscript's setting. Retuning on the manuscript's own grid --
+# N_vis {5,10,20,50} at W_eff 420 and W_eff {100..1680} at N_vis 20, both with
+# N_nat = 10 and both access modes (harq_sim/tune_c.py) -- puts 1.2 at the top
+# of total airtime but leaves the visitors on 0.358 of their proportional
+# share. Returning to 1.5 costs 2.0% of total airtime and lifts that share to
+# 0.635, which is the trade the paper's stated objective asks for.
+PND_C_COLL = 1.5
+PND_C_IDLE = 1.5
 
 # Per-method ALPHA_DOWN values (0.0 = no collision penalty)
 _ALPHA_DOWN_MAP = {

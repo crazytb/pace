@@ -87,14 +87,16 @@ def run_config(method: str, n_native: int, coll_cost, succ_oh: int,
         rng_p = np.random.default_rng(seed * 10001 + r * 71 + 7)
         rng = np.random.default_rng(seed * 200003 + r * 3163 + m_idx * 29
                                     + n_native * 101)
-        tau_c = np.full(_f25.N_VISITOR, 1.0 / _f25.N_VISITOR) \
-            if method == "pace" else None
         for v in range(visits):
             ppdus = _f25._sample_ppdus25(rng_p)
-            air, _c, _i, _o, carry = _f25._run_visit25(
+            # tau_0 = 1/W_eff, re-initialised every visit: this is the algorithm
+            # the paper states (Table II and Section V) and the one fig27, 28
+            # and 29 run. This script used to seed at 1/N_visitor and then carry
+            # the end-of-visit tau forward, which is a different algorithm.
+            tau_c = (np.full(_f25.N_VISITOR, 1.0 / _f25.W_REF)
+                     if method == "pace" else None)
+            air, _c, _i, _o, _carry = _f25._run_visit25(
                 ppdus, rng, method, tau_c, coll_cost, succ_oh)
-            if method == "pace":
-                tau_c = carry
             if v >= visits // 2:
                 sv += air[:_f25.N_VISITOR].sum()
                 sn += air[_f25.N_VISITOR:].sum()
