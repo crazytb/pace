@@ -30,6 +30,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+import math
+
 import run_step9_fig17 as _f17
 import run_step9_fig25 as _f25
 import run_step9_fig26 as _f26
@@ -50,10 +52,12 @@ _STYLE = {
     "dcf_excl": dict(_f26._STYLE_26["dcf_excl"]),
     "pace":     dict(_f26._STYLE_26["pace"]),
     "oracle":   dict(_f26._STYLE_26["oracle"]),
+    "pace_dyn": dict(color="#d62728", ls=":", lw=2.0),
 }
 _LABEL = {
     "dcf_excl": "Standard NPCA (measured)",
     "pace":     "PACE (measured)",
+    "pace_dyn": r"PACE-dynamic ($c=\exp(C/\sqrt{W_\mathrm{eff}})$)",
     "oracle":   "FS target ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
 }
 
@@ -164,19 +168,29 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
 
 # ─── Binned average across visits ─────────────────────────────────────────────
 
+C_WRULE = 10.16          # section 4.5.40, calibrated at alpha = 0.5
+
+
 def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
     sums = np.zeros(N_BINS)
     cnts = np.zeros(N_BINS)
+    # pace_dyn is PACE with the coefficient taken from the window rather than
+    # fixed; at this figure's single W_eff it differs only by 1.64 against 1.50
+    saved = (_f17.PND_C_COLL, _f17.PND_C_IDLE)
+    if mode == "pace_dyn":
+        _f17.PND_C_COLL = _f17.PND_C_IDLE = math.exp(C_WRULE / math.sqrt(W))
+    inner = "pace" if mode == "pace_dyn" else mode
     for r in range(visits):
         rng_p = np.random.default_rng(9000 + r)
         rng = np.random.default_rng(31337 + r * 13)
         ppdus = np.concatenate([
             rng_p.integers(_f25.PPDU_V_LO, _f25.PPDU_V_HI + 1, size=N_V),
             np.full(M, _f25.PPDU_NATIVE_SLOTS)]).astype(np.int32)
-        for t, val in visit_trace(mode, ppdus, rng, coll_cost, succ_oh):
+        for t, val in visit_trace(inner, ppdus, rng, coll_cost, succ_oh):
             b = min(int(N_BINS * t / W), N_BINS - 1)
             sums[b] += val
             cnts[b] += 1
+    _f17.PND_C_COLL, _f17.PND_C_IDLE = saved
     xs = (np.arange(N_BINS) + 0.5) * W / N_BINS * 9 / 1000   # ms
     ys = np.where(cnts > 0, sums / np.maximum(cnts, 1), np.nan)
     return xs, ys
@@ -188,7 +202,7 @@ def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
              fig_dir: str, out_dir: str, fig_name: str,
              leg_loc: str = "best") -> None:
     fig, ax = plt.subplots(figsize=(3.5, 2.2))
-    for mode in ["dcf_excl", "pace", "oracle"]:
+    for mode in ["dcf_excl", "pace", "pace_dyn", "oracle"]:
         xs, ys = binned(mode, coll_cost, succ_oh, visits)
         st = dict(_STYLE[mode])
         st["marker"] = None
