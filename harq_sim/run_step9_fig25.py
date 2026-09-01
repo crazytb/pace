@@ -241,6 +241,12 @@ def _run_visit25(
             stats["nat_tx"] = stats.get("nat_tx", 0) + int(tx_n.sum())
             stats["nat_slots"] = stats.get("nat_slots", 0) + int(vn.sum())
             stats["vis_viable"] = stats.get("vis_viable", 0) + int(vv.sum())
+            # Epochs in which NO visitor transmitted. This is the quantity the
+            # analytic p0 term approximates by (1 - mean tau)^n; measuring it
+            # directly shows how much the mean-field substitution costs,
+            # without having to guess which variance term dominates.
+            if not bool(tx_v.any()):
+                stats["vis_silent"] = stats.get("vis_silent", 0) + 1
             key = "idle" if idle_o else "coll" if coll else \
                 ("solo_vis" if int(np.where(tx)[0][0]) < N_VISITOR
                  else "solo_nat")

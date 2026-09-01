@@ -60,12 +60,18 @@ def _e_window(a: float) -> float:
     return float(sum(pk * _cw(k) for k, pk in enumerate(p)))
 
 
-def tau_nat(n_nat: int, n_vis: int = 0, tau_vis: float = 0.0,
+def tau_nat(n_nat: int, n_vis: float = 0.0, tau_vis: float = 0.0,
             tol: float = 1e-12, iters: int = 200) -> float:
     """Attempt probability per native per contention epoch.
 
     tau_vis is the visitors' common attempt probability; they matter only
-    through how often they deny the natives an idle slot to count down in."""
+    through how often they deny the natives an idle slot to count down in.
+
+    n_vis must be the VIABLE count, not the population. Measuring the visitor
+    silence the natives actually see against (1 - mean tau)^n gave a median
+    1.36 with the population and 1.08 with the viable count, and the epoch CV
+    of tau is 0.007-0.149, so self-exclusion and not cross-sectional spread is
+    what the substitution was getting wrong (section 4.5.37)."""
     if n_nat <= 0:
         return 0.0
     vis = (1.0 - tau_vis) ** n_vis
@@ -82,7 +88,7 @@ def tau_nat(n_nat: int, n_vis: int = 0, tau_vis: float = 0.0,
     return float(min(max(q, 1e-9), 1.0))
 
 
-def idle_share(n_nat: int, n_vis: int = 0, tau_vis: float = 0.0) -> float:
+def idle_share(n_nat: int, n_vis: float = 0.0, tau_vis: float = 0.0) -> float:
     """P(no native transmits) -- what p0n needs, without assuming a constant."""
     return (1.0 - tau_nat(n_nat, n_vis, tau_vis)) ** n_nat
 
