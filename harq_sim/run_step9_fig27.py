@@ -38,12 +38,26 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+import run_step9_fig17 as _f17
 import run_step9_fig25 as _f25
 import run_step9_fig26 as _f26
 
 # ─── Parameters ───────────────────────────────────────────────────────────────
 
-METHODS_27 = ["dcf_excl", "pace", "oracle"]
+METHODS_27 = ["dcf_excl", "pace", "pace_wrule", "oracle"]
+
+# Window-scaled coefficient, plotted alongside the fixed one so the reader can
+# see what the fixed value costs at the ends of the sweep. Section 4.5.40:
+# the log step is bounded by the stationary spread of a stochastic
+# approximation, eps <= delta / sqrt(E), and the epoch budget E is close to
+# proportional to the window (E ~ W^0.85, since the mean slots per epoch move
+# only 1.5x across a 16.8x sweep), which is where the square root comes from.
+# C is calibrated, at alpha = 0.5.
+C_WRULE = 10.16
+
+
+def _c_of_w(w_eff: int) -> float:
+    return math.exp(C_WRULE / math.sqrt(w_eff))
 
 W_LIST   = [100, 200, 420, 840, 1680]        # slots (σ=9µs) → 0.9–15.12 ms
 N_REF    = 20                                 # visitors (see --pick-n)
@@ -61,8 +75,10 @@ FAST_WLIST  = [100, 420, 1680]
 FIELDS_27 = ["access", "W_eff", "N", "method", "seed",
              "succ_v", "succ_n", "useful"]
 
-_STYLE = _f26._STYLE_26
-_LABEL = _f26._LABEL_26
+_STYLE = dict(_f26._STYLE_26)
+_LABEL = dict(_f26._LABEL_26)
+_STYLE["pace_wrule"] = dict(color="#d62728", ls=":", lw=2.0, marker="v", ms=5)
+_LABEL["pace_wrule"] = (r"PACE, $c=\exp(C/\sqrt{W_\mathrm{eff}})$")
 
 
 # ─── One config ───────────────────────────────────────────────────────────────
@@ -74,6 +90,9 @@ def run_config(method: str, n_visitor: int, w_eff: int, coll_cost, succ_oh: int,
     _f25.N_NATIVE = M_FIX
     _f25.W_REF = w_eff
     m_idx = METHODS_27.index(method)
+    saved_c = (_f17.PND_C_COLL, _f17.PND_C_IDLE)
+    if method == "pace_wrule":
+        _f17.PND_C_COLL = _f17.PND_C_IDLE = _c_of_w(w_eff)
     sv = sn = 0.0
     for r in range(reps):
         rng_p = np.random.default_rng(seed * 10001 + r * 71 + 7)
@@ -81,15 +100,17 @@ def run_config(method: str, n_visitor: int, w_eff: int, coll_cost, succ_oh: int,
                                     + n_visitor * 211 + w_eff * 7)
         for v in range(visits):
             ppdus = _f25._sample_ppdus25(rng_p)
-            tau0 = np.full(n_visitor, 1.0 / w_eff) if method == "pace" else None
+            tau0 = (np.full(n_visitor, 1.0 / w_eff)
+                    if method.startswith("pace") else None)
             mode = {"dcf_excl": "dcf_excl", "pace": "pace",
-                    "oracle": "oracle"}[method]
+                    "pace_wrule": "pace", "oracle": "oracle"}[method]
             air, _c, _i, _o, _carry = _f25._run_visit25(
                 ppdus, rng, mode, tau0, coll_cost, succ_oh)
             if v >= visits // 2:
                 sv += air[:n_visitor].sum()
                 sn += air[n_visitor:].sum()
     norm = reps * (visits - visits // 2) * w_eff
+    _f17.PND_C_COLL, _f17.PND_C_IDLE = saved_c
     _f25.N_VISITOR, _f25.N_NATIVE, _f25.W_REF = 10, 10, 420   # restore
     return {"succ_v": sv / norm, "succ_n": sn / norm, "useful": (sv + sn) / norm}
 
