@@ -395,6 +395,12 @@ def _run_visit25(
     if mode.startswith("pace"):
         for kk in range(N_VISITOR):
             carry[kk] = float(np.clip(tau[kk], 1e-4, 1.0))
+    if stats is not None:
+        # End-of-visit native contention state, so a caller can hand it back
+        # through native_init. The OBSS does not stop when the visitor's NPCA
+        # window closes, so resetting the natives every visit is the odd
+        # choice, not carrying them. Passive: copies only, consumes no rng.
+        stats["native_end"] = (cw_n.copy(), bo_n.copy())
     return airtime, coll_air, idle, oh_air, carry
 
 

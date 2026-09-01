@@ -1,0 +1,36 @@
+
+54 scenarios x 6 eps_idle x 7 r   (tau AND native state carried)
+
+  SEPARATION TEST 1 -- does the operating point depend on r only?
+    settled tau spread over r  (scale fixed) min    1.000  median   11.893  max 3011.505
+    settled tau spread over eps_i (r fixed)  min    1.020  median    3.454  max 9174.312
+
+  SEPARATION TEST 2 -- does convergence time depend on eps_idle?
+      eps_idle  conv visits (median)
+        0.0080                   100
+        0.0165                    89
+        0.0341                    95
+        0.0704                    99
+        0.1453                   100
+        0.3000                    99
+             r  conv visits (median)
+          0.50                    94
+          1.00                    96
+          1.50                    98
+          2.00                    98
+          3.00                    99
+          5.00                   100
+          8.00                   100
+
+  BEST (eps_i, r) per scenario, and what the scale costs
+    alpha = 0.25:  best r median 5.00 (range 1.5-8.0), best eps_i median 0.0080
+          G with the scale pinned at 0.0704  min    0.744  median    0.979  max    1.000
+    alpha = 0.5:  best r median 5.00 (range 1.5-8.0), best eps_i median 0.0165
+          G with the scale pinned at 0.0704  min    0.587  median    0.974  max    1.000
+    alpha = 1.0:  best r median 5.00 (range 1.5-8.0), best eps_i median 0.0165
+          G with the scale pinned at 0.0704  min    0.283  median    0.978  max    1.000
+
+  tau_nat under native carry (compare 4.5.32's fresh-init values)
+    N_nat =  5: median 0.0255  (fresh-init was 0.0613 / 0.0498 / 0.0417)
+    N_nat = 10: median 0.0178  (fresh-init was 0.0613 / 0.0498 / 0.0417)
+    N_nat = 20: median 0.0126  (fresh-init was 0.0613 / 0.0498 / 0.0417)

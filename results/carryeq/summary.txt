@@ -1,0 +1,16 @@
+
+288 runs; drift equilibrium predicted for 263
+
+  settled / predicted:  min 0.037  median 1.319  max 6.681
+  within 25%: 88/263   within 50%: 174/263
+
+  does the settled tau move with r the way the theory says?
+         r  pred median  settled median   ratio
+      0.25      0.07341         0.09449    1.29
+       0.5      0.05211         0.07094    1.36
+      0.75      0.04112         0.05709    1.39
+       1.0      0.03402         0.04849    1.43
+       1.5      0.01914         0.03489    1.82
+       2.0      0.01861         0.02697    1.45
+       3.0      0.01445         0.01690    1.17
+       5.0      0.00714         0.00647    0.91

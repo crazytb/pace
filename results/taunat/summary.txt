@@ -1,0 +1,36 @@
+
+tau_nat measured off the engine, 360 configurations
+params.TAU_NAT = 0.052 (measured at N_nat = 10 only)
+
+  over everything: min 0.0262  median 0.0471  max 0.0966  spread 3.7x
+
+  (1) dependence on N_nat  [median over the rest]
+               2         5        10        20        40   <- N_nat
+          0.0759    0.0613    0.0498    0.0417    0.0373
+      ratio N_nat=2 / N_nat=40: 2.03x
+
+  (2) dependence on the VISITOR population
+               0         5        20        50   <- N_vis
+          0.0535    0.0495    0.0465    0.0433
+      by visitor aggressiveness c:
+            1.05       1.2       1.6   <- c
+          0.0523    0.0480    0.0437
+
+  (3) the two together, at W_eff = 420, rts
+      N_nat down, N_vis across        0        5       20       50
+                 2   0.0909   0.0817   0.0736   0.0665
+                 5   0.0712   0.0687   0.0636   0.0576
+                10   0.0566   0.0559   0.0531   0.0491
+                20   0.0458   0.0449   0.0439   0.0422
+                40   0.0387   0.0384   0.0383   0.0375
+
+  (4) how far is the constant 0.052 off, per configuration?
+      measured / 0.052:  min 0.50  median 0.91  max 1.86
+      within 10% of 0.052: 69/360
+
+  (5) other axes [median]
+      W_eff =   210: 0.0522
+      W_eff =   420: 0.0529
+      W_eff =  1680: 0.0393
+      access =   rts: 0.0465
+      access = basic: 0.0480
