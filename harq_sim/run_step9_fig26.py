@@ -185,19 +185,19 @@ def _plot_one(rows, access: str, nat_list: list, ylim, fig_dir: str,
               ylabel: str = "Visitor airtime / $W_\\mathrm{eff}$") -> None:
     # Sized for a full-\columnwidth IEEE subfigure (stacked vertically) —
     # rendered ≈1:1, so use print-scale fonts (~9-10pt).
-    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    fig, ax = plt.subplots(figsize=(5.0, 3.2))
     for m in METHODS_26:
         ys = [_mean26(rows, ykey, access=access, method=m, **{xkey: n})
               for n in nat_list]
         ax.plot(nat_list, ys, label=_LABEL_26[m], **_STYLE_26[m])
     ax.set_xticks(nat_list)
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel(xlabel, fontsize=9)
-    ax.set_ylabel(ylabel, fontsize=9)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     ax.set_ylim(*ylim)
     ax.legend(fontsize=7.5, frameon=True, loc="best",
               handlelength=1.5, borderpad=0.3, labelspacing=0.3)
-    ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    ax.grid(color="0.9", lw=0.4)
+    ax.set_axisbelow(True)
     fig.tight_layout()
 
     for ext, kwargs in [
@@ -225,7 +225,7 @@ def plot(rows, nat_list: list, out_dir: str, fig_dir: str) -> None:
 def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
                    out_dir: str, fig_name: str) -> None:
     """Airtime proportionality: (visitor airtime share) / (population share)."""
-    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    fig, ax = plt.subplots(figsize=(5.0, 3.2))
     for m in METHODS_26:
         ys = []
         for n in nv_list:
@@ -236,13 +236,13 @@ def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
         ax.plot(nv_list, ys, label=_LABEL_26[m], **_STYLE_26[m])
     ax.axhline(1.0, color="gray", ls="--", lw=1.2)
     ax.set_xticks(nv_list)
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$", fontsize=9)
-    ax.set_ylabel("Visitor airtime proportionality $\\rho$", fontsize=9)
+    ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$")
+    ax.set_ylabel("Visitor airtime proportionality $\\rho$")
     ax.set_ylim(*ylim)
     ax.legend(fontsize=7.5, frameon=True, loc="best",
               handlelength=1.5, borderpad=0.3, labelspacing=0.3)
-    ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    ax.grid(color="0.9", lw=0.4)
+    ax.set_axisbelow(True)
     fig.tight_layout()
 
     for ext, kwargs in [

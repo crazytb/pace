@@ -147,19 +147,19 @@ def _mean29(rows, metric, **kw) -> float:
 
 def _plot_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    fig, ax = plt.subplots(figsize=(5.0, 3.2))
     for m in PLOT_METHODS:
         ys = [_mean29(rows, "useful", access=access, method=m, N_visitor=n)
               for n in nv_list]
         ax.plot(nv_list, ys, label=_LABEL_29[m], **_STYLE_29[m])
     ax.set_xticks(nv_list)
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$", fontsize=9)
-    ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$", fontsize=9)
+    ax.set_xlabel("Number of visitor STAs $N_\\mathrm{vis}$")
+    ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$")
     ax.set_ylim(*ylim)
     ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
               handlelength=1.5, borderpad=0.3, labelspacing=0.3)
-    ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    ax.grid(color="0.9", lw=0.4)
+    ax.set_axisbelow(True)
     fig.tight_layout()
 
     for ext, kwargs in [

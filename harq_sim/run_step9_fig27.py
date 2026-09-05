@@ -171,7 +171,7 @@ def summary(rows, w_list: list) -> None:
 
 def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    fig, ax = plt.subplots(figsize=(5.0, 3.2))
     xs = [w * 9 / 1000 for w in w_list]      # ms
     for m in METHODS_27:
         ys = [_mean27(rows, "useful", access=access, W_eff=w, method=m)
@@ -181,14 +181,14 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
     ax.set_xticks(xs)
     ax.set_xticklabels([f"{x:.1f}" if x < 10 else f"{x:.0f}" for x in xs])
     ax.minorticks_off()
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel("Visiting duration (ms)", fontsize=9)
-    ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$", fontsize=9)
+    ax.set_xlabel("Visiting duration (ms)")
+    ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$")
     if ylim is not None:
         ax.set_ylim(*ylim)
     ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
               handlelength=1.5, borderpad=0.3, labelspacing=0.3)
-    ax.grid(True, ls=":", lw=0.6, alpha=0.7)
+    ax.grid(color="0.9", lw=0.4)
+    ax.set_axisbelow(True)
     fig.tight_layout()
 
     for ext, kwargs in [

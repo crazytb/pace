@@ -49,7 +49,7 @@ STYLE = {"dcf_excl": dict(color="#525252", ls="-.", marker="x", ms=6, lw=1.9),
 
 NV_LIST = [5, 10, 20, 50]
 M_FIX, W_FIX = 10, 420
-ALPHAS = [0.0, 0.25, 0.5, 1.0]
+ALPHAS = [0.0, 0.5, 1.0]
 ACCESS = [("basic", "nocd", 0),
           ("rts", _f25.COLL_RTS_24M, _f25.OH_SUCC_24M)]
 
@@ -99,12 +99,21 @@ def main():
     ap = argparse.ArgumentParser(
         description="Paper Fig eval-6 (fig6-1/fig6-2) — objective vs N_vis")
     ap.add_argument("--fast", action="store_true")
+    ap.add_argument("--replot", action="store_true",
+                    help="plot from the cached results/fig6/data.csv")
     ap.add_argument("--out-dir", default=FIG_DIR)
     a = ap.parse_args()
     seeds, reps, visits = ((FAST_SEEDS, FAST_REPS, FAST_VISITS) if a.fast
                            else (FULL_SEEDS, FULL_REPS, FULL_VISITS))
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(a.out_dir, exist_ok=True)
+
+    if a.replot:
+        with open(os.path.join(OUT_DIR, "data.csv")) as fh:
+            rows = [{"access": r["access"], "method": r["method"],
+                     "n_vis": int(r["n_vis"]), "T": float(r["T"]),
+                     "rho": float(r["rho"])} for r in csv.DictReader(fh)]
+        return plot(rows, a.out_dir)
 
     rows = []
     for acc, cc, oh in ACCESS:
@@ -120,9 +129,13 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
+    plot(rows, a.out_dir)
+
+
+def plot(rows, out_dir):
     for i, (acc, _cc, _oh) in enumerate(ACCESS, start=1):
         fig, axes = plt.subplots(1, len(ALPHAS),
-                                 figsize=(3.1 * len(ALPHAS), 3.1), sharex=True)
+                                 figsize=(3.33 * len(ALPHAS), 3.2), sharex=True)
         for ax, al in zip(axes, ALPHAS):
             for m in METHODS:
                 sel = [x for x in rows if x["access"] == acc and x["method"] == m]
@@ -139,18 +152,14 @@ def main():
             ax.set_axisbelow(True)
         axes[0].set_ylabel(r"$J=\ln T-\alpha(\ln\rho)^2$")
         axes[0].legend(fontsize=7.5, loc="best")
-        fig.suptitle(rf"{'basic access' if acc == 'basic' else 'RTS/CTS'}: "
-                     r"efficiency--proportionality objective, "
-                     rf"$c_\mathrm{{coll}}=c_\mathrm{{idle}}={_f17.PND_C_COLL}$",
-                     fontsize=10)
-        fig.tight_layout(rect=(0, 0, 1, 0.93))
-        stem = os.path.join(a.out_dir, f"fig6-{i}")
+        fig.tight_layout()
+        stem = os.path.join(out_dir, f"fig6-{i}")
         for ext in ("eps", "png", "pdf"):
             fig.savefig(f"{stem}.{ext}", format=ext, dpi=300,
                         bbox_inches="tight")
         plt.close(fig)
         print(f"  Figure -> {stem}.pdf")
-    print(f"\nFig 6 complete (c = {_f17.PND_C_COLL}) -> {a.out_dir}/fig6-*")
+    print(f"\nFig 6 complete (c = {_f17.PND_C_COLL}) -> {out_dir}/fig6-*")
 
 
 if __name__ == "__main__":

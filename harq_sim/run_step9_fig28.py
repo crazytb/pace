@@ -56,7 +56,7 @@ _STYLE = {
 }
 _LABEL = {
     "dcf_excl": "Standard NPCA (measured)",
-    "pace":     "PACE (measured)",
+    "pace":     "PACE-static (measured)",
     "pace_dyn": r"PACE-dynamic ($c=\exp(C/\sqrt{W_\mathrm{eff}})$)",
     "oracle":   "FS target ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
 }
@@ -201,7 +201,7 @@ def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
 def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
              fig_dir: str, out_dir: str, fig_name: str,
              leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(3.5, 2.2))
+    fig, ax = plt.subplots(figsize=(5.0, 3.2))
     for mode in ["dcf_excl", "pace", "pace_dyn", "oracle"]:
         xs, ys = binned(mode, coll_cost, succ_oh, visits)
         st = dict(_STYLE[mode])
@@ -210,12 +210,12 @@ def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
                                                if k not in ("marker", "ms")})
     ax.set_yscale("log")
     ax.set_ylim(top=0.4)   # empty top band reserved for the legend
-    ax.tick_params(labelsize=8)
-    ax.set_xlabel("Elapsed time in the visit (ms)", fontsize=9)
-    ax.set_ylabel("Per-slot transmission rate", fontsize=9)
+    ax.set_xlabel("Elapsed time in the visit (ms)")
+    ax.set_ylabel("Per-slot transmission rate")
     ax.legend(fontsize=7.5, frameon=True, loc=leg_loc,
               handlelength=1.5, borderpad=0.3, labelspacing=0.3)
-    ax.grid(True, ls=":", lw=0.6, alpha=0.7, which="both")
+    ax.grid(color="0.9", lw=0.4, which="both")
+    ax.set_axisbelow(True)
     fig.tight_layout()
 
     for ext, kwargs in [

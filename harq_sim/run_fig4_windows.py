@@ -62,7 +62,7 @@ def main():
     try:
         for i, (acc, cc, oh) in enumerate(ACCESS, start=3):
             fig, axes = plt.subplots(1, len(WINDOWS),
-                                     figsize=(4.4 * len(WINDOWS), 3.1))
+                                     figsize=(5.0 * len(WINDOWS), 3.2))
             for ax, w in zip(axes, WINDOWS):
                 _f28.W = w
                 # a 0.9 ms visit has only a handful of epochs, so the default
@@ -74,16 +74,17 @@ def main():
                           if k not in ("marker", "ms")}
                     ax.plot(xs, ys, label=_f28._LABEL[mode], **st)
                 ax.set_yscale("log")
-                ax.set_xlabel("Elapsed time in the visit (ms)", fontsize=9)
+                ax.set_xlabel("Elapsed time in the visit (ms)")
                 ax.set_title(rf"$W_\mathrm{{eff}}={w}$ slots "
                              rf"({w * 9 / 1000:.2f} ms):  fixed $c=1.5$ vs "
                              rf"dynamic $c={math.exp(_f28.C_WRULE / math.sqrt(w)):.2f}$",
-                             fontsize=9)
-                ax.grid(True, ls=":", lw=0.6, alpha=0.7)
-                ax.tick_params(labelsize=8)
+                             fontsize=10)
+                ax.grid(color="0.9", lw=0.4)
+                ax.set_axisbelow(True)
+                ax.minorticks_off()
                 print(f"  {acc} W={w} done", flush=True)
-            axes[0].set_ylabel("Per-slot transmission rate", fontsize=9)
-            axes[0].legend(fontsize=7, loc="best")
+            axes[0].set_ylabel("Per-slot transmission rate")
+            axes[0].legend(fontsize=7.5, loc="best")
             fig.tight_layout()
             stem = os.path.join(a.out_dir, f"fig4-{i}")
             for ext in ("eps", "png", "pdf"):

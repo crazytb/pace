@@ -159,22 +159,22 @@ the closest mechanism in spirit, but was designed for infinite-horizon
 neighbor discovery and provides no accounting for bounded window duration
 or frame-length viability.
 
-Table~\ref{tab:comparison} summarizes these distinctions. No prior scheme
-withdraws a STA whose frame cannot fit the remaining window, and the schemes
-that do adapt their operating point either track only the contending
-population or pay for the adaptation with a view of that population, whereas
-PACE meets both requirements from purely local observations.
+Table~\ref{tab:comparison} summarizes these distinctions along three axes.
+\emph{Frame-fit self-exclusion} withdraws a STA whose frame no longer fits
+the remaining window. A \emph{signaling-free} scheme transmits no control
+information for its own sake, a value riding in a frame a STA sends anyway
+not being counted, and $\triangle$ marks a scheme that adds no transmission
+but must still infer the contending population from the activity of the
+others. \emph{Time-varying target tracking} follows an operating point that
+moves with the contending population rather than a static equilibrium. No
+prior scheme withdraws an unfittable frame, and the schemes that do adapt
+their operating point either track only the contending population or pay
+for the adaptation with a view of that population, whereas PACE meets all
+three requirements from purely local observations.
 
 \begin{table*}[!t]
 \centering
-\caption{Comparison of contention control schemes. \emph{Frame-fit
-self-exclusion} withdraws a STA whose frame no longer fits the remaining
-window. \emph{Signaling-free} transmits no control information for its own
-sake, a value riding in a frame a STA sends anyway not being counted, where
-$\triangle$ marks a scheme that adds no transmission but must still infer
-the contending population from the activity of the others.
-\emph{Time-varying target tracking} follows an operating point that moves
-with the contending population rather than a static equilibrium.}
+\caption{Comparison of contention control schemes.}
 \label{tab:comparison}
 \begin{tabular}{l >{\raggedright\arraybackslash}p{9cm} ccc}
 \hline
@@ -482,7 +482,12 @@ Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit. Under Eq.~\eqre
 \end{equation}
 with restoring rate $\kappa=-h'(x^*)>0$ and zero-mean outcome noise $\xi$ of variance $\nu^2=p_\mathrm{I}(x^*)+p_\mathrm{C}(x^*)$.
 
-A visit is scored by what it accumulates rather than by where it ends, since the airtime and fairness measures of Section~\ref{sec:performance_evaluation} are collected over the whole window. For a utility that is locally quadratic around $x^*$ with curvature $q>0$, summing the second moment of Eq.~\eqref{eq:linrec} over the $K$ update opportunities of a visit gives the loss
+A visit is scored by what it accumulates rather than by where it ends. We make the objective explicit as
+\begin{equation}
+    J \;=\; \ln T \;-\; \alpha\,\bigl(\ln\rho\bigr)^{2},
+    \label{eq:objective}
+\end{equation}
+where $T$ is the fraction of the window carrying useful airtime, $\rho$ is the visitors' share of that airtime divided by their population share $\Nvis/(\Nvis{+}\Nnat)$, and $\alpha\ge0$ weights proportionality against efficiency. The quadratic log penalty vanishes exactly at the proportional share $\rho=1$ and charges over- and under-service symmetrically, so $J$ scores the design goal of Section~\ref{subsec:self_exclusion}, an efficient window that neither starves the visitors nor lets them displace the natives. Both ingredients accumulate over the whole window and are the measures that Section~\ref{sec:performance_evaluation} reports. Treating $J$ as a function of the operating point and assuming it is locally quadratic around $x^*$ with curvature $q>0$, summing the second moment of Eq.~\eqref{eq:linrec} over the $K$ update opportunities of a visit gives the loss
 \begin{equation}
     R_K(\epsilon) \;\approx\; \frac{q}{4\kappa}
     \left( \frac{Y_0^2}{\epsilon} + K \nu^2 \epsilon \right),
@@ -513,7 +518,7 @@ hence $\epsilon^*_K=\Theta(K^{-1/2})$. If moreover $K=W_\mathrm{eff}/\bar{L}+o(W
 
 Two remarks bound the claim. First, Phase~(a) sets $X_0=-\ln W_\mathrm{eff}$, so the offset $|Y_0|=|\ln(W_\mathrm{eff}\,\tau^*)|$ retains a slow logarithmic dependence on the window, and $C$ behaves as a constant only over ranges of $W_\mathrm{eff}$ in which this variation is small enough to be absorbed. Eq.~\eqref{eq:eps_window} is therefore an asymptotic inverse-square-root scaling under the local finite-horizon approximation, not an exact equality. Second, the scaling presumes the cumulative criterion above; a criterion that graded only the terminal state would favor a smaller step of order $\ln K/K$. Within these bounds, Eq.~\eqref{eq:eps_window} delivers the same message as the initialization of Phase~(a). Both design knobs of PACE are set from the window alone, the starting probability at $1/W_\mathrm{eff}$ and the adaptation step at $\Theta(1/\sqrt{W_\mathrm{eff}})$, with faster adaptation in shorter visits.
 
-The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrated once at a reference window, and refer to the fixed-factor configuration as \emph{PACE-static}. The names describe only how the step size is chosen. Both variants adapt $\tau_i$ on every observed slot, and both draw on the same local information as the initialization of Phase~(a). Section~\ref{subsec:eval_duration} compares the two across the window range, where a single fixed factor turns out to be too small for a short visit and too large for a long one.
+The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrated once at a reference window to maximize the objective of Eq.~\eqref{eq:objective} at $\alpha=0.5$, and refer to the fixed-factor configuration as \emph{PACE-static}. The names describe only how the step size is chosen. Both variants adapt $\tau_i$ on every observed slot, and both draw on the same local information as the initialization of Phase~(a). Section~\ref{subsec:eval_duration} compares the two across the window range, where a single fixed factor turns out to be too small for a short visit and too large for a long one.
 
 \section{Performance Evaluation}
 \label{sec:performance_evaluation}
@@ -549,7 +554,7 @@ We compare PACE against two references. The first is the standard-compliant NPCA
 
 The second is a genie-aided \emph{fair-share} reference (FS) that transmits at $\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the viable set. FS is not an airtime optimum but the attempt-fair operating point that PACE is designed to track.
 
-Native STAs, which neither know nor observe the visitors' window, keep their standard DCF parameters unchanged in every scheme and contend without any fit restriction; a native frame that straddles the window end completes on the channel, with its in-window portion credited to the window utilization. Both access modes of Section~\ref{subsec:npca_window} are evaluated, basic access charging a collision the longest colliding frame of Eq.~\eqref{eq:lmax}, and mandatory RTS/CTS with the standard-derived costs $L_\mathrm{hs}=88~\mu$s and $L_\mathrm{col}=106~\mu$s. Each data point averages the steady half of $50$ consecutive NPCA transitions over $20$ sequences and five seeds. Performance is reported as the total useful airtime of the channel normalized by $W_\mathrm{eff}$, its split between visitors and natives, and the visitor airtime proportionality index defined in Section~\ref{subsec:eval_fairness}.
+Native STAs, which neither know nor observe the visitors' window, keep their standard DCF parameters unchanged in every scheme and contend without any fit restriction; a native frame that straddles the window end completes on the channel, with its in-window portion credited to the window utilization. Both access modes of Section~\ref{subsec:npca_window} are evaluated, basic access charging a collision the longest colliding frame of Eq.~\eqref{eq:lmax}, and mandatory RTS/CTS with the standard-derived costs $L_\mathrm{hs}=88~\mu$s and $L_\mathrm{col}=106~\mu$s. Each data point averages the steady half of $50$ consecutive NPCA transitions over $20$ sequences and five seeds. Performance is reported as the total useful airtime of the channel normalized by $W_\mathrm{eff}$, its split between visitors and natives, and the visitor airtime proportionality index defined in Section~\ref{subsec:eval_fairness}; the two axes are those of the objective $J$ of Eq.~\eqref{eq:objective}.
 
 \subsection{Why PACE: Channel Airtime under Mixed Contention}
 \label{subsec:eval_whypace}
@@ -621,6 +626,56 @@ FS itself starts at $\rho=1.6$ for $\Nvis=5$ and falls to about $0.95$ at $\Nvis
 Against this reference the two schemes separate clearly. The standard-compliant visitors hold $\rho\approx 0.9$--$1.0$, but this is a proportional share of a channel whose total airtime their collisions have already reduced at large $\Nvis$. PACE operates below unity throughout, holding $\rho$ at $0.55$--$0.61$ under basic access and $0.65$--$0.73$ under RTS/CTS, so the visitors settle at roughly two thirds of their proportional share regardless of their population.
 
 The visitors are guests on the primary channel of the neighboring BSS, so an NPCA scheme should let them exploit idle capacity without displacing the native traffic. It attains the highest total airtime among the three schemes in Fig.~\ref{fig:why_pace} while leaving the natives' share intact, since its gain comes from slots that contention had been wasting rather than from native airtime.
+
+\begin{figure*}[t]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.92\textwidth]{figure/fig6-1.pdf}
+        \caption{Basic access (no RTS/CTS).}
+        \label{fig:objective_basic}
+    \end{subfigure}
+    \vspace{0.6em}
+
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.92\textwidth]{figure/fig6-2.pdf}
+        \caption{Mandatory RTS/CTS.}
+        \label{fig:objective_rts}
+    \end{subfigure}
+    \caption{The combined objective of Eq.~\eqref{eq:objective} versus the
+    number of visitor STAs, in the setting of Fig.~\ref{fig:why_pace}, for
+    proportionality weights $\alpha\in\{0,\,0.5,\,1\}$.}
+    \label{fig:objective}
+\end{figure*}
+
+Efficiency and proportionality can also be read on one axis.
+Fig.~\ref{fig:objective} evaluates the objective of
+Eq.~\eqref{eq:objective} across the visitor sweep for three settings of
+the weight $\alpha$, which has no canonical value. At $\alpha=0$ the objective reduces to log airtime
+and PACE sits at or above FS at every population. Raising $\alpha$
+rewards proximity to the proportional line, which is FS's defining
+property, so FS moves ahead by a growing margin, up to $0.26$ at
+$\alpha=1$ under basic access, while PACE stays within about $0.1$ of
+FS at the calibration weight $\alpha=0.5$. The one reordering appears
+at $\Nvis=5$ under the full weight $\alpha=1$, where the standard
+baseline scores best of the three; a lightly loaded channel loses
+little airtime to its collisions and its share happens to sit near
+proportional, whereas FS structurally over-serves ($\rho\approx1.6$)
+and PACE under-serves. From $\Nvis=10$ onward, where contention
+actually stresses the window, no weight changes the ranking. PACE and
+FS remain close while the standard baseline trails by $0.3$ to $1.1$,
+its collapse in $T$ dominating any proportionality credit. The
+calibration weight $\alpha=0.5$ of Section~\ref{subsec:factor_scaling}
+thus sits in the middle of the range in which the comparison is
+insensitive to the weight. The comparison also flatters FS less than it
+seems. FS is a genie policy that transmits at
+$\tau^*(t)=1/|\mathcal{V}(t)|$ with per-slot knowledge of the viable
+set, which presupposes not only the visitor population but the native
+one and every contender's frame fit, whereas PACE reaches these scores
+from local feedback alone, knowing neither $\Nvis$ nor $\Nnat$.
+Near-parity with the genie at every weight is therefore the substantive
+result of the figure.
 
 \subsection{Impact of Visiting Duration}
 \label{subsec:eval_duration}
@@ -755,15 +810,16 @@ at every duration.
     of Fig.~\ref{fig:why_pace} ($\Nvis=20$, $\Nnat=10$,
     $W_\mathrm{eff}=420$ slots, $3.78$~ms). The analytic FS target
     $\tau^*(t)=1/|\mathcal{V}(t)|$ and the measured per-slot
-    transmission rate of viable visitors under PACE and under the
-    standard procedure, averaged over $500$ visits.}
+    transmission rate of viable visitors under PACE-static,
+    PACE-dynamic, and the standard procedure, averaged over $500$
+    visits.}
     \label{fig:tracking}
 \end{figure}
 
 The aggregate results of Sections~\ref{subsec:eval_whypace}%
 --\ref{subsec:eval_duration} follow from the within-visit transmission
 behavior of each scheme, which Fig.~\ref{fig:tracking} reports. Since the standard visitor holds no per-slot probability, we
-plot for both schemes the same model-free quantity, the measured
+plot for every scheme the same model-free quantity, the measured
 fraction of viable visitors transmitting in each slot, against the
 analytic FS target. The target $\tau^*(t)$ stays near $1/(\Nvis{+}\Nnat)=1/30$
 for most of the visit and then rises steeply in the final slots, as
