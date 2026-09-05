@@ -77,8 +77,9 @@ FIELDS_27 = ["access", "W_eff", "N", "method", "seed",
 
 _STYLE = dict(_f26._STYLE_26)
 _LABEL = dict(_f26._LABEL_26)
+_LABEL["pace"] = "PACE-static"
 _STYLE["pace_wrule"] = dict(color="#d62728", ls=":", lw=2.0, marker="v", ms=5)
-_LABEL["pace_wrule"] = (r"PACE, $c=\exp(C/\sqrt{W_\mathrm{eff}})$")
+_LABEL["pace_wrule"] = "PACE-dynamic"
 
 
 # ─── One config ───────────────────────────────────────────────────────────────

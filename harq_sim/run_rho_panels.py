@@ -69,9 +69,9 @@ def rho_of(rows, n_vis):
     return (sv / tot) / (n_vis / (n_vis + N_NAT))
 
 
-def panel(ax, xs, series, xlabel, xticklabels=None):
+def panel(ax, xs, series, xlabel, xticklabels=None, labels=None):
     for m, ys in series:
-        ax.plot(xs, ys, label=LABEL[m], **STYLE[m])
+        ax.plot(xs, ys, label=(labels or LABEL)[m], **STYLE[m])
     ax.axhline(1.0, color="0.5", ls="--", lw=1.0, zorder=0)
     ax.set_xscale("log")
     ax.set_xticks(xs)
@@ -103,10 +103,9 @@ def window_sweep():
             series.append((m, ys))
         fig, ax = plt.subplots(figsize=(5.0, 3.2))
         panel(ax, ws, series, "Visiting duration (ms)",
-              [f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".") for w in ws])
-        ax.set_title(f"{'basic access' if acc == 'basic' else 'RTS/CTS'}"
-                     rf",  $N_\mathrm{{vis}}={n_vis}$,  "
-                     rf"$c={_f17.PND_C_COLL}$", fontsize=10)
+              [f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".") for w in ws],
+              labels={**LABEL, "pace": "PACE-static",
+                      "pace_wrule": "PACE-dynamic"})
         ax.legend(fontsize=7.5)
         fig.tight_layout()
         save(fig, f"fig3-{i}")

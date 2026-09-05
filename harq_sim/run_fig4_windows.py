@@ -54,6 +54,9 @@ def main():
     a = ap.parse_args()
     visits = _f28.FAST_VISITS if a.fast else _f28.FULL_VISITS
     os.makedirs(a.out_dir, exist_ok=True)
+    _f28._LABEL = dict(_f28._LABEL)
+    _f28._LABEL["pace"] = "PACE-static (measured)"
+    _f28._LABEL["pace_dyn"] = "PACE-dynamic (measured)"
 
     saved_w, saved_bins = _f28.W, _f28.N_BINS
     try:
@@ -81,9 +84,7 @@ def main():
                 print(f"  {acc} W={w} done", flush=True)
             axes[0].set_ylabel("Per-slot transmission rate", fontsize=9)
             axes[0].legend(fontsize=7, loc="best")
-            fig.suptitle("basic access" if acc == "basic" else "RTS/CTS",
-                         fontsize=10)
-            fig.tight_layout(rect=(0, 0, 1, 0.94))
+            fig.tight_layout()
             stem = os.path.join(a.out_dir, f"fig4-{i}")
             for ext in ("eps", "png", "pdf"):
                 fig.savefig(f"{stem}.{ext}", format=ext, dpi=300,
