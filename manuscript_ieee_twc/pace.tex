@@ -476,7 +476,7 @@ The rule of Eq.~\eqref{eq:mimd} leaves the factors $c_\mathrm{idle}$ and $c_\mat
     \label{eq:logstep}
 \end{equation}
 
-Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit. Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. The mean drift $h(x)=p_\mathrm{I}(x)-p_\mathrm{C}(x)$, the gap between the idle and collision probabilities seen from state $x$, vanishes at the operating point $x^*$ that the feedback seeks. Near a stable $x^*$ the error $Y_k=X_k-x^*$ follows the linearized recursion
+Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$-th outcome STA $i$ observes as a listener; slots in which the STA itself transmits are excluded, since Eq.~\eqref{eq:mimd} does not run there and $\tau_i$ is unchanged (Section~\ref{subsec:channel_access}). Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. The mean drift $h(x)=p_\mathrm{I}(x)-p_\mathrm{C}(x)$, the gap between the idle and collision probabilities seen from state $x$, vanishes at the operating point $x^*$ that the feedback seeks. Near a stable $x^*$ the error $Y_k=X_k-x^*$ follows the linearized recursion
 \begin{equation}
     Y_{k+1} \;\approx\; (1-\kappa\epsilon)\,Y_k + \epsilon\,\xi_{k+1},
     \label{eq:linrec}
