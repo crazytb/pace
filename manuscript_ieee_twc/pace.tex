@@ -259,12 +259,12 @@ Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{sub
 \end{equation}
 which is non-increasing in $t$ as both the window depletes and frames become infeasible.
 
-The viable population fixes the operating point that any contention rule on this channel should seek. In a slot with $|\mathcal{V}(t)|$ viable STAs each attempting independently with a common probability, a success, meaning exactly one transmitter, is most likely when that probability is
+The viable population defines a natural operating point for contention. In a slot with $|\mathcal{V}(t)|$ viable STAs each attempting independently with a common probability, a success, meaning exactly one transmitter, is most likely when that probability is
 \begin{equation}
     \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
     \label{eq:tau_opt}
 \end{equation}
-the classical slotted-ALOHA optimum applied to the viable set. Because $\mathcal{V}(t)$ is non-increasing, this target rises toward the deadline, and tracking it without knowing $|\mathcal{V}(t)|$ is what Section~\ref{sec:pace_algorithm} constructs.
+the classical slotted-ALOHA optimum applied to the viable set. This is the attempt-fair operating point rather than an airtime optimum, and it is the target the scheme of Section~\ref{sec:pace_algorithm} tracks in service of the efficiency and fairness objective of Section~\ref{subsec:factor_scaling}. Because $\mathcal{V}(t)$ is non-increasing, the target rises toward the deadline, and tracking it without knowing $|\mathcal{V}(t)|$ is what Section~\ref{sec:pace_algorithm} constructs.
 
 At each slot $t$, a viable STA $i$ attempts transmission with probability $\tau_i(t)$. Following the half-duplex assumption, a transmitting STA cannot sense the channel in the same slot. Let $\mathcal{D}(t)$ denote the set of STAs whose transmissions on the NPCA primary channel are detected by a given STA in slot $t$. This set is defined at the channel level. It counts every STA transmitting on that channel in the slot, not only the switching visitors but also any other STA that uses the same channel as its own primary. The slot outcome is idle when $|\mathcal{D}(t)|=0$, a success when $|\mathcal{D}(t)|=1$, and a collision when $|\mathcal{D}(t)|\ge 2$. These three observable events are the only feedback available to a STA, and they drive the adaptive contention control developed in Section~\ref{sec:pace_algorithm}.
 
