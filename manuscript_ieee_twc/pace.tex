@@ -259,6 +259,13 @@ Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{sub
 \end{equation}
 which is non-increasing in $t$ as both the window depletes and frames become infeasible.
 
+The viable population fixes the operating point that any contention rule on this channel should seek. In a slot with $|\mathcal{V}(t)|$ viable STAs each attempting independently with a common probability, a success, meaning exactly one transmitter, is most likely when that probability is
+\begin{equation}
+    \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
+    \label{eq:tau_opt}
+\end{equation}
+the classical slotted-ALOHA optimum applied to the viable set. Because $\mathcal{V}(t)$ is non-increasing, this target rises toward the deadline, and tracking it without knowing $|\mathcal{V}(t)|$ is what Section~\ref{sec:pace_algorithm} constructs.
+
 At each slot $t$, a viable STA $i$ attempts transmission with probability $\tau_i(t)$. Following the half-duplex assumption, a transmitting STA cannot sense the channel in the same slot. Let $\mathcal{D}(t)$ denote the set of STAs whose transmissions on the NPCA primary channel are detected by a given STA in slot $t$. This set is defined at the channel level. It counts every STA transmitting on that channel in the slot, not only the switching visitors but also any other STA that uses the same channel as its own primary. The slot outcome is idle when $|\mathcal{D}(t)|=0$, a success when $|\mathcal{D}(t)|=1$, and a collision when $|\mathcal{D}(t)|\ge 2$. These three observable events are the only feedback available to a STA, and they drive the adaptive contention control developed in Section~\ref{sec:pace_algorithm}.
 
 The remaining window advances by the time each outcome occupies the medium. An idle slot consumes one slot, while a successful slot consumes $L_\mathrm{solo}$ slots and a collision consumes $L_\mathrm{col}$ slots. The two occupancies depend on the access mode.
@@ -391,8 +398,7 @@ each phase in turn.
 
 A visitor that has just switched to the NPCA primary channel does not know how
 many other STAs are contending there. The population-matched choice
-$\tau_0=1/(\Nvis{+}\Nnat)$, which is the well-known throughput-optimal attempt probability of
-slotted ALOHA, is therefore unavailable in practice since the contender count is not observable.
+$\tau_0=1/(\Nvis{+}\Nnat)$, which is the value the target $\tau^*$ of Eq.~\eqref{eq:tau_opt} takes at the start of a visit in which every contender fits, is therefore unavailable in practice since the contender count is not observable.
 
 Visitor STAs might, through association state or management traffic, form some
 estimate of how many STAs belong to its own BSS. The harder obstacle is that
@@ -418,12 +424,7 @@ At the start of every slot a STA applies a frame-fit test, comparing the airtime
 
 Conventional NPCA has no such rule, yet the deadline binds it all the same, since a STA shall switch back to the BSS primary channel when the NPCA timer expires~\cite{ieee80211bn}. A frame that does not fit the remaining window is therefore cut off at expiry even if it wins the channel; self-exclusion makes this inevitability explicit and returns those slots to the STAs that can still finish.
 
-Self-exclusion keeps the optimal target that PACE aims to track,
-\begin{equation}
-    \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
-    \label{eq:tau_opt}
-\end{equation}
-meaningful in a heterogeneous and finite window. In a slot with $|\mathcal{V}(t)|$ viable STAs, a success, meaning exactly one transmitter, is most likely when each attempts with probability $\tau^*(t)$, and this target rises over the visit as the viable set drains. A STA whose frame no longer fits is removed from the viable set $\mathcal{V}(t)$ of Eq.~\eqref{eq:viable}, so it neither wastes time on attempts destined to fail nor inflates the contention seen by the STAs that can still succeed. This plays the same role as the collision detection departure of a previously proposed neighbor discovery algorithm~\cite{song2014pnd}, in which a STA leaves the contention once its advertisement succeeds. Here a STA also leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$ toward the set of STAs that genuinely compete for the remaining slots.
+Self-exclusion keeps the optimal target $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt}, which PACE aims to track, meaningful in a heterogeneous and finite window. A STA whose frame no longer fits is removed from the viable set $\mathcal{V}(t)$ of Eq.~\eqref{eq:viable}, so it neither wastes time on attempts destined to fail nor inflates the contention seen by the STAs that can still succeed. This plays the same role as the collision detection departure of a previously proposed neighbor discovery algorithm~\cite{song2014pnd}, in which a STA leaves the contention once its advertisement succeeds. Here a STA also leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$ toward the set of STAs that genuinely compete for the remaining slots.
 
 \subsection{Phase (c): Probabilistic Channel Access}
 \label{subsec:channel_access}
