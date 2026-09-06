@@ -968,7 +968,13 @@ initialization $\tau_0=1/W_\mathrm{eff}$ of Phase~(a) and the PPDU-aware
 self-exclusion of Phase~(b). Fig.~\ref{fig:ablation} removes each in
 turn in the setting of Fig.~\ref{fig:why_pace}. The initialization
 determines the behavior at the beginning of the visit and
-self-exclusion determines the behavior at its end.
+self-exclusion determines the behavior at its end. The third design
+choice, the adaptation step of Section~\ref{subsec:factor_scaling},
+distinguishes itself only when the window varies, so its ablation is
+the static-to-dynamic comparison of
+Section~\ref{subsec:eval_duration}; at the reference window of this
+experiment the two variants nearly coincide, and the runs here use
+PACE-static.
 
 Replacing the initialization with the knowledge-free choice
 $\tau_0\sim\mathcal{U}(0,1)$, a natural prior when no population
