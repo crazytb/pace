@@ -179,7 +179,7 @@ def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
         ax.plot(xs, ys, label=_LABEL[m], **_STYLE[m])
     ax.set_xscale("log")
     ax.set_xticks(xs)
-    ax.set_xticklabels([f"{x:.1f}" if x < 10 else f"{x:.0f}" for x in xs])
+    ax.set_xticklabels([f"{x:.1f}".rstrip("0").rstrip(".") for x in xs])
     ax.minorticks_off()
     ax.set_xlabel("Visiting duration (ms)")
     ax.set_ylabel("Total airtime / $W_\\mathrm{eff}$")

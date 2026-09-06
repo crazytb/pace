@@ -1,7 +1,9 @@
 access,scheme,succ_pct,coll_pct,att_per_frame,attempts,successes
 basic,Standard,15.5,84.5,6.5,10543,1634
-basic,PACE,43.5,56.5,2.3,4218,1836
+basic,PACE-static,43.5,56.5,2.3,4218,1836
+basic,PACE-dynamic,39.6,60.4,2.5,5111,2023
 basic,FS,39.5,60.5,2.5,8269,3267
 RTS/CTS,Standard,13.8,86.2,7.3,23748,3273
-RTS/CTS,PACE,40.0,60.0,2.5,6447,2576
+RTS/CTS,PACE-static,40.0,60.0,2.5,6447,2576
+RTS/CTS,PACE-dynamic,35.4,64.6,2.8,8301,2938
 RTS/CTS,FS,40.8,59.2,2.4,11216,4581

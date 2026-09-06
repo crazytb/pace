@@ -75,8 +75,9 @@ def main():
                     ax.plot(xs, ys, label=_f28._LABEL[mode], **st)
                 ax.set_yscale("log")
                 ax.set_xlabel("Elapsed time in the visit (ms)")
+                ms_label = f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".")
                 ax.set_title(rf"$W_\mathrm{{eff}}={w}$ slots "
-                             rf"({w * 9 / 1000:.2f} ms):  fixed $c=1.5$ vs "
+                             rf"({ms_label} ms):  fixed $c=1.5$ vs "
                              rf"dynamic $c={math.exp(_f28.C_WRULE / math.sqrt(w)):.2f}$",
                              fontsize=10)
                 ax.grid(color="0.9", lw=0.4)

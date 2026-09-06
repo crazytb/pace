@@ -31,7 +31,9 @@ import run_step9_fig25 as _f25
 N_V, M, W = 20, 10, 420
 SEEDS = [42, 123, 456, 789, 1234]
 REPS, VISITS = 8, 60
-SCHEMES = [("Standard", "dcf_excl"), ("PACE", "pace"), ("FS", "oracle")]
+SCHEMES = [("Standard", "dcf_excl"), ("PACE-static", "pace"),
+           ("PACE-dynamic", "pace_dyn"), ("FS", "oracle")]
+C_WRULE = 10.16          # section 4.5.40, calibrated at alpha = 0.5
 ACCESS = [("basic", "nocd", 0), ("RTS/CTS", _f25.COLL_RTS_24M, _f25.OH_SUCC_24M)]
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +44,13 @@ def tally(mode: str, coll_cost, succ_oh: int) -> dict:
     """Count visitor attempts, successes and collisions over the steady half."""
     old = (_f25.N_VISITOR, _f25.N_NATIVE, _f25.W_REF)
     _f25.N_VISITOR, _f25.N_NATIVE, _f25.W_REF = N_V, M, W
+    saved_c = (_f17.PND_C_COLL, _f17.PND_C_IDLE)
+    if mode == "pace_dyn":
+        _f17.PND_C_COLL = _f17.PND_C_IDLE = float(np.exp(C_WRULE / np.sqrt(W)))
+        mode = "pace"
+        is_pace = True
+    else:
+        is_pace = mode == "pace"
     att = succ = 0
     try:
         for s in SEEDS:
@@ -50,7 +59,7 @@ def tally(mode: str, coll_cost, succ_oh: int) -> dict:
                 rng = np.random.default_rng(s * 200003 + r * 3163)
                 for v in range(VISITS):
                     ppdus = _f25._sample_ppdus25(rng_p)
-                    tau0 = (np.full(N_V, 1.0 / W) if mode == "pace" else None)
+                    tau0 = (np.full(N_V, 1.0 / W) if is_pace else None)
                     st: dict = {}
                     _f25._run_visit25(ppdus, rng, mode, tau0, coll_cost,
                                       succ_oh, stats=st)
@@ -64,6 +73,7 @@ def tally(mode: str, coll_cost, succ_oh: int) -> dict:
                     st.clear()
     finally:
         _f25.N_VISITOR, _f25.N_NATIVE, _f25.W_REF = old
+        _f17.PND_C_COLL, _f17.PND_C_IDLE = saved_c
     return {"att": att, "succ": succ, "coll": att - succ}
 
 
@@ -93,7 +103,7 @@ def main():
            r"\textbf{Access} & \textbf{Scheme} & \textbf{Succ.} & "
            r"\textbf{Coll.} & \textbf{Att./frame} \\", r"\hline"]
     for i, r in enumerate(rows):
-        first = (i % 3 == 0)
+        first = (i % len(SCHEMES) == 0)
         acc = r["access"] if first else ""
         if first and i:
             tex.append(r"\hline")

@@ -907,11 +907,13 @@ Figs.~\ref{fig:duration} and~\ref{fig:duration_rho}.
 \textbf{Access} & \textbf{Scheme} & \textbf{Succ.} & \textbf{Coll.} & \textbf{Att./frame} \\
 \hline
 basic   & Standard & $16\%$ & $84\%$ & $6.5$ \\
-        & PACE          & $44\%$ & $56\%$ & $2.3$ \\
+        & PACE-static   & $44\%$ & $56\%$ & $2.3$ \\
+        & PACE-dynamic  & $40\%$ & $60\%$ & $2.5$ \\
         & FS            & $40\%$ & $60\%$ & $2.5$ \\
 \hline
 RTS/CTS & Standard & $14\%$ & $86\%$ & $7.3$ \\
-        & PACE          & $40\%$ & $60\%$ & $2.5$ \\
+        & PACE-static   & $40\%$ & $60\%$ & $2.5$ \\
+        & PACE-dynamic  & $35\%$ & $65\%$ & $2.8$ \\
         & FS            & $41\%$ & $59\%$ & $2.4$ \\
 \hline
 \end{tabular}
@@ -925,7 +927,9 @@ synchronized collisions, so the standard procedure transmits six to
 seven times to deliver a single frame. PACE completes $40$--$44\%$ of
 its attempts and delivers a frame in about two and a half
 transmissions, which is essentially the per-attempt outcome of FS
-itself. A high success ratio alone could be achieved by transmitting
+itself; PACE-dynamic, whose per-visit factor at this window is the
+slightly more aggressive $1.64$, sits a few points lower at
+$35$--$40\%$ while delivering the same airtime. A high success ratio alone could be achieved by transmitting
 rarely, so the result is meaningful only in combination with
 Fig.~\ref{fig:why_pace}. PACE attains the highest total airtime of the
 three schemes while spending about the same number of transmissions
