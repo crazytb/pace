@@ -9,10 +9,10 @@ coefficient and a window-scaled one differ by 1.50 against 1.64 and the two
 traces nearly coincide. The point of the scaling is what happens away from that
 window, so this draws the same trace at the ends of the sweep:
 
-    W_eff = 100 slots (0.9 ms)   the fixed value ramps too slowly to arrive
+    W_eff = 200 slots (1.8 ms)   the fixed value ramps too slowly to arrive
     W_eff = 1680 slots (15 ms)   the fixed value keeps climbing past the target
 
-PACE-dynamic uses c = exp(C / sqrt(W_eff)), which is 2.76 at the short window
+PACE-dynamic uses c = exp(C / sqrt(W_eff)), which is 2.05 at the short window
 and 1.28 at the long one, against the fixed 1.5 in both. C is calibrated at
 alpha = 0.5 (section 4.5.40).
 
@@ -37,7 +37,7 @@ import run_step9_fig17 as _f17
 import run_step9_fig25 as _f25
 import run_step9_fig28 as _f28
 
-WINDOWS = [100, 1680]
+WINDOWS = [200, 1680]
 MODES = ["dcf_excl", "pace", "pace_dyn", "oracle"]
 ACCESS = [("basic", "nocd", 0),
           ("rts", _f25.COLL_RTS_24M, _f25.OH_SUCC_24M)]
@@ -55,8 +55,9 @@ def main():
     visits = _f28.FAST_VISITS if a.fast else _f28.FULL_VISITS
     os.makedirs(a.out_dir, exist_ok=True)
     _f28._LABEL = dict(_f28._LABEL)
-    _f28._LABEL["pace"] = "PACE-static (measured)"
-    _f28._LABEL["pace_dyn"] = "PACE-dynamic (measured)"
+    _f28._LABEL["dcf_excl"] = "Standard NPCA"
+    _f28._LABEL["pace"] = "PACE-static"
+    _f28._LABEL["pace_dyn"] = "PACE-dynamic"
 
     saved_w, saved_bins = _f28.W, _f28.N_BINS
     try:
@@ -68,11 +69,21 @@ def main():
                 # a 0.9 ms visit has only a handful of epochs, so the default
                 # 42 bins leave most of them empty and the trace breaks up
                 _f28.N_BINS = max(6, min(saved_bins, int(w / 12)))
+                curves = {m: _f28.binned(m, cc, oh, visits) for m in MODES}
+                common = np.logical_and.reduce(
+                    [ok for m, (_x, _y, ok) in curves.items()
+                     if m != "oracle"])
                 for mode in MODES:
-                    xs, ys = _f28.binned(mode, cc, oh, visits)
+                    xs, ys, _ok = curves[mode]
+                    if mode != "oracle":
+                        ys = np.where(common, ys, np.nan)
+                    # structurally empty bins (the first busy period jumps
+                    # over them) would break the line and leave the first
+                    # bin as an invisible isolated point; bridge them
+                    m = ~np.isnan(ys)
                     st = {k: v for k, v in _f28._STYLE[mode].items()
                           if k not in ("marker", "ms")}
-                    ax.plot(xs, ys, label=_f28._LABEL[mode], **st)
+                    ax.plot(xs[m], ys[m], label=_f28._LABEL[mode], **st)
                 ax.set_yscale("log")
                 ax.set_xlabel("Elapsed time in the visit (ms)")
                 ms_label = f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".")
@@ -85,7 +96,9 @@ def main():
                 ax.minorticks_off()
                 print(f"  {acc} W={w} done", flush=True)
             axes[0].set_ylabel("Per-slot transmission rate")
-            axes[0].legend(fontsize=7.5, loc="best")
+            # the long-window panel is empty below the ramp on the right, so
+            # the legend goes there instead of covering the short-window traces
+            axes[1].legend(fontsize=7.5, loc="lower right")
             fig.tight_layout()
             stem = os.path.join(a.out_dir, f"fig4-{i}")
             for ext in ("eps", "png", "pdf"):

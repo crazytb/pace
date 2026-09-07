@@ -41,7 +41,7 @@ import run_step9_fig17 as _f17
 import run_step9_fig25 as _f25
 
 METHODS = ["dcf_excl", "pace", "oracle"]
-LABEL = {"dcf_excl": "Standard NPCA", "pace": "PACE",
+LABEL = {"dcf_excl": "Standard NPCA", "pace": "PACE-static",
          "oracle": "FS (fair share)"}
 STYLE = {"dcf_excl": dict(color="#525252", ls="-.", marker="x", ms=6, lw=1.9),
          "pace": dict(color="#ff7f0e", ls="-", marker="^", ms=6, lw=2.2),

@@ -75,7 +75,7 @@ _STYLE_29 = {
     "dcf_excl":    dict(color="#525252", ls="-.", lw=1.9, marker="x", ms=7),
 }
 _LABEL_29 = {
-    "pace":        "PACE",
+    "pace":        "PACE-static",
     "pace_noexcl": "No self-exclusion",
     "pace_high":   "Naive $\\tau_0{=}0.5$",
     "pace_rand":   "Naive $\\tau_0{\\sim}\\mathcal{U}(0,1)$",

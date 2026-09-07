@@ -55,9 +55,9 @@ _STYLE = {
     "pace_dyn": dict(color="#d62728", ls=":", lw=2.0),
 }
 _LABEL = {
-    "dcf_excl": "Standard NPCA (measured)",
-    "pace":     "PACE-static (measured)",
-    "pace_dyn": r"PACE-dynamic ($c=\exp(C/\sqrt{W_\mathrm{eff}})$)",
+    "dcf_excl": "Standard NPCA",
+    "pace":     "PACE-static",
+    "pace_dyn": "PACE-dynamic",
     "oracle":   "FS target ($\\tau^*{=}1/|\\mathcal{V}(t)|$)",
 }
 
@@ -89,17 +89,17 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
         t = W - W_rem
 
         if mode == "oracle":
-            out.append((t, 1.0 / k))
+            out.append((t, 1.0 / k, int(vv.sum())))
             tx_v = rng.random(N_V) < np.where(vv, 1.0 / k, 0.0)
         elif mode == "pace":
             tx_v = rng.random(N_V) < np.where(vv, tau.clip(1e-4, 1.0), 0.0)
             if vv.any():
                 # measured per-slot transmission frequency of viable visitors
-                out.append((t, float(tx_v[vv].mean())))
+                out.append((t, float(tx_v[vv].mean()), int(vv.sum())))
         else:  # dcf_excl
             tx_v = (bo_v == 0) & vv
             if vv.any():
-                out.append((t, float(tx_v[vv].mean())))
+                out.append((t, float(tx_v[vv].mean()), int(vv.sum())))
         tx_n = (bo_n == 0) & vn
         tx = np.concatenate([tx_v, tx_n])
         n_tx = int(tx.sum())
@@ -171,9 +171,17 @@ def visit_trace(mode: str, ppdus: np.ndarray, rng: np.random.Generator,
 C_WRULE = 10.16          # section 4.5.40, calibrated at alpha = 0.5
 
 
+# a bin is drawn only while the estimate means something: on average at
+# least this many visitor frames must still fit, or the per-slot rate of the
+# few survivors degenerates into a coin flip (spurious cliffs and spikes at
+# the end of short windows). The analytic FS target is exempt.
+VIABLE_MIN = 2.5
+
+
 def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
     sums = np.zeros(N_BINS)
     cnts = np.zeros(N_BINS)
+    vsums = np.zeros(N_BINS)
     # pace_dyn is PACE with the coefficient taken from the window rather than
     # fixed; at this figure's single W_eff it differs only by 1.64 against 1.50
     saved = (_f17.PND_C_COLL, _f17.PND_C_IDLE)
@@ -186,14 +194,17 @@ def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
         ppdus = np.concatenate([
             rng_p.integers(_f25.PPDU_V_LO, _f25.PPDU_V_HI + 1, size=N_V),
             np.full(M, _f25.PPDU_NATIVE_SLOTS)]).astype(np.int32)
-        for t, val in visit_trace(inner, ppdus, rng, coll_cost, succ_oh):
+        for t, val, nv in visit_trace(inner, ppdus, rng, coll_cost, succ_oh):
             b = min(int(N_BINS * t / W), N_BINS - 1)
             sums[b] += val
             cnts[b] += 1
+            vsums[b] += nv
     _f17.PND_C_COLL, _f17.PND_C_IDLE = saved
     xs = (np.arange(N_BINS) + 0.5) * W / N_BINS * 9 / 1000   # ms
     ys = np.where(cnts > 0, sums / np.maximum(cnts, 1), np.nan)
-    return xs, ys
+    mean_v = vsums / np.maximum(cnts, 1)
+    ok = (mean_v >= VIABLE_MIN) & (cnts > 0)
+    return xs, ys, ok
 
 
 # ─── Plot ─────────────────────────────────────────────────────────────────────
@@ -202,12 +213,22 @@ def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
              fig_dir: str, out_dir: str, fig_name: str,
              leg_loc: str = "best") -> None:
     fig, ax = plt.subplots(figsize=(5.0, 3.2))
+    # every measured curve is cut at the same bin: the support mask is the
+    # intersection across schemes, so the panel has one common ending
+    curves = {m: binned(m, coll_cost, succ_oh, visits)
+              for m in ["dcf_excl", "pace", "pace_dyn", "oracle"]}
+    common = np.logical_and.reduce(
+        [ok for m, (_x, _y, ok) in curves.items() if m != "oracle"])
     for mode in ["dcf_excl", "pace", "pace_dyn", "oracle"]:
-        xs, ys = binned(mode, coll_cost, succ_oh, visits)
+        xs, ys, _ok = curves[mode]
+        if mode != "oracle":
+            ys = np.where(common, ys, np.nan)
+        m = ~np.isnan(ys)
         st = dict(_STYLE[mode])
         st["marker"] = None
-        ax.plot(xs, ys, label=_LABEL[mode], **{k: v for k, v in st.items()
-                                               if k not in ("marker", "ms")})
+        ax.plot(xs[m], ys[m], label=_LABEL[mode],
+                **{k: v for k, v in st.items()
+                   if k not in ("marker", "ms")})
     ax.set_yscale("log")
     ax.set_ylim(top=0.4)   # empty top band reserved for the legend
     ax.set_xlabel("Elapsed time in the visit (ms)")

@@ -251,13 +251,13 @@ This probabilistic access departs from the current draft, which reuses
 the enhanced distributed channel access (EDCA) backoff procedure on the NPCA primary channel~\cite{ieee80211bn}. PACE keeps the NPCA architecture intact, including the switching triggers, the NPCA timer, and the contention-state save and restore, and replaces only the contention rule applied within the bounded visit. 
 % We therefore position PACE as a candidate refinement of the amendment's contention rule, whose benefit over the draft-compliant procedure is quantified in Section~\ref{sec:performance_evaluation}.
 
-Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{subsec:npca_access}, we denote by $W_\mathrm{rem}(t)=W_\mathrm{eff}-t+1$ the number of slots remaining at slot $t$, including the current one, so that $W_\mathrm{rem}$ counts down toward the deadline as contention proceeds. All STAs are assumed to be saturated, so each STA $i$ always holds a pending head-of-line PPDU, whose transmission occupies $L_i$ slots, and a STA that completes a transmission draws its next frame and continues contending. $L_i$ therefore changes only at STA $i$'s own delivery instants and is constant in between; we suppress this time dependence in the notation and let $L_i$ always denote the current head-of-line frame. Because a transmission must complete before the window closes, STA $i$ is viable at slot $t$ only if its frame still fits, i.e.\ $L_i \le W_\mathrm{rem}(t)$; otherwise it can no longer succeed within the visit. We write the viable population at slot $t$ as
+Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{subsec:npca_access}, we denote by $W_\mathrm{rem}(t)=W_\mathrm{eff}-t+1$ the number of slots remaining at slot $t$, including the current one, so that $W_\mathrm{rem}$ counts down toward the deadline as contention proceeds. All STAs are assumed to be saturated, so each STA $i$ always holds a pending head-of-line PPDU, whose transmission occupies $L_i$ slots, and a STA that completes a transmission draws its next frame and continues contending. $L_i$ therefore changes only at STA $i$'s own delivery instants and is constant in between; we suppress this time dependence in the notation and let $L_i$ always denote the current head-of-line frame. Because a visitor's transmission must complete before the window closes, visitor $i$ is viable at slot $t$ only if its frame still fits, i.e.\ $L_i \le W_\mathrm{rem}(t)$; otherwise it can no longer succeed within the visit. The natives face no such deadline, since the window is the visitors' constraint alone and a native frame that straddles its end simply completes on the channel, so every native remains a contender throughout. We write the viable population at slot $t$ as
 \begin{equation}
     \mathcal{V}(t) \;=\; \bigl\{\, i\in\mathcal{V} :
-    L_i \le W_\mathrm{rem}(t) \,\bigr\},
+    L_i \le W_\mathrm{rem}(t) \,\bigr\} \cup \mathcal{N},
     \label{eq:viable}
 \end{equation}
-which is non-increasing in $t$ as both the window depletes and frames become infeasible.
+which is non-increasing in $t$ as both the window depletes and visitor frames become infeasible, but never falls below $\Nnat$.
 
 The viable population defines a natural operating point for contention. In a slot with $|\mathcal{V}(t)|$ viable STAs each attempting independently with a common probability, a success, meaning exactly one transmitter, is most likely when that probability is
 \begin{equation}
@@ -476,29 +476,64 @@ The rule of Eq.~\eqref{eq:mimd} leaves the factors $c_\mathrm{idle}$ and $c_\mat
     \label{eq:logstep}
 \end{equation}
 
-Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$-th outcome STA $i$ observes as a listener; slots in which the STA itself transmits are excluded, since Eq.~\eqref{eq:mimd} does not run there and $\tau_i$ is unchanged (Section~\ref{subsec:channel_access}). Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. The mean drift $h(x)=p_\mathrm{I}(x)-p_\mathrm{C}(x)$, the gap between the idle and collision probabilities seen from state $x$, vanishes at the operating point $x^*$ that the feedback seeks. Near a stable $x^*$ the error $Y_k=X_k-x^*$ follows the linearized recursion
+Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$-th outcome STA $i$ observes as a listener; slots in which the STA itself transmits are excluded, since Eq.~\eqref{eq:mimd} does not run there and $\tau_i$ is unchanged (Section~\ref{subsec:channel_access}). Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. Splitting each outcome into its conditional mean and the remainder,
 \begin{equation}
-    Y_{k+1} \;\approx\; (1-\kappa\epsilon)\,Y_k + \epsilon\,\xi_{k+1},
+    X_{k+1} \;=\; X_k + \epsilon\,h(X_k) + \epsilon\,\xi_{k+1},
+    \qquad
+    h(x) \;=\; p_\mathrm{I}(x)-p_\mathrm{C}(x),
+    \label{eq:decomp}
+\end{equation}
+where $p_\mathrm{I}(x)$ and $p_\mathrm{C}(x)$ are the probabilities that a listener in state $x$ observes an idle slot or a collision, and $\xi_{k+1}=H_k-h(X_k)$ satisfies $\mathbb{E}[\xi_{k+1}\mid X_k]=0$ by construction. Therefore, Eq.~\eqref{eq:decomp} involves no approximation, but it separates the walk into a deterministic pull and a zero-mean kick.
+
+The pull has a single balance point. Because solo-copy keeps the population near a common value, we read $x$ as that common operating point. A larger $x$ then means a busier channel, so $p_\mathrm{I}$ falls and $p_\mathrm{C}$ rises with $x$, and $h$ crosses zero exactly once, from above. At the crossing $x^*$ an idle slot and a collision are equally likely, and because the crossing is downward the drift restores the state from either side, raising the rate on a channel that has gone quiet and lowering it on one that has grown collision-prone. We write the restoring rate as $\kappa=-h'(x^*)>0$.
+
+Two clarifications delimit what $x^*$ is. It is the equilibrium of the idle and collision feedback, not the fair-share target itself; we do not require $x^*=\ln\tau^*(t)$, only that the feedback settles in that target's neighborhood, which is what Phase~(d) is built to arrange. And since $\tau^*(t)$ drifts upward as the viable set drains, the analysis freezes the target over the stretch of the visit it examines, a quasi-static approximation that suffices because the question here is how the step should scale with the number of updates, not where the operating point sits exactly.
+
+Near $x^*$ the drift linearizes. Taylor expansion gives $h(X_k)=h(x^*)+h'(x^*)\,(X_k-x^*)+O\bigl((X_k-x^*)^2\bigr)$, the constant term vanishes at the equilibrium, and dropping the quadratic remainder, the only approximation made so far, turns Eq.~\eqref{eq:decomp} into a linear recursion for the error $Y_k=X_k-x^*$,
+\begin{equation}
+    Y_{k+1} \;\approx\; (1-\kappa\epsilon)\,Y_k + \epsilon\,\xi_{k+1}.
     \label{eq:linrec}
 \end{equation}
-with restoring rate $\kappa=-h'(x^*)>0$ and zero-mean outcome noise $\xi$ of variance $\nu^2=p_\mathrm{I}(x^*)+p_\mathrm{C}(x^*)$.
+Each update contracts the error by the factor $1-\kappa\epsilon$ and injects a kick of size $\epsilon\xi$. At the equilibrium $h(x^*)=0$, so the noise there is the outcome itself, $\xi_{k+1}=H_k$, which is $\pm1$ whenever the observed slot is idle or collided and $0$ otherwise, giving
+\begin{equation*}
+    \nu^2 \;=\; \operatorname{Var}\bigl[H_k \mid X_k=x^*\bigr]
+    \;=\; p_\mathrm{I}(x^*)+p_\mathrm{C}(x^*),
+\end{equation*}
+the fraction of observed outcomes that move the state at all.
 
 A visit is scored by what it accumulates rather than by where it ends. We make the objective explicit as
 \begin{equation}
     J \;=\; \ln T \;-\; \alpha\,\bigl(\ln\rho\bigr)^{2},
     \label{eq:objective}
 \end{equation}
-where $T$ is the fraction of the window carrying useful airtime, $\rho$ is the visitors' share of that airtime divided by their population share $\Nvis/(\Nvis{+}\Nnat)$, and $\alpha\ge0$ weights proportionality against efficiency. The quadratic log penalty vanishes exactly at the proportional share $\rho=1$ and charges over- and under-service symmetrically, so $J$ scores the design goal of Section~\ref{subsec:self_exclusion}, an efficient window that neither starves the visitors nor lets them displace the natives. Both ingredients accumulate over the whole window and are the measures that Section~\ref{sec:performance_evaluation} reports. Treating $J$ as a function of the operating point and assuming it is locally quadratic around $x^*$ with curvature $q>0$, summing the second moment of Eq.~\eqref{eq:linrec} over the $K$ update opportunities of a visit gives the loss
+where $T$ is the fraction of the window carrying useful airtime, $\rho$ is the visitors' share of that airtime divided by their population share $\Nvis/(\Nvis{+}\Nnat)$, and $\alpha\ge0$ weights proportionality against efficiency. The quadratic log penalty vanishes exactly at the proportional share $\rho=1$ and charges over- and under-service symmetrically, so $J$ scores the design goal of Section~\ref{subsec:self_exclusion}, an efficient window that neither starves the visitors nor lets them displace the natives. 
+% Both ingredients accumulate over the whole window and are the measures that Section~\ref{sec:performance_evaluation} reports.
+
+The link between the dynamics of Eq.~\eqref{eq:linrec} and this objective is one further assumption, stated openly. Viewed as a function of the common operating point, $J$ is taken to attain a local maximum near the feedback equilibrium and to be locally quadratic there, $J(x)\approx J(x^*)-\frac{q}{2}(x-x^*)^2$ with curvature $q>0$. Every update spent at error $Y_k$ then forfeits about $\frac{q}{2}Y_k^2$ of utility, and because the metrics accumulate over the window rather than being read at the final slot, the loss of a visit with $K$ update opportunities is 
+\begin{equation}
+    R_K(\epsilon)\approx\frac{q}{2}\sum_{k=0}^{K-1}\mathbb{E}[Y_k^2].
+    \label{eq:regret_def}    
+\end{equation}
+
+
+The sum follows from Eq.~\eqref{eq:linrec} directly. Writing $a=1-\kappa\epsilon$ and iterating,
+\begin{equation}
+    \mathbb{E}\bigl[Y_k^2\bigr] \;=\; a^{2k}\,Y_0^2
+    \;+\; \epsilon^2\nu^2\sum_{j=0}^{k-1}a^{2j},
+    \label{eq:second_moment}
+\end{equation}
+whose two terms accumulate differently over the visit. The first is the initial offset $Y_0=X_0-x^*$ decaying geometrically; summed over $k=0,\dots,K-1$ it contributes about $Y_0^2/(1-a^2)\approx Y_0^2/(2\kappa\epsilon)$ for small $\epsilon$, so a small step pays for its slow ramp at rate $1/\epsilon$. The second is the injected noise, which saturates at the stationary variance $\epsilon^2\nu^2/(1-a^2)\approx\epsilon\nu^2/(2\kappa)$ and is then paid on every one of the $K$ updates, so a large step pays for its jitter at rate $K\epsilon$. Multiplying by the curvature factor $q/2$,
 \begin{equation}
     R_K(\epsilon) \;\approx\; \frac{q}{4\kappa}
     \left( \frac{Y_0^2}{\epsilon} + K \nu^2 \epsilon \right),
     \label{eq:regret}
 \end{equation}
-where $Y_0$ is the initial offset. The first term is the transient cost of a slow ramp and decays as $1/\epsilon$, while the second is the fluctuation that a large step sustains around the operating point and grows as $K\epsilon$. The two scale oppositely in $\epsilon$, and balancing them yields
+where the first term is the transient cost of the ramp and the second the accumulated fluctuation around the operating point. The two scale oppositely in $\epsilon$, and balancing them yields
 \begin{equation}
     \epsilon^* \;=\; \frac{|Y_0|}{\nu\sqrt{K}}.
     \label{eq:eps_opt}
 \end{equation}
+A short visit offers few corrections, so each must be large; a long one offers many, so a smaller step that trades ramp speed for composure around the target comes out ahead.
 
 The number of update opportunities is in turn set by the window. Every outcome occupies the medium for one idle slot, $L_\mathrm{solo}$ slots, or $L_\mathrm{col}$ slots, so $K\approx W_\mathrm{eff}/\bar{L}$, where $\bar{L}$ is the mean outcome occupancy of the access mode in use. Substituting into Eq.~\eqref{eq:eps_opt},
 \begin{equation}
@@ -507,7 +542,7 @@ The number of update opportunities is in turn set by the window. Every outcome o
     C \;=\; \frac{|Y_0|\sqrt{\bar{L}}}{\nu},
     \label{eq:eps_window}
 \end{equation}
-which prescribes $c_\mathrm{idle}^*=c_\mathrm{coll}^*=\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$. The constant also separates the two access modes. Since basic access and RTS/CTS protection differ through $L_\mathrm{solo}$ and $L_\mathrm{col}$, their constants relate as $C_\mathrm{RTS}/C_\mathrm{basic}\approx\sqrt{\bar{L}_\mathrm{RTS}/\bar{L}_\mathrm{basic}}$, so the mode whose outcomes hold the channel longer, and hence grants fewer updates per window, calls for a proportionally larger step. The argument is summarized as follows.
+which prescribes $c_\mathrm{idle}^*=c_\mathrm{coll}^*=\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$. The constant also separates the two access modes. Since basic access and RTS/CTS protection differ through $L_\mathrm{solo}$ and $L_\mathrm{col}$, their constants relate as $C_\mathrm{RTS}/C_\mathrm{basic}\approx\sqrt{\bar{L}_\mathrm{RTS}/\bar{L}_\mathrm{basic}}$, so the mode whose outcomes hold the channel longer, and hence grants fewer updates per window, calls for a proportionally larger step. The argument is summarized as follows, and it should be read as a scaling law for the local finite-horizon model above, not as an exact optimality claim for the full time-varying system.
 
 \begin{proposition}
 Consider the finite-horizon adaptation $X_{k+1}=X_k+\epsilon H_k$ with a locally stable equilibrium $x^*$, a locally quadratic utility, and bounded outcome noise of variance $\nu^2$. If a visit contains $K$ effective update opportunities and both the transient and the fluctuation loss of Eq.~\eqref{eq:regret} are accumulated, the loss-minimizing constant step satisfies
@@ -519,7 +554,9 @@ hence $\epsilon^*_K=\Theta(K^{-1/2})$. If moreover $K=W_\mathrm{eff}/\bar{L}+o(W
 
 Two remarks bound the claim. First, Phase~(a) sets $X_0=-\ln W_\mathrm{eff}$, so the offset $|Y_0|=|\ln(W_\mathrm{eff}\,\tau^*)|$ retains a slow logarithmic dependence on the window, and $C$ behaves as a constant only over ranges of $W_\mathrm{eff}$ in which this variation is small enough to be absorbed. Eq.~\eqref{eq:eps_window} is therefore an asymptotic inverse-square-root scaling under the local finite-horizon approximation, not an exact equality. Second, the scaling presumes the cumulative criterion above; a criterion that graded only the terminal state would favor a smaller step of order $\ln K/K$. Within these bounds, Eq.~\eqref{eq:eps_window} delivers the same message as the initialization of Phase~(a). Both design knobs of PACE are set from the window alone, the starting probability at $1/W_\mathrm{eff}$ and the adaptation step at $\Theta(1/\sqrt{W_\mathrm{eff}})$, with faster adaptation in shorter visits.
 
-The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrated once at a reference window to maximize the objective of Eq.~\eqref{eq:objective} at $\alpha=0.5$, and refer to the fixed-factor configuration as \emph{PACE-static}. The names describe only how the step size is chosen. Both variants adapt $\tau_i$ on every observed slot, and both draw on the same local information as the initialization of Phase~(a). Section~\ref{subsec:eval_duration} compares the two across the window range, where a single fixed factor turns out to be too small for a short visit and too large for a long one.
+The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. 
+
+We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrated once at a reference window to maximize the objective of Eq.~\eqref{eq:objective} at $\alpha=0.5$, and refer to the fixed-factor configuration as \emph{PACE-static}. The names describe only how the step size is chosen. Both variants adapt $\tau_i$ on every observed slot, and both draw on the same local information as the initialization of Phase~(a). Section~\ref{subsec:eval_duration} compares the two across the window range, where a single fixed factor turns out to be too small for a short visit and too large for a long one.
 
 \section{Performance Evaluation}
 \label{sec:performance_evaluation}
@@ -578,7 +615,7 @@ Native STAs, which neither know nor observe the visitors' window, keep their sta
     \end{subfigure}
     \caption{Total useful airtime (visitor and native combined) versus the
     number of visitor STAs $\Nvis$ for standard-compliant NPCA (CSMA/CA
-    visitors), PACE, and the fair-share reference (FS), in the mixed
+    visitors), PACE-static, and the fair-share reference (FS), in the mixed
     native/visitor channel
     with $\Nnat=10$ native DCF stations.}
     \label{fig:why_pace}
@@ -874,24 +911,28 @@ $L_\mathrm{col}$ rather than a full frame.
         \caption{Mandatory RTS/CTS.}
         \label{fig:tracking_windows_rts}
     \end{subfigure}
-    \caption{Within-visit transmission dynamics at the two ends of the
-    window sweep of Fig.~\ref{fig:duration} ($W_\mathrm{eff}$ of $100$
-    and $1680$ slots, $0.9$ and $15.1$~ms, $\Nvis=20$, $\Nnat=10$).
+    \caption{Within-visit transmission dynamics at a short and a long
+    window of the sweep of Fig.~\ref{fig:duration} ($W_\mathrm{eff}$ of
+    $200$ and $1680$ slots, $1.8$ and $15.1$~ms, $\Nvis=20$, $\Nnat=10$).
     PACE-static keeps the fixed factor $c=1.5$ at both windows, while
-    PACE-dynamic recomputes it per visit, $c=2.76$ at the short window
-    and $c=1.28$ at the long one.}
+    PACE-dynamic recomputes it per visit, $c=2.05$ at the short window
+    and $c=1.28$ at the long one. Measured curves are drawn while more
+    than two visitor frames on average still fit the remaining window;
+    under RTS/CTS the handshake must also fit, so this point arrives
+    slightly earlier than under basic access.}
     \label{fig:tracking_windows}
 \end{figure*}
 
 Fig.~\ref{fig:tracking} is drawn at the reference window, where the
 factor PACE-dynamic computes, $1.64$, differs little from the fixed
 $1.5$ and the two variants trace nearly the same path. The distinction
-appears at the ends of the window sweep, which
-Fig.~\ref{fig:tracking_windows} redraws. In a $0.9$-ms visit the fixed
+appears away from the reference window, which
+Fig.~\ref{fig:tracking_windows} redraws at a short and a long visit. In
+a $1.8$-ms visit the fixed
 factor never lifts the rate to the target before the window closes,
 which is the transient loss of Section~\ref{subsec:factor_scaling} made
-visible, whereas the per-visit factor of $2.76$ arrives with slots to
-spare. In a $15.1$-ms visit the same fixed factor crosses the target
+visible, whereas the per-visit factor of $2.05$ reaches the target with
+most of the visit still ahead. In a $15.1$-ms visit the same fixed factor crosses the target
 partway through and keeps the rate above it for the remainder, the
 accumulated fluctuation loss, while the factor of $1.28$ settles onto
 the target and stays there. The two failure modes are symmetric, and
@@ -959,7 +1000,7 @@ is.
         \label{fig:ablation_rts}
     \end{subfigure}
     \caption{Ablation study in the setting of Fig.~\ref{fig:why_pace}:
-    total useful airtime for full PACE, PACE without PPDU-aware
+    total useful airtime for full PACE-static, PACE without PPDU-aware
     self-exclusion, PACE without the one-probe initialization, and the standard-compliant baseline.}
     \label{fig:ablation}
 \end{figure}

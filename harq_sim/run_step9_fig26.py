@@ -71,7 +71,7 @@ _STYLE_26 = {
 }
 _LABEL_26 = {
     "dcf_excl": "Standard NPCA (CSMA/CA)",
-    "pace":     "PACE",
+    "pace":     "PACE-static",
     "oracle":   "Fair share (FS)",
 }
 
