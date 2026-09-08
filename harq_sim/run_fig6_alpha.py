@@ -135,7 +135,7 @@ def main():
 def plot(rows, out_dir):
     for i, (acc, _cc, _oh) in enumerate(ACCESS, start=1):
         fig, axes = plt.subplots(1, len(ALPHAS),
-                                 figsize=(3.33 * len(ALPHAS), 3.2), sharex=True)
+                                 figsize=(3.33 * len(ALPHAS), 2.5), sharex=True)
         for ax, al in zip(axes, ALPHAS):
             for m in METHODS:
                 sel = [x for x in rows if x["access"] == acc and x["method"] == m]

@@ -48,7 +48,7 @@ FIG_DIR = os.path.join(ROOT, "results", "figure")
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Paper Fig eval-4b (fig4-3/fig4-4) — tracking vs window")
+        description="Paper Fig eval-4b (fig4q-1..4) — tracking vs window")
     ap.add_argument("--fast", action="store_true")
     ap.add_argument("--out-dir", default=FIG_DIR)
     a = ap.parse_args()
@@ -60,15 +60,16 @@ def main():
     _f28._LABEL["pace_dyn"] = "PACE-dynamic"
 
     saved_w, saved_bins = _f28.W, _f28.N_BINS
+    idx = 0
     try:
-        for i, (acc, cc, oh) in enumerate(ACCESS, start=3):
-            fig, axes = plt.subplots(1, len(WINDOWS),
-                                     figsize=(5.0 * len(WINDOWS), 3.2))
-            for ax, w in zip(axes, WINDOWS):
+        for acc, cc, oh in ACCESS:
+            for w in WINDOWS:
+                idx += 1
                 _f28.W = w
-                # a 0.9 ms visit has only a handful of epochs, so the default
+                # a short visit has only a handful of epochs, so the default
                 # 42 bins leave most of them empty and the trace breaks up
                 _f28.N_BINS = max(6, min(saved_bins, int(w / 12)))
+                fig, ax = plt.subplots(figsize=(2.8, 2.3))
                 curves = {m: _f28.binned(m, cc, oh, visits) for m in MODES}
                 common = np.logical_and.reduce(
                     [ok for m, (_x, _y, ok) in curves.items()
@@ -77,38 +78,34 @@ def main():
                     xs, ys, _ok = curves[mode]
                     if mode != "oracle":
                         ys = np.where(common, ys, np.nan)
-                    # structurally empty bins (the first busy period jumps
-                    # over them) would break the line and leave the first
-                    # bin as an invisible isolated point; bridge them
+                    # bridge structurally empty bins so the line stays whole
                     m = ~np.isnan(ys)
                     st = {k: v for k, v in _f28._STYLE[mode].items()
                           if k not in ("marker", "ms")}
+                    st["lw"] = st.get("lw", 1.8) * 0.85
                     ax.plot(xs[m], ys[m], label=_f28._LABEL[mode], **st)
                 ax.set_yscale("log")
                 ax.set_xlabel("Elapsed time in the visit (ms)")
-                ms_label = f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".")
-                ax.set_title(rf"$W_\mathrm{{eff}}={w}$ slots "
-                             rf"({ms_label} ms):  fixed $c=1.5$ vs "
-                             rf"dynamic $c={math.exp(_f28.C_WRULE / math.sqrt(w)):.2f}$",
-                             fontsize=10)
+                ax.set_ylabel("Per-slot transmission rate")
                 ax.grid(color="0.9", lw=0.4)
                 ax.set_axisbelow(True)
                 ax.minorticks_off()
-                print(f"  {acc} W={w} done", flush=True)
-            axes[0].set_ylabel("Per-slot transmission rate")
-            # the long-window panel is empty below the ramp on the right, so
-            # the legend goes there instead of covering the short-window traces
-            axes[1].legend(fontsize=7.5, loc="lower right")
-            fig.tight_layout()
-            stem = os.path.join(a.out_dir, f"fig4-{i}")
-            for ext in ("eps", "png", "pdf"):
-                fig.savefig(f"{stem}.{ext}", format=ext, dpi=300,
-                            bbox_inches="tight")
-            plt.close(fig)
-            print(f"  Figure -> {stem}.pdf")
+                if acc == "basic" and w == WINDOWS[1]:
+                    # the long-window panel is empty below the ramp on the
+                    # right, so the shared legend lives there
+                    ax.legend(fontsize=6, loc="lower right", frameon=True,
+                              handlelength=1.4, borderpad=0.25,
+                              labelspacing=0.25)
+                fig.tight_layout()
+                stem = os.path.join(a.out_dir, f"fig4q-{idx}")
+                for ext in ("eps", "png", "pdf"):
+                    fig.savefig(f"{stem}.{ext}", format=ext, dpi=300,
+                                bbox_inches="tight")
+                plt.close(fig)
+                print(f"  {acc} W={w} -> {stem}.pdf", flush=True)
     finally:
         _f28.W, _f28.N_BINS = saved_w, saved_bins
-    print(f"\nFig 4b complete -> {a.out_dir}/fig4-3, fig4-4")
+    print(f"\nFig 4 quad complete -> {a.out_dir}/fig4q-1..4")
 
 
 if __name__ == "__main__":

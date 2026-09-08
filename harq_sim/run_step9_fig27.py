@@ -171,7 +171,7 @@ def summary(rows, w_list: list) -> None:
 
 def _plot_one(rows, access: str, w_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(5.0, 3.2))
+    fig, ax = plt.subplots(figsize=(5.0, 2.5))
     xs = [w * 9 / 1000 for w in w_list]      # ms
     for m in METHODS_27:
         ys = [_mean27(rows, "useful", access=access, W_eff=w, method=m)

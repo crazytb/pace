@@ -101,7 +101,7 @@ def window_sweep():
                           and int(r["W_eff"]) == w and r["method"] == m], n_vis)
                   for w in ws]
             series.append((m, ys))
-        fig, ax = plt.subplots(figsize=(5.0, 3.2))
+        fig, ax = plt.subplots(figsize=(5.0, 2.5))
         panel(ax, ws, series, "Visiting duration (ms)",
               [f"{w * 9 / 1000:.1f}".rstrip("0").rstrip(".") for w in ws],
               labels={**LABEL, "pace": "PACE-static",
@@ -122,7 +122,7 @@ def ablation():
                           and int(r["N_visitor"]) == nv and r["method"] == m], nv)
                   for nv in nvs]
             series.append((m, ys))
-        fig, ax = plt.subplots(figsize=(5.0, 3.2))
+        fig, ax = plt.subplots(figsize=(5.0, 2.5))
         panel(ax, nvs, series, r"Number of visitor STAs $N_\mathrm{vis}$")
         ax.set_title(f"{'basic access' if acc == 'basic' else 'RTS/CTS'}"
                      rf",  ablation,  $c={_f17.PND_C_COLL}$", fontsize=10)

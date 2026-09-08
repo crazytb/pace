@@ -185,7 +185,7 @@ def _plot_one(rows, access: str, nat_list: list, ylim, fig_dir: str,
               ylabel: str = "Visitor airtime / $W_\\mathrm{eff}$") -> None:
     # Sized for a full-\columnwidth IEEE subfigure (stacked vertically) —
     # rendered ≈1:1, so use print-scale fonts (~9-10pt).
-    fig, ax = plt.subplots(figsize=(5.0, 3.2))
+    fig, ax = plt.subplots(figsize=(5.0, 2.5))
     for m in METHODS_26:
         ys = [_mean26(rows, ykey, access=access, method=m, **{xkey: n})
               for n in nat_list]
@@ -225,7 +225,7 @@ def plot(rows, nat_list: list, out_dir: str, fig_dir: str) -> None:
 def _plot_fair_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
                    out_dir: str, fig_name: str) -> None:
     """Airtime proportionality: (visitor airtime share) / (population share)."""
-    fig, ax = plt.subplots(figsize=(5.0, 3.2))
+    fig, ax = plt.subplots(figsize=(5.0, 2.5))
     for m in METHODS_26:
         ys = []
         for n in nv_list:

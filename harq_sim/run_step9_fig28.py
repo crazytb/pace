@@ -212,7 +212,7 @@ def binned(mode: str, coll_cost, succ_oh: int, visits: int) -> tuple:
 def plot_one(access: str, coll_cost, succ_oh: int, visits: int,
              fig_dir: str, out_dir: str, fig_name: str,
              leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(5.0, 3.2))
+    fig, ax = plt.subplots(figsize=(5.0, 2.5))
     # every measured curve is cut at the same bin: the support mask is the
     # intersection across schemes, so the panel has one common ending
     curves = {m: binned(m, coll_cost, succ_oh, visits)
