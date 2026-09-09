@@ -147,7 +147,7 @@ def _mean29(rows, metric, **kw) -> float:
 
 def _plot_one(rows, access: str, nv_list: list, ylim, fig_dir: str,
               out_dir: str, fig_name: str, leg_loc: str = "best") -> None:
-    fig, ax = plt.subplots(figsize=(5.0, 2.5))
+    fig, ax = plt.subplots(figsize=(5.0, 2.2))
     for m in PLOT_METHODS:
         ys = [_mean29(rows, "useful", access=access, method=m, N_visitor=n)
               for n in nv_list]

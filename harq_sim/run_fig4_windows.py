@@ -90,12 +90,13 @@ def main():
                 ax.grid(color="0.9", lw=0.4)
                 ax.set_axisbelow(True)
                 ax.minorticks_off()
-                if acc == "basic" and w == WINDOWS[1]:
-                    # the long-window panel is empty below the ramp on the
-                    # right, so the shared legend lives there
-                    ax.legend(fontsize=6, loc="lower right", frameon=True,
-                              handlelength=1.4, borderpad=0.25,
-                              labelspacing=0.25)
+                # every panel carries its own legend, placed in the emptiest
+                # corner: the short-window ramp fills the lower right, the
+                # long-window ramp the upper left
+                loc = "upper left" if w == WINDOWS[0] else "lower right"
+                ax.legend(fontsize=6, loc=loc, frameon=True,
+                          handlelength=1.4, borderpad=0.25,
+                          labelspacing=0.25)
                 fig.tight_layout()
                 stem = os.path.join(a.out_dir, f"fig4q-{idx}")
                 for ext in ("eps", "png", "pdf"):

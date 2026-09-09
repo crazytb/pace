@@ -69,7 +69,7 @@ Non-Primary Channel Access, IEEE 802.11bn, Probabilistic Access Control, OBSS, A
 
 Spectrum efficiency in next-generation Wi-Fi networks depends critically on how effectively stations (STAs) exploit available channel time. In dense deployments, overlapping basic service sets (OBSSs) routinely occupy the primary channel while adjacent channels remain idle, creating a persistent underutilization problem. Hence, IEEE 802.11bn addresses this gap by introducing non-primary channel access (NPCA), which allows STAs to transmit opportunistically on non-primary channels during ongoing OBSS intervals~\cite{ieee80211bn,wei2024non}.
 
-NPCA, however, presents a contention challenge distinct from conventional channel access. Each opportunity lasts only as long as the ongoing OBSS transmission, so competing STAs must resolve their access within a finite, depleting window. To govern this access, the IEEE 802.11bn draft has STAs on the non-primary channel reuse the same binary exponential backoff (BEB) mechanism that the distributed coordination function (DCF) employs on the primary channel~\cite{ieee80211bn}, yet BEB was designed for open-ended contention. On the primary channel, doubling the backoff window after each collision harmlessly spreads out retransmissions; within a bounded NPCA window the same growth turns harmful, as the inflated backoff frequently exceeds the time remaining. STAs whose counters overshoot the deadline are silenced for the rest of the interval, leaving the channel idle even when they still have data to send. Heterogeneous frame lengths compound the problem, since the draft leaves unspecified what a STA should do when its frame no longer fits the remaining window.
+NPCA, however, presents a contention challenge distinct from conventional channel access. Each opportunity lasts only as long as the ongoing OBSS transmission, so competing STAs must resolve their access within a finite, depleting window. To govern this access, the IEEE 802.11bn draft has STAs on the non-primary channel reuse the same binary exponential backoff (BEB) mechanism that the distributed coordination function (DCF) employs on the primary channel~\cite{ieee80211bn}, yet BEB was designed for open-ended contention. On the primary channel, doubling the backoff window after each collision harmlessly spreads out retransmissions. Within a bounded NPCA window the same growth turns harmful, as the inflated backoff frequently exceeds the time remaining. STAs whose counters overshoot the deadline are silenced for the rest of the interval, leaving the channel idle even when they still have data to send. Heterogeneous frame lengths compound the problem, since the draft leaves unspecified what a STA should do when its frame no longer fits the remaining window.
 
 % Consider a dense office environment where multiple STAs detect an OBSS transmission
 % and attempt to use the secondary channel concurrently. Early collisions trigger
@@ -87,7 +87,7 @@ The main contributions of this paper are as follows.
 \begin{itemize}
   \item We characterize the fair-share transmission probability for finite-window NPCA, showing that it must continuously track the remaining window duration and the number of still-viable competing STAs, a deadline-driven, rising target that neither BEB nor existing infinite-horizon adaptive schemes follow.
   \item We propose PACE, a fully distributed algorithm that addresses both requirements simultaneously. A deadline-scaled initialization and MIMD feedback drive the transmission probability toward the time-varying target without inter-STA signaling or knowledge of the total STA count.
-  \item Through simulation in IEEE~802.11 standard timing on a channel shared with native DCF stations, we demonstrate that PACE keeps the total useful airtime within $3\%$ of a genie-aided fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access and up to $4.1\times$ above the standard-compliant baseline under basic access, holds the visitors' airtime at or below their population-proportional share, and attains a per-attempt success ratio close to three times the baseline's, matching the fair-share reference; an ablation study further shows that both the deadline-scaled initialization and the self-exclusion rule are necessary for these gains.
+  \item Through simulation in IEEE~802.11 standard timing on a channel shared with native DCF stations, we demonstrate that PACE keeps the total useful airtime within $3\%$ of a genie-aided fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access and up to $4.1\times$ above the standard-compliant baseline under basic access, holds the visitors' airtime at or below their population-proportional share, and attains a per-attempt success ratio close to three times the baseline's, matching the fair-share reference. An ablation study further shows that both the deadline-scaled initialization and the self-exclusion rule are necessary for these gains.
 \end{itemize}
 
 
@@ -96,13 +96,35 @@ The remainder of this paper is organized as follows. Section~\ref{sec:related_wo
 \section{Related Work}
 \label{sec:related_work}
 
+\begin{table*}[!ht]
+\centering
+\caption{Comparison of contention control schemes.}
+\label{tab:comparison}
+\small
+\begin{tabular}{l >{\raggedright\arraybackslash}p{9cm} ccc}
+\hline
+\textbf{Method} & \textbf{Mechanism and objective} & \textbf{\shortstack{Frame-fit\\self-exclusion}} & \textbf{\shortstack{Signaling-\\free}} & \textbf{\shortstack{Time-varying\\target tracking}} \\
+\hline
+PND~\cite{song2014pnd}      & Multiplicative feedback with solo-copy rule to converge the transmission probability to the optimum without the contender count & $\times$   & \checkmark & \checkmark   \\
+AND~\cite{vasudevan2013efficient} & Fixed-probability slotted ALOHA to discover all neighbors in finite time without coordination & $\times$   & \checkmark & $\times$   \\
+Cali \textit{et al.}~\cite{cali2002dynamic} & p-persistent access with run-time estimation of the active station count to approach the theoretical throughput limit in a distributed manner & $\times$   & $\triangle$ & \checkmark   \\
+BLADE~\cite{guo2026blade}   & Hybrid increase / multiplicative decrease toward a fixed target access rate to eliminate packet-delivery droughts for real-time Wi-Fi & $\times$   & \checkmark & $\times$   \\
+IYT~\cite{wilhelmi2025s}    & Neighbor-ordered backoff interval assignment to reduce collision probability and worst-case latency & $\times$   & $\triangle$ & $\times$   \\
+ACWB-DQN~\cite{zuo2025adaptive} & Deep Q-network contention window selection centralized at the AP to maximize throughput under varying network load & $\times$   & $\times$   & \checkmark   \\
+FC-MAPPO~\cite{pan2025ai}   & Fairness-constrained multi-agent policy optimization to minimize collisions while ensuring inter-STA fairness & $\times$   & $\times$   & \checkmark   \\
+\hline
+\textbf{PACE (proposed)}     & \textbf{Multiplicative feedback with solo-copy, a window-scaled step, and PPDU-aware self-exclusion to track the rising fair-share target of the finite NPCA window for an efficient and proportionally fair channel} & \checkmark & \checkmark & \checkmark \\
+\hline
+\end{tabular}
+\end{table*}
+
 \subsection{Non-Primary Channel Access in IEEE 802.11bn}
 
 IEEE 802.11bn introduces NPCA as a core mechanism for exploiting idle
 secondary channels during OBSS transmissions~\cite{ieee80211bn,galati2024will}.
 Wei \textit{et al.}~\cite{wei2024non} extended Bianchi's DCF model to the
 multi-channel setting and showed analytically that NPCA outperforms the
-non-NPCA mode; a follow-up~\cite{wei2024optimized} added switching overhead
+non-NPCA mode. A follow-up~\cite{wei2024optimized} added switching overhead
 and a threshold policy for toggling NPCA on primary-channel occupancy.
 Bellalta \textit{et al.}~\cite{bellalta2025performance} modeled a multi-BSS
 topology as a continuous-time Markov chain and identified a
@@ -127,16 +149,16 @@ showed that p-persistent access can approach this limit distributedly, at
 the cost of estimating the active station count from idle-slot statistics.
 Later work diversified the mechanisms. BLADE~\cite{guo2026blade} runs a
 hybrid increase multiplicative decrease (HIMD) policy toward a fixed target
-rate derived from a steady-state model; Wilhelmi
+rate derived from a steady-state model, Wilhelmi
 \textit{et al.}~\cite{wilhelmi2025s} impose a structured transmission order
-that requires each STA to identify and track its neighbors; and
+that requires each STA to identify and track its neighbors, and
 learning-based approaches select contention windows through deep
 Q-networks at the access point~\cite{zuo2025adaptive} or through
 fairness-constrained multi-agent policy optimization trained centrally on
 joint observations~\cite{pan2025ai}.
 
 Several of these schemes follow a moving operating point as the population
-changes, but none represents a deadline; all assume an open-ended horizon,
+changes, but none represents a deadline. All assume an open-ended horizon,
 so their target never depends on how much time is left, whereas in NPCA the
 optimal probability must evolve as the window shrinks and the viable
 population changes. The MIMD rule of PND~\cite{song2014pnd} is the closest
@@ -151,33 +173,12 @@ information for its own sake, a value riding in a frame a STA sends anyway
 not being counted, and $\triangle$ marks a scheme that adds no transmission
 but must still infer the contending population from the activity of the
 others. \emph{Time-varying target tracking} follows an operating point that
-moves with the contending population rather than a static equilibrium. No
-prior scheme withdraws an unfittable frame, and the schemes that do adapt
-their operating point either track only the contending population or pay
-for the adaptation with a view of that population, whereas PACE meets all
-three requirements from purely local observations.
-
-\begin{table*}[!t]
-\centering
-\caption{Comparison of contention control schemes.}
-\label{tab:comparison}
-\small
-\begin{tabular}{l >{\raggedright\arraybackslash}p{9cm} ccc}
-\hline
-\textbf{Method} & \textbf{Mechanism and objective} & \textbf{\shortstack{Frame-fit\\self-exclusion}} & \textbf{\shortstack{Signaling-\\free}} & \textbf{\shortstack{Time-varying\\target tracking}} \\
-\hline
-PND~\cite{song2014pnd}      & Multiplicative feedback with solo-copy rule; converge the transmission probability to the optimum without the contender count & $\times$   & \checkmark & \checkmark   \\
-AND~\cite{vasudevan2013efficient} & Fixed-probability slotted ALOHA; discover all neighbors in finite time without coordination & $\times$   & \checkmark & $\times$   \\
-Cali \textit{et al.}~\cite{cali2002dynamic} & p-persistent access with run-time estimation of the active station count; approach the theoretical throughput limit in a distributed manner & $\times$   & $\triangle$ & \checkmark   \\
-BLADE~\cite{guo2026blade}   & Hybrid increase / multiplicative decrease toward a fixed target access rate; eliminate packet-delivery droughts for real-time Wi-Fi & $\times$   & \checkmark & $\times$   \\
-IYT~\cite{wilhelmi2025s}    & Neighbor-ordered backoff interval assignment; reduce collision probability and worst-case latency & $\times$   & $\triangle$ & $\times$   \\
-ACWB-DQN~\cite{zuo2025adaptive} & Deep Q-network contention window selection centralized at the AP; maximize throughput under varying network load & $\times$   & $\times$   & \checkmark   \\
-FC-MAPPO~\cite{pan2025ai}   & Fairness-constrained multi-agent policy optimization; minimize collisions while ensuring inter-STA fairness & $\times$   & $\times$   & \checkmark   \\
-\hline
-\textbf{PACE (proposed)}     & \textbf{Multiplicative feedback with PPDU-aware self-exclusion; maximize channel utilization in the finite NPCA window} & \checkmark & \checkmark & \checkmark \\
-\hline
-\end{tabular}
-\end{table*}
+moves with the contending population rather than a static equilibrium.
+Frame-fit self-exclusion is absent from the surveyed schemes, and those
+that do adapt their operating point either track only the contending
+population or pay for the adaptation with a view of that population,
+whereas PACE meets all three requirements from purely local
+observations.
 
 \section{System Model}
 \label{sec:system_model}
@@ -185,25 +186,38 @@ FC-MAPPO~\cite{pan2025ai}   & Fairness-constrained multi-agent policy optimizati
 \subsection{Network and Channel Model}
 \label{subsec:network_model}
 
+Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel assignment assumed throughout this work. The target BSS, whose NPCA operation is our focus, comprises an access point (AP) and a set $\mathcal{V}=\{1,2,\dots,\Nvis\}$ of associated non-AP STAs and they can be considered as \emph{visitors} to the neighboring BSS. The visitors normally contend on their BSS primary channel, Channel~\#1 in Fig.~\ref{fig:topology_and_channel}, which is the main channel used by the target BSS for its own transmissions.
+
 \begin{figure}
     \centering
     \includegraphics[width=0.40\textwidth]{figure/topology_and_channel.pdf}
-    \caption{Two-BSS topology and channel assignment.}
+    \caption{Two-BSS topology and channel assignment. The STAs of the target BSS act as the visitors $\mathcal{V}$ on Channel~\#2 during NPCA visits, while the STAs of the neighboring BSS are treated as natives $\mathcal{N}$.}
     \label{fig:topology_and_channel}
 \end{figure}
-
-Fig.~\ref{fig:topology_and_channel} depicts the two-BSS topology and channel assignment assumed throughout this work. The target BSS, whose NPCA operation is our focus, comprises an access point (AP) and a set $\mathcal{V}=\{1,2,\dots,\Nvis\}$ of associated non-AP STAs and they can be considered as \emph{visitors} to the neighboring BSS. The visitors normally contend on their BSS primary channel, Channel~\#1 in Fig.~\ref{fig:topology_and_channel}, which is the main channel used by the target BSS for its own transmissions.
 
 Channel~\#1 is also used by an OBSS operating on the same channel, whose transmissions intermittently render it busy. In standards prior to IEEE 802.11bn, a STA could not initiate a transmission whenever its designated primary channel was busy, even if the secondary channel was idle.
 In IEEE 802.11bn, however, the AP can designate a separate channel as the NPCA primary channel, used by the visitors during NPCA operation, named as Channel~\#2 in Fig.~\ref{fig:topology_and_channel}. We use the qualifier ``BSS'' to distinguish the original primary channel from the NPCA primary channel, consistent with P802.11bn Draft terminology~\cite{ieee80211bn}.
 
 The NPCA primary channel is not unused spectrum reserved for the target BSS. Channel~\#2 is itself the BSS primary channel of the neighboring BSS, comprising its own AP and a set $\mathcal{N}=\{1,2,\dots,\Nnat\}$ of \emph{native} STAs that contend on it with standard DCF at all times. The visitors, by contrast, use Channel~\#2 only opportunistically, during NPCA visits. Two classes of contenders therefore coexist on the NPCA primary channel: the native STAs, which contend there persistently, and the visitors, whose access is confined to the bounded NPCA window.
 
-As depicted in Fig.~\ref{fig:topology_and_channel}, we assume the coverages of the two BSSs coincide, so that all visitors and native STAs are mutually within carrier-sensing range and form a single collision domain on the NPCA primary channel: every visitor senses, defers to, and competes with every native STA. This is the configuration in which the visitors' impact on native airtime is greatest, so the coexistence results reported here upper-bound that cost. In general the two coverages may overlap only partially, in which case a visitor outside the neighboring BSS coverage would reuse the NPCA primary channel without contending with the natives at all; this spatial-reuse regime only lowers the coexistence cost and is left to future work. 
+As depicted in Fig.~\ref{fig:topology_and_channel}, we assume the coverages of the two BSSs coincide, so that all visitors and native STAs are mutually within carrier-sensing range and form a single collision domain on the NPCA primary channel. Every visitor senses, defers to, and competes with every native STA. This is the configuration in which the visitors' impact on native airtime is greatest, so the coexistence results reported here upper-bound that cost. 
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.42\textwidth]{figure/channel_access.pdf}
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/channel_access_without_NPCA.pdf}
+        \caption{Without NPCA.}
+        \label{fig:channel_access_without}
+    \end{subfigure}
+    \vspace{0.2em}
+
+    \begin{subfigure}[b]{\columnwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figure/channel_access_with_NPCA.pdf}
+        \caption{With NPCA.}
+        \label{fig:channel_access_with}
+    \end{subfigure}
     \caption{The medium access process comparison with and without NPCA.}
     \label{fig:channel_access}
 \end{figure}
@@ -211,9 +225,9 @@ As depicted in Fig.~\ref{fig:topology_and_channel}, we assume the coverages of t
 \subsection{NPCA Operation and Effective Window}
 \label{subsec:npca_access}
 
-Fig.~\ref{fig:channel_access} contrasts the medium-access processes with and without NPCA operation. Under conventional access (top), prior to IEEE 802.11bn, a STA contends only on the BSS primary channel.\footnote{We use the term BSS primary channel to distinguish the original primary channel from the NPCA primary channel introduced in IEEE 802.11bn. Prior to 802.11bn, when NPCA was not yet defined, this channel was referred to simply as the primary channel.} It decrements its backoff counter while the channel is idle and transmits when the counter reaches zero. If the secondary channel is also sensed idle at this instant, the STA may bond it with the BSS primary channel and transmit a wideband PPDU spanning the combined bandwidth (e.g., $40$, $80$, $160$, or $320$~MHz). When an OBSS transmission seizes the BSS primary channel, however, the STA must defer and freeze its backoff for the entire OBSS busy period, even though the secondary channel is idle.
+Fig.~\ref{fig:channel_access} contrasts the medium-access processes with and without NPCA operation. Under conventional access, shown in Fig.~\ref{fig:channel_access_without}, prior to IEEE 802.11bn a STA contends only on the BSS primary channel.\footnote{We use the term BSS primary channel to distinguish the original primary channel from the NPCA primary channel introduced in IEEE 802.11bn. Prior to 802.11bn, when NPCA was not yet defined, this channel was referred to simply as the primary channel.} It decrements its backoff counter while the channel is idle and transmits when the counter reaches zero. If the secondary channel is also sensed idle at this instant, the STA may bond it with the BSS primary channel and transmit a wideband PPDU spanning the combined bandwidth, e.g., $40$, $80$, $160$, or $320$~MHz. When an OBSS transmission seizes the BSS primary channel, however, the STA must defer and freeze its backoff for the entire OBSS busy period, even though the secondary channel is idle.
 
-Under NPCA access (bottom), a STA no longer wastes the OBSS busy period. When it detects an OBSS transmission on the BSS primary channel, it decodes the preamble of that transmission and learns its duration in advance,\footnote{NPCA relies on preamble detection rather than energy detection. A STA must decode the inter-BSS PPDU preamble at PHY-RXSTART to both classify the transmission and derive its remaining duration, from which the NPCA window is determined. Energy detection alone, which yields no length or BSS information, is insufficient to trigger an NPCA transition.} rather than freezing its backoff for the whole period, it switches to the idle NPCA primary channel and contends and transmits there. On each such switch the STA saves its backoff state on the BSS primary channel and initializes a fresh contention window for the NPCA primary channel, so every NPCA visit begins at the minimum backoff stage regardless of prior history. The STA already knows when the OBSS transmission will finish, so it sets a timer to that instant and switches back when it expires, restoring the saved state. Spectrum that a conventional STA leaves idle is thus put to use.
+Under NPCA access, shown in Fig.~\ref{fig:channel_access_with}, a STA no longer wastes the OBSS busy period. When it detects an OBSS transmission on the BSS primary channel, it decodes the preamble of that transmission and learns its duration in advance,\footnote{NPCA relies on preamble detection rather than energy detection. A STA must decode the inter-BSS PPDU preamble at PHY-RXSTART to both classify the transmission and derive its remaining duration, from which the NPCA window is determined. Energy detection alone, which yields no length or BSS information, is insufficient to trigger an NPCA transition.} rather than freezing its backoff for the whole period, it switches to the idle NPCA primary channel and contends and transmits there. On each such switch the STA saves its backoff state on the BSS primary channel and initializes a fresh contention window for the NPCA primary channel, so every NPCA visit begins at the minimum backoff stage regardless of prior history. The STA already knows when the OBSS transmission will finish, so it sets a timer to that instant and switches back when it expires, restoring the saved state. Spectrum that a conventional STA leaves idle is thus put to use.
 
 Two constraints shape this access. First, a radio transition delay $\delta_\mathrm{sw}$ is incurred on each switch: the STA becomes ready on the NPCA primary channel only after the switching delay, and the NPCA timer is set to expire one switch-back delay before the OBSS transmission ends so that the STA is back on the BSS primary channel in time~\cite{ieee80211bn}. Second, the opportunity lasts only until the known end of the OBSS transmission, whose remaining duration $D_\mathrm{rem}$ is read from the preamble. Contention and transmission must therefore fit within a bounded window of
 \begin{equation}
@@ -231,12 +245,12 @@ Because the contention window is reset at every NPCA visit, this penalty recurs 
 \subsection{Slotted Contention Model}
 \label{subsec:npca_window}
 
-We model time on the NPCA primary channel as a sequence of slots of duration $\sigma$. Each visitor maintains a per-slot transmission probability $\tau_i(t)$ at each time slot $t$ and, when eligible, transmits in slot $t$ with that probability, in the manner of slotted ALOHA; we abbreviate it as $\tau_i$ where the slot index is immaterial. This per-slot access probability is the variable that the scheme of Section~\ref{sec:pace_algorithm} controls. The standard baseline instead runs its backoff countdown unchanged, and enters the model only through the slot outcomes defined below.
+We model time on the NPCA primary channel as a sequence of slots of duration $\sigma$. Each visitor maintains a per-slot transmission probability $\tau_i(t)$ at each time slot $t$ and, when eligible, transmits in slot $t$ with that probability, in the manner of slotted ALOHA. We abbreviate it as $\tau_i$ where the slot index is immaterial. This per-slot access probability is the variable that the scheme of Section~\ref{sec:pace_algorithm} controls. The standard baseline instead runs its backoff countdown unchanged, and enters the model only through the slot outcomes defined below.
 
-This probabilistic access departs from the current draft, which reuses the enhanced distributed channel access (EDCA) backoff on the NPCA primary channel~\cite{ieee80211bn}; PACE keeps the NPCA architecture intact, including the switching triggers, the timer, and the state save and restore, and replaces only the contention rule inside the bounded visit. 
+This probabilistic access departs from the current draft, which reuses the enhanced distributed channel access (EDCA) backoff on the NPCA primary channel~\cite{ieee80211bn}. PACE keeps the NPCA architecture intact, including the switching triggers, the timer, and the state save and restore, and replaces only the contention rule inside the bounded visit. 
 % We therefore position PACE as a candidate refinement of the amendment's contention rule, whose benefit over the draft-compliant procedure is quantified in Section~\ref{sec:performance_evaluation}.
 
-Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{subsec:npca_access}, we denote by $W_\mathrm{rem}(t)=W_\mathrm{eff}-t+1$ the slots remaining at slot $t$, counting down toward the deadline. All STAs are saturated; each STA $i$ always holds a head-of-line PPDU occupying $L_i$ slots and, upon delivery, draws its next frame and continues contending, so $L_i$ always denotes the current head-of-line frame. Because a visitor's transmission must complete before the window closes, visitor $i$ is viable at slot $t$ only if its frame still fits, i.e.\ $L_i \le W_\mathrm{rem}(t)$; otherwise it can no longer succeed within the visit. The natives face no such deadline, since the window is the visitors' constraint alone and a native frame that straddles its end simply completes on the channel, so every native remains a contender throughout. We write the viable population at slot $t$ as
+Following the slot indexing $t\in\{1,\dots,W_\mathrm{eff}\}$ of Section~\ref{subsec:npca_access}, we denote by $W_\mathrm{rem}(t)=W_\mathrm{eff}-t+1$ the slots remaining at slot $t$. All STAs are saturated. Each STA $i$ always holds a head-of-line PPDU of duration $T_i$ occupying $L_i=\lceil T_i/\sigma\rceil$ slots. Upon delivery it draws the next frame and continues contending, so $L_i$ always denotes the current head-of-line frame. A visitor's transmission must complete before the window closes, so visitor $i$ is viable at slot $t$ only while its frame still fits, i.e.\ $L_i \le W_\mathrm{rem}(t)$. The natives face no such deadline. The window is the visitors' constraint alone, and a native frame that straddles its end simply completes on the channel, so every native remains a contender throughout. The population that can still transmit in slot $t$ therefore consists of the viable visitors together with all natives, and we write it as
 \begin{equation}
     \mathcal{V}(t) \;=\; \bigl\{\, i\in\mathcal{V} :
     L_i \le W_\mathrm{rem}(t) \,\bigr\} \cup \mathcal{N},
@@ -249,7 +263,7 @@ The viable population defines a natural operating point for contention. In a slo
     \tau^*(t) \;=\; \frac{1}{|\mathcal{V}(t)|},
     \label{eq:tau_opt}
 \end{equation}
-the classical slotted-ALOHA optimum applied to the viable set. This is the attempt-fair operating point rather than an airtime optimum, and it is the target the scheme of Section~\ref{sec:pace_algorithm} tracks in service of the efficiency and fairness objective of Section~\ref{subsec:factor_scaling}. Because $\mathcal{V}(t)$ is non-increasing, the target rises toward the deadline, and tracking it without knowing $|\mathcal{V}(t)|$ is what Section~\ref{sec:pace_algorithm} constructs.
+the classical slotted-ALOHA optimum applied to the viable set. It maximizes the per-slot success probability, not the useful airtime once collisions carry frame-length costs, and is the attempt-fair target that Section~\ref{sec:pace_algorithm} tracks in service of the objective of Section~\ref{subsec:factor_scaling}. Because $\mathcal{V}(t)$ is non-increasing, the target rises toward the deadline, and tracking it without knowing $|\mathcal{V}(t)|$ is what Section~\ref{sec:pace_algorithm} constructs.
 
 At each slot $t$, a viable STA $i$ attempts transmission with probability $\tau_i(t)$. Following the half-duplex assumption, a transmitting STA cannot sense the channel in the same slot. Let $\mathcal{D}(t)$ denote the set of STAs whose transmissions on the NPCA primary channel are detected by a given STA in slot $t$. This set is defined at the channel level. It counts every STA transmitting on that channel in the slot, not only the switching visitors but also any other STA that uses the same channel as its own primary. The slot outcome is idle when $|\mathcal{D}(t)|=0$, a success when $|\mathcal{D}(t)|=1$, and a collision when $|\mathcal{D}(t)|\ge 2$. These three observable events are the only feedback available to a STA, and they drive the adaptive contention control developed in Section~\ref{sec:pace_algorithm}.
 
@@ -266,7 +280,7 @@ while a collision keeps the medium busy until the longest colliding frame has en
     L_\mathrm{col} \;=\; \max_{i\in\mathcal{D}(t)} L_i,
     \label{eq:lmax}
 \end{equation}
-as in standard IEEE 802.11 without collision detection. Since each STA contends for one head-of-line PPDU at a time, $L_i$ is fixed until that frame is delivered; the slot dependence of both occupancies enters through the identity of the transmitters $\mathcal{D}(t)$ and their current frames.
+as in standard IEEE 802.11 without collision detection. Since each STA contends for one head-of-line PPDU at a time, $L_i$ is fixed until that frame is delivered. The slot dependence of both occupancies enters through the identity of the transmitters $\mathcal{D}(t)$ and their current frames.
 
 \subsubsection{RTS/CTS-Protected Access}
 Under RTS/CTS-protected access the busy-slot accounting changes. A successful exchange is preceded by the handshake and therefore occupies
@@ -287,7 +301,7 @@ is the handshake overhead, with $T_\mathrm{RTS}$, $T_\mathrm{CTS}$, and $T_\math
     \frac{T_\mathrm{RTS} + T_\mathrm{EIFS}}{\sigma} \right\rceil
     \label{eq:coll_rts}
 \end{equation}
-slots, where $T_\mathrm{EIFS}=T_\mathrm{SIFS}+T_\mathrm{ACK}+T_\mathrm{DIFS}$ is the extended interframe space with $T_\mathrm{ACK}$ and $T_\mathrm{DIFS}$ being the acknowledgment (ACK) and distributed interframe space (DIFS) durations defined in IEEE 802.11. Unlike its basic-access counterpart of~\eqref{eq:lmax}, this occupancy is a constant. Under protection the viability test of~\eqref{eq:viable} must also leave room for the handshake, i.e.\ $L_i$ is replaced by $L_i+L_\mathrm{hs}$; basic access is the special case $L_\mathrm{hs}=0$ with $L_\mathrm{col}$ given by~\eqref{eq:lmax}.
+slots, where $T_\mathrm{EIFS}=T_\mathrm{SIFS}+T_\mathrm{ACK}+T_\mathrm{DIFS}$ is the extended interframe space with $T_\mathrm{ACK}$ and $T_\mathrm{DIFS}$ being the acknowledgment (ACK) and distributed interframe space (DIFS) durations defined in IEEE 802.11. Unlike its basic-access counterpart of~\eqref{eq:lmax}, this occupancy is a constant. Under protection the viability test of~\eqref{eq:viable} must also leave room for the handshake, i.e.\ $L_i$ is replaced by $L_i+L_\mathrm{hs}$. Basic access is the special case $L_\mathrm{hs}=0$ with $L_\mathrm{col}$ given by~\eqref{eq:lmax}.
 
 \section{PACE Algorithm}
 \label{sec:pace_algorithm}
@@ -304,7 +318,7 @@ slots, where $T_\mathrm{EIFS}=T_\mathrm{SIFS}+T_\mathrm{ACK}+T_\mathrm{DIFS}$ is
     \begin{subfigure}{\linewidth}
         \centering
         \includegraphics[width=0.84\linewidth]{figure/transition_pace.pdf}
-        \caption{Proposed PACE (probabilistic adaptive contention).}
+        \caption{Proposed PACE.}
         \label{fig:transition_pace}
     \end{subfigure}
     \caption{Medium access on the NPCA primary channel: a STA that detects
@@ -317,14 +331,14 @@ slots, where $T_\mathrm{EIFS}=T_\mathrm{SIFS}+T_\mathrm{ACK}+T_\mathrm{DIFS}$ is
 
 Fig.~\ref{fig:contention} illustrates contention on the NPCA primary channel under the slotted model of Section~\ref{subsec:npca_window} and contrasts the two schemes studied in this paper. In both, a STA that detects an OBSS transmission on the BSS primary channel stores its DCF state, migrates to the NPCA primary channel, and contends there until the NPCA timer expires, whereupon it restores the saved state and resumes on the BSS primary channel. Under the NPCA baseline of Fig.~\ref{fig:transition_npca}, STAs contend with BEB. A STA that collides doubles its contention window, so its counter can outlast the remaining window, and because the countdown is frozen during every busy period, the surviving counters tend to expire together and collide again.
 
-Meanwhile, under the proposed PACE scheme of Fig.~\ref{fig:transition_pace}, each STA instead adapts its per-slot probability $\tau_i$ from the idle, success, and collision feedback. The access probability is raised multiplicatively on idle slots, lowered on collisions, and replaced by the successful sender's value on solo receptions. In addition, a STA proactively withdraws from contention once its frame can no longer fit within $W_\mathrm{rem}(t)$.
+Meanwhile, under the proposed PACE scheme of Fig.~\ref{fig:transition_pace}, each STA $i$ instead adapts its per-slot probability $\tau_i$ from the idle, success, and collision feedback. The access probability is raised multiplicatively on idle slots, lowered on collisions, and replaced by the successful sender's value on solo receptions. In addition, a STA proactively withdraws from contention once its frame can no longer fit within $W_\mathrm{rem}(t)$.
 
 \begin{algorithm}[t]
 \caption{PACE at STA $i$ during one NPCA visit}
 \label{alg:pace}
 \small
 \begin{algorithmic}[1]
-\REQUIRE head-of-line PPDU length $L_i$ (slots), window $W_\mathrm{eff}$, factors $c_\mathrm{coll},\,c_\mathrm{idle}>1$, handshake overhead $L_\mathrm{hs}$ of Eq.~\eqref{eq:oh_rts} ($L_\mathrm{hs}=0$ under basic access)
+\REQUIRE head-of-line PPDU length $L_i$ (slots), window $W_\mathrm{eff}$, adaptation factor $c>1$
 \PHASE {/* Phase (a): Probability Initialization */}
 \STATE $\tau_i \leftarrow 1/W_\mathrm{eff}$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{eff}$
 \WHILE{$W_\mathrm{rem} > 0$}
@@ -335,7 +349,7 @@ Meanwhile, under the proposed PACE scheme of Fig.~\ref{fig:transition_pace}, eac
     \PHASE {/* Phase (c): Probabilistic Channel Access */}
     \STATE draw $u \sim \mathrm{Uniform}(0,1)$
     \IF{$u < \tau_i$}
-        \STATE transmit the PPDU, advertising $\tau_i$ (preceded by the RTS/CTS handshake under protected access)
+        \STATE transmit the PPDU, advertising $\tau_i$, preceded by the RTS/CTS handshake under protected access
         \IF{solo success}
             \STATE $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_\mathrm{solo}$;\quad $L_i \leftarrow$ next pending PPDU
         \ELSE
@@ -345,11 +359,11 @@ Meanwhile, under the proposed PACE scheme of Fig.~\ref{fig:transition_pace}, eac
         \PHASE {/* Phase (d): Feedback-based Adaptation */}
         \STATE observe the slot outcome $|\mathcal{D}(t)|$
         \IF{$|\mathcal{D}(t)| = 0$}
-            \STATE $\tau_i \leftarrow \min(\tau_i \cdot c_\mathrm{idle},\;1)$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - 1$
+            \STATE $\tau_i \leftarrow \min(\tau_i \cdot c,\;1)$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - 1$
         \ELSIF{$|\mathcal{D}(t)| = 1$ where $\mathcal{D}(t) = \{j\}$}
             \STATE $\tau_i \leftarrow \tau_j$ \COMMENT{the solo sender's advertised probability};\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_\mathrm{solo}$
         \ELSE
-            \STATE $\tau_i \leftarrow \tau_i / c_\mathrm{coll}$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_\mathrm{col}$
+            \STATE $\tau_i \leftarrow \tau_i / c$;\quad $W_\mathrm{rem} \leftarrow W_\mathrm{rem} - L_\mathrm{col}$
         \ENDIF
     \ENDIF
 \ENDWHILE
@@ -363,7 +377,7 @@ Algorithm~\ref{alg:pace} summarizes PACE as executed independently by each STA o
 % with probability $\tau_i$. This is a probabilistic, slotted-ALOHA-style access
 % policy.
 
-We adopt the probabilistic approach for two reasons. First, the per-slot probability $\tau$ is the abstraction under which DCF, PND, and AND are all analyzed~\cite{bianchi2000performance,song2014pnd,vasudevan2013efficient}, placing PACE on the same analytical footing. Second, a single backoff draw cannot re-adapt within the handful of slots a visit lasts, whereas a per-slot probability can be re-steered every slot by the feedback law of Subsec.~\ref{subsec:adaptive_control}; the ALOHA-style attempt is the mechanism that makes within-window adaptation possible.
+We adopt the probabilistic approach for two reasons. First, the per-slot probability $\tau$ is the abstraction under which DCF, PND, and AND are all analyzed~\cite{bianchi2000performance,song2014pnd,vasudevan2013efficient}, placing PACE on the same analytical footing. Second, a single backoff draw cannot re-adapt within the handful of slots a visit lasts, whereas a per-slot probability can be re-steered every slot by the feedback law of Subsec.~\ref{subsec:adaptive_control}. The ALOHA-style attempt is the mechanism that makes within-window adaptation possible.
 
 Algorithm~\ref{alg:pace} runs four phases per visit. (a) a one-time probability
 initialization, followed by a per-slot loop of (b) self-exclusion, (c) channel
@@ -379,54 +393,54 @@ $\tau_0=1/(\Nvis{+}\Nnat)$, which is the value the target $\tau^*$ of Eq.~\eqref
 
 A visitor might estimate its own BSS population from association state, but the population it actually contends with also includes the native STAs of the neighboring BSS, which it has no way to count. The denominator of $1/(\Nvis{+}\Nnat)$ is thus doubly hidden, which motivates a surrogate that avoids counting STAs altogether.
 
-We propose a method where the window length itself determines the scale. A visit spans $W_\mathrm{eff}$ slots, and a STA contends in at most one of them per slot so $W_\mathrm{eff}$ upper-bounds the number of attempt opportunities any STA sees in a visit. A STA attempting with probability $\tau$ therefore expects at most $W_\mathrm{eff}\,\tau$ attempts before the deadline. Fixing this budget to a single probe per STA, $W_\mathrm{eff}\,\tau_0 = 1$ sets the most conservative self-consistent  exploration rate. Low enough to avoid an early collision storm, yet high enough for each STA to test the medium about once before the window drains. This yields
+We propose a method where the window length itself determines the scale. The window $W_\mathrm{eff}$ of Eq.~\eqref{eq:weff} is locally available to every visitor. The remaining duration $D_\mathrm{rem}$ arrives naturally in the NPCA transition procedure of IEEE~802.11bn, and the switching delay $\delta_\mathrm{sw}$ is obtained during association with the AP~\cite{ieee80211bn}. A visit spans $W_\mathrm{eff}$ slots, and a STA contends in at most one of them per slot so $W_\mathrm{eff}$ upper-bounds the number of attempt opportunities any STA sees in a visit. A STA attempting with probability $\tau$ therefore expects at most $W_\mathrm{eff}\,\tau$ attempts before the deadline. Fixing this budget to a single probe per STA, $W_\mathrm{eff}\,\tau_0 = 1$ sets the most conservative self-consistent  exploration rate. Low enough to avoid an early collision storm, yet high enough for each STA to test the medium about once before the window drains. This yields
 \begin{equation}
     \tau_0 = \frac{1}{W_\mathrm{eff}},
     \label{eq:init}
 \end{equation}
-with which each visitor starts the visit, $\tau_i(1)=\tau_0$. It depends only on $W_\mathrm{eff}$, which each STA computes locally from the OBSS PPDU duration, and requires no knowledge of the contender count.
+with which each visitor starts the visit, $\tau_i(1)=\tau_0$. It depends only on the locally available $W_\mathrm{eff}$ and requires no knowledge of the contender count.
 
-Since a frame outlasts a single slot, $\tau_0$ sits below the optimum, a bias chosen for two reasons. First, it errs in the safe direction; an over-conservative $\tau_i$ is raised within a few slots by the idle-driven increase of Phase~(d), whereas an over-aggressive start triggers collisions whose wasted slots a finite window never returns. Second, $1/W_\mathrm{eff}$ tracks the regime where initialization matters most; a tight window $W_\mathrm{eff}\!\approx\!\Nvis{+}\Nnat$ makes it approximate the optimum $1/(\Nvis{+}\Nnat)$ outright, and in a loose one the mild timidity is erased long before the window drains. 
+Since a frame outlasts a single slot, $\tau_0$ sits below the optimum, a bias chosen for two reasons. First, it errs in the safe direction. An over-conservative $\tau_i$ is raised within a few slots by the idle-driven increase of Phase~(d), whereas an over-aggressive start triggers collisions whose wasted slots a finite window never returns. Second, $1/W_\mathrm{eff}$ tracks the regime where initialization matters most. A tight window $W_\mathrm{eff}\!\approx\!\Nvis{+}\Nnat$ makes it approximate the optimum $1/(\Nvis{+}\Nnat)$ outright, and in a loose one the mild timidity is erased long before the window drains. 
 % Section~\ref{sec:performance_evaluation} shows that this locally computable initialization stays within a few percent of the count-aware optimum across the entire window-tightness range, while aggressive or wide-spread initializations collapse---confirming that PACE inherits the initialization-robustness of neighbor discovery only when the initial scale is kept at or below $1/W_\mathrm{eff}$.
 
 \subsection{Phase (b): PPDU-aware Self-Exclusion}
 \label{subsec:self_exclusion}
 
-At the start of every slot a STA applies a frame-fit test, comparing the airtime its own frame needs to the remaining window $W_\mathrm{rem}(t)$. Following the viability condition of Eq.~\eqref{eq:viable}, that airtime is $L_i$ under basic access and $L_i+L_\mathrm{hs}$ under RTS/CTS protection, since the handshake of Eq.~\eqref{eq:oh_rts} must also fit before the deadline. If the frame can no longer finish, the STA sets $\tau_i(t)=0$ and stays out; because $W_\mathrm{rem}(t)$ only shrinks, it remains silent for the rest of the visit unless it later holds a shorter frame. The test involves only the STA's own frame and the slot index and, like initialization, requires no knowledge of the contending population.
+At the start of every slot a STA applies a frame-fit test, comparing the airtime its own frame needs to the remaining window $W_\mathrm{rem}(t)$. Following the viability condition of Eq.~\eqref{eq:viable}, that airtime is $L_i$ under basic access and $L_i+L_\mathrm{hs}$ under RTS/CTS protection, since the handshake of Eq.~\eqref{eq:oh_rts} must also fit before the deadline. If the frame can no longer finish, the STA sets $\tau_i(t)=0$ and stays out. Because $W_\mathrm{rem}(t)$ only shrinks, it remains silent for the rest of the visit unless it later holds a shorter frame. The test involves only the STA's own frame and the slot index and, like initialization, requires no knowledge of the contending population.
 
-Conventional NPCA has no such rule, yet the deadline binds it all the same; a frame that does not fit the remaining window is cut off at NPCA-timer expiry even if it wins the channel~\cite{ieee80211bn}. Self-exclusion makes this inevitability explicit and returns those slots to the STAs that can still finish.
+Conventional NPCA has no such rule, yet the deadline binds it all the same. A frame that does not fit the remaining window is cut off at NPCA-timer expiry even if it wins the channel~\cite{ieee80211bn}. Self-exclusion makes this inevitability explicit and returns those slots to the STAs that can still finish.
 
 Self-exclusion keeps the optimal target $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt}, which PACE aims to track, meaningful in a heterogeneous and finite window. A STA whose frame no longer fits is removed from the viable set $\mathcal{V}(t)$ of Eq.~\eqref{eq:viable}, so it neither wastes time on attempts destined to fail nor inflates the contention seen by the STAs that can still succeed. This plays the same role as the collision detection departure of a previously proposed neighbor discovery algorithm~\cite{song2014pnd}, in which a STA leaves the contention once its advertisement succeeds. Here a STA also leaves once its frame provably cannot complete, tightening $\mathcal{V}(t)$ toward the set of STAs that genuinely compete for the remaining slots.
 
 \subsection{Phase (c): Probabilistic Channel Access}
 \label{subsec:channel_access}
 
-A STA that is still viable transmits in slot $t$ with probability $\tau_i(t)$ and otherwise listens. Because the radio is half-duplex, a transmitting STA cannot sense the slot it occupies. It learns from the acknowledgement whether its own frame got through, which tells it how far the window has advanced and whether to dequeue the next frame, but it observes none of the three slot outcomes that drive the adaptation, so it leaves $\tau_i$ untouched on its own transmissions. Each transmitted PPDU advertises the sender's current $\tau_i(t)$ in its header\footnote{A few quantization bits for $\tau_i$ fit in a newly defined A-Control subfield of the HT Control field, which rides unencrypted in the MAC header of a QoS Data frame; this follows the existing A-Control extension framework, though it would require an amendment. One placement serves both access modes, since RTS and CTS carry no HT Control field.}, which the listeners use in Phase~(d). This value describes only the sender's own state and rides in a frame it transmits anyway, in the manner of the per-frame information IEEE~802.11 headers already carry, so no control frame is added and no STA ever learns how many others are contending.
+A STA that is still viable transmits in slot $t$ with probability $\tau_i(t)$ and otherwise listens. Because the radio is half-duplex, a transmitting STA cannot sense the slot it occupies. It learns from the acknowledgement whether its own frame got through, which tells it how far the window has advanced and whether to dequeue the next frame, but it observes none of the three slot outcomes that drive the adaptation, so it leaves $\tau_i$ untouched on its own transmissions. Each transmitted PPDU advertises the sender's current $\tau_i(t)$ in its header\footnote{A few quantization bits for $\tau_i$ fit in a newly defined A-Control subfield of the HT Control field, which rides unencrypted in the MAC header of a QoS Data frame. This follows the existing A-Control extension framework, though it would require an amendment. One placement serves both access modes, since RTS and CTS carry no HT Control field.}, which the listeners use in Phase~(d). This value describes only the sender's own state and rides in a frame it transmits anyway, in the manner of the per-frame information IEEE~802.11 headers already carry, so no control frame is added and no STA ever learns how many others are contending.
 
-A slot is a success when exactly one viable STA transmits. Being saturated, the winner draws its next frame and re-enters the contention with its current $\tau_i$, which the solo advertisement has just propagated, so $\mathcal{V}(t)$ shrinks only through self-exclusion. Slots with no transmission are idle and slots with two or more are collisions; both outcomes are observed by every non-transmitting STA and feed Phase~(d).
+A slot is a success when exactly one viable STA transmits. Being saturated, the winner draws its next frame and re-enters the contention with its current $\tau_i$, which the solo advertisement has just propagated, so $\mathcal{V}(t)$ shrinks only through self-exclusion. Slots with no transmission are idle and slots with two or more are collisions. Both outcomes are observed by every non-transmitting STA and feed Phase~(d).
 
 \subsection{Phase (d): Feedback-based Adaptation}
 \label{subsec:adaptive_control}
 
-Every STA that listened in slot $t$ updates its probability from the slot outcome $|\mathcal{D}(t)|$ using the MIMD rule inherited from neighbor discovery as
+Every STA that listened in slot $t$ updates its probability from the slot outcome $|\mathcal{D}(t)|$ using the MIMD rule inherited from neighbor discovery~\cite{song2014pnd} as
 \begin{equation}
 \tau_i(t') =
 \begin{cases}
-\min\bigl(c_\mathrm{idle}\,\tau_i(t),\,1\bigr) & |\mathcal{D}(t)|=0\;(\text{idle}),\\[2pt]
+\min\bigl(c\,\tau_i(t),\,1\bigr) & |\mathcal{D}(t)|=0\;(\text{idle}),\\[2pt]
 \tau_j(t)              & \mathcal{D}(t)=\{j\}\;(\text{success}),\\[2pt]
-\tau_i(t) / c_\mathrm{coll}          & |\mathcal{D}(t)|\ge 2\;(\text{collision}),
+\tau_i(t) / c          & |\mathcal{D}(t)|\ge 2\;(\text{collision}),
 \end{cases}
 \label{eq:mimd}
 \end{equation}
-with $c_\mathrm{idle},c_\mathrm{coll}>1$, where $t'$ denotes the next contention slot after the outcome of slot $t$, i.e., $t'=t+1$ after an idle slot and $t'=t+L_\mathrm{solo}$ or $t'=t+L_\mathrm{col}$ after a busy one, and $\tau_i$ is unchanged while the medium is occupied. 
+with $c>1$, where $t'$ denotes the next contention slot after the outcome of slot $t$, i.e., $t'=t+1$ after an idle slot and $t'=t+L_\mathrm{solo}$ or $t'=t+L_\mathrm{col}$ after a busy one, and $\tau_i$ is unchanged while the medium is occupied. 
 
-An idle slot signals overestimation of the population and raises the attempt rate by $c_\mathrm{idle}$; a collision signals the opposite and divides it by $c_\mathrm{coll}$. On a solo success, every listener copies the advertised $\tau_j$, so a single successful slot propagates the winning operating point to the whole contending set at once, giving PACE its fast intra-visit consensus.
+An idle slot signals overestimation of the population and multiplies the attempt rate by $c$. A collision signals the opposite and divides it by $c$. On a solo success, every listener copies the advertised $\tau_j$, so a single successful slot propagates the winning operating point to the whole contending set at once, giving PACE its fast intra-visit consensus. The single adaptation factor $c$ keeps every $\tau_i$ on a common multiplicative grid of powers of $c$ so that the solo-copy exchanges values the listeners can themselves reach.
 
 None of the three updates counts the viable STAs. Instead, the idle and collision statistics move each $\tau_i$ toward the operating point implicitly, and solo-copy pulls the population onto a common value, so the ensemble approximately tracks the time-varying optimum $\tau^*(t)$ of Eq.~\eqref{eq:tau_opt} without estimating the number of contending STAs $|\mathcal{V}(t)|$. 
 
 The direction of this adaptation is what separates PACE from BEB. Because the viable set only shrinks over a visit, the optimal target $\tau^*(t)=1/|\mathcal{V}(t)|$ of~\eqref{eq:tau_opt} rises as the deadline approaches. On the other hand, the BEB moves the opposite way, that is, a collision doubles the contention window and halves the attempt rate, so the access probability falls exactly when it should climb.
 
-Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate alongside the native STAs of Section~\ref{subsec:network_model}. Because the slot outcome $\mathcal{D}(t)$ is measured at the channel level, native activity enters a visitor's feedback directly. A slot in which two or more frames overlap is a collision whether the extra transmitter is a visitor or a native, so a native transmission that clashes with a visitor lowers that visitor's $\tau_i$, and a slot with no transmission at all, native or visitor, is idle and raises it. The solo case is the one exception; a native's frame advertises no probability, so a listening visitor keeps $\tau_i$ unchanged and simply observes the busy slot.
+Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate alongside the native STAs of Section~\ref{subsec:network_model}. Because the slot outcome $\mathcal{D}(t)$ is measured at the channel level, native activity enters a visitor's feedback directly. A slot in which two or more frames overlap is a collision whether the extra transmitter is a visitor or a native, so a native transmission that clashes with a visitor lowers that visitor's $\tau_i$, and a slot with no transmission at all, native or visitor, is idle and raises it. The solo case is the one exception. A native's frame advertises no probability, so a listening visitor keeps $\tau_i$ unchanged and simply observes the busy slot.
 
 % The mismatch is twofold. First, the adaptation is backwards---BEB retreats on congestion while the window's diminishing population
 % calls for a more aggressive attempt rate---so late slots are left idle. Second,
@@ -438,16 +452,16 @@ Finally, the rule of Eq.~\eqref{eq:mimd} needs no modification to operate alongs
 % rising $\tau^*(t)$ trajectory, matching the sign of the optimal policy rather
 % than fighting it.
 
-\subsection{Window Scaling of the Adaptation Factors}
+\subsection{Window Scaling of the Adaptation Factor}
 \label{subsec:factor_scaling}
 
-The rule of Eq.~\eqref{eq:mimd} leaves the factors $c_\mathrm{idle}$ and $c_\mathrm{coll}$ open, and the finite window turns their choice into a trade-off between two losses that both accumulate before the deadline. A small factor adapts slowly and spends the visit ramping toward the operating point, whereas a large one reaches it quickly but keeps overshooting around it. This subsection quantifies the balance by treating Phase~(d) as a finite-horizon stochastic approximation. We set the two factors equal, which keeps every $\tau_i$ on a common multiplicative grid so that the solo-copy of Eq.~\eqref{eq:mimd} exchanges values the listeners can themselves reach, and the pair then reduces to a single log-domain step size
+The rule of Eq.~\eqref{eq:mimd} leaves the factor $c$ open, and the finite window turns its choice into a trade-off between two losses that both accumulate before the deadline. A small factor adapts slowly and spends the visit ramping toward the operating point, whereas a large one reaches it quickly but keeps overshooting around it. This subsection quantifies the balance by treating Phase~(d) as a finite-horizon stochastic approximation over the log-domain step size
 \begin{equation}
-    \epsilon \;=\; \ln c_\mathrm{idle} \;=\; \ln c_\mathrm{coll}.
+    \epsilon \;=\; \ln c.
     \label{eq:logstep}
 \end{equation}
 
-Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$-th outcome STA $i$ observes as a listener; slots in which the STA itself transmits are excluded, since Eq.~\eqref{eq:mimd} does not run there and $\tau_i$ is unchanged (Section~\ref{subsec:channel_access}). Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. Splitting each outcome into its conditional mean and the remainder,
+Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$-th outcome STA $i$ observes as a listener. Slots in which the STA itself transmits are excluded, since Eq.~\eqref{eq:mimd} does not run there and $\tau_i$ is unchanged (Section~\ref{subsec:channel_access}). Under Eq.~\eqref{eq:mimd} the state performs a random walk $X_{k+1}=X_k+\epsilon H_k$, where $H_k$ equals $+1$ on an idle outcome, $-1$ on a collision, and $0$ otherwise. Splitting each outcome into its conditional mean and the remainder,
 \begin{equation}
     \begin{aligned}
     & X_{k+1} \;=\; X_k + \epsilon\,h(X_k) + \epsilon\,\xi_{k+1}, \\
@@ -455,18 +469,18 @@ Let $X_k=\ln\tau_i$ at the $k$-th update opportunity of a visit, meaning the $k$
     \label{eq:decomp}
     \end{aligned}
 \end{equation}
-where $p_\mathrm{I}(x)$ and $p_\mathrm{C}(x)$ are the probabilities that a listener in state $x$ observes an idle slot or a collision, and $\xi_{k+1}=H_k-h(X_k)$ satisfies $\mathbb{E}[\xi_{k+1}\mid X_k]=0$ by construction. Therefore, Eq.~\eqref{eq:decomp} involves no approximation, but it separates the walk into a deterministic pull and a zero-mean kick.
+where $p_\mathrm{I}(x)$ and $p_\mathrm{C}(x)$ are the probabilities that a listener in state $x$ observes an idle slot or a collision, and $\xi_{k+1}=H_k-h(X_k)$ satisfies $\mathbb{E}[\xi_{k+1}\mid X_k]=0$ by construction. Therefore, Eq.~\eqref{eq:decomp} involves no approximation, but it separates the walk into a deterministic drift and a zero-mean noise term.
 
-The pull has a single balance point. Because solo-copy keeps the population near a common value, we read $x$ as that common operating point. A larger $x$ then means a busier channel, so $p_\mathrm{I}$ falls and $p_\mathrm{C}$ rises with $x$, and $h$ crosses zero exactly once, from above. At the crossing $x^*$ an idle slot and a collision are equally likely, and the downward crossing means the drift restores the state from either side; we write the restoring rate as $\kappa=-h'(x^*)>0$.
+The drift has a single zero. Because solo-copy keeps the population near a common value, we read $x$ as that common operating point. A larger $x$ then means a busier channel, so $p_\mathrm{I}$ falls and $p_\mathrm{C}$ rises with $x$, and $h$ crosses zero exactly once, from above. At the crossing $x^*$ an idle slot and a collision are equally likely, and the downward crossing means the drift restores the state from either side. We write the restoring rate as $\kappa=-h'(x^*)>0$.
 
-Two clarifications delimit what $x^*$ is. It is the equilibrium of the idle and collision feedback, not the fair-share target itself; we require only that the feedback settles in that target's neighborhood, which is what Phase~(d) is built to arrange. And since $\tau^*(t)$ drifts upward as the viable set drains, the analysis freezes the target over the stretch it examines, a quasi-static approximation that suffices because the question is how the step scales with the number of updates, not where the operating point sits.
+Two clarifications delimit what $x^*$ is. It is the equilibrium of the idle and collision feedback, not the fair-share target itself. We require only that the feedback settles in that target's neighborhood, which is what Phase~(d) is built to arrange. And since $\tau^*(t)$ drifts upward as the viable set drains, the analysis freezes the target over the stretch it examines, a quasi-static approximation that suffices because the question is how the step scales with the number of updates, not where the operating point sits.
 
-Near $x^*$ the drift linearizes, $h(X_k)\approx-\kappa Y_k$ for the error $Y_k=X_k-x^*$; dropping the quadratic Taylor remainder is the only approximation made so far, and Eq.~\eqref{eq:decomp} becomes
+Near $x^*$ the drift linearizes, $h(X_k)\approx-\kappa Y_k$ for the error $Y_k=X_k-x^*$. Dropping the quadratic Taylor remainder is the only approximation made so far, and Eq.~\eqref{eq:decomp} becomes
 \begin{equation}
     Y_{k+1} \;\approx\; (1-\kappa\epsilon)\,Y_k + \epsilon\,\xi_{k+1}.
     \label{eq:linrec}
 \end{equation}
-Each update contracts the error by $1-\kappa\epsilon$ and injects a kick of size $\epsilon\xi$. At the equilibrium $h(x^*)=0$, so the noise is the outcome itself, $\xi_{k+1}=H_k$, giving $\nu^2=\operatorname{Var}[H_k \mid X_k=x^*]=p_\mathrm{I}(x^*)+p_\mathrm{C}(x^*)$, the fraction of observed outcomes that move the state at all.
+Each update contracts the error by $1-\kappa\epsilon$ and injects the noise term $\epsilon\xi_{k+1}$. At the equilibrium $h(x^*)=0$, so the noise is the outcome itself, $\xi_{k+1}=H_k$, giving $\nu^2=\operatorname{Var}[H_k \mid X_k=x^*]=p_\mathrm{I}(x^*)+p_\mathrm{C}(x^*)$, the fraction of observed outcomes that move the state at all.
 
 A visit is scored by what it accumulates rather than by where it ends. We make the objective explicit as
 \begin{equation}
@@ -489,18 +503,18 @@ The sum follows from Eq.~\eqref{eq:linrec} directly. Writing $a=1-\kappa\epsilon
     \;+\; \epsilon^2\nu^2\sum_{j=0}^{k-1}a^{2j},
     \label{eq:second_moment}
 \end{equation}
-whose two terms accumulate differently. The first is the initial offset $Y_0=X_0-x^*$ decaying geometrically; its sum over $k$ is about $Y_0^2/(2\kappa\epsilon)$, so a small step pays for its slow ramp at rate $1/\epsilon$. The second saturates at the stationary variance $\epsilon\nu^2/(2\kappa)$ and is then paid on all $K$ updates, so a large step pays for its jitter at rate $K\epsilon$. Multiplying by $q/2$,
+whose two terms accumulate differently. The first is the initial offset $Y_0=X_0-x^*$ decaying geometrically. Its sum over $k$ is about $Y_0^2/(2\kappa\epsilon)$, so a small step pays for its slow ramp at rate $1/\epsilon$. The second saturates at the stationary variance $\epsilon\nu^2/(2\kappa)$ and is then paid on all $K$ updates, so a large step pays for its jitter at rate $K\epsilon$. Multiplying by $q/2$,
 \begin{equation}
     R_K(\epsilon) \;\approx\; \frac{q}{4\kappa}
     \left( \frac{Y_0^2}{\epsilon} + K \nu^2 \epsilon \right),
     \label{eq:regret}
 \end{equation}
-whose terms are the transient and the fluctuation loss; balancing them yields
+whose terms are the transient and the fluctuation loss. Balancing them yields
 \begin{equation}
     \epsilon^* \;=\; \frac{|Y_0|}{\nu\sqrt{K}}.
     \label{eq:eps_opt}
 \end{equation}
-A short visit offers few corrections, so each must be large; a long one affords a smaller step that trades ramp speed for composure around the target.
+A short visit offers few corrections, so each must be large. A long one affords a smaller step that trades ramp speed for composure around the target.
 
 The number of update opportunities is in turn set by the window. Every outcome occupies the medium for one idle slot, $L_\mathrm{solo}$ slots, or $L_\mathrm{col}$ slots, so $K\approx W_\mathrm{eff}/\bar{L}$, where $\bar{L}$ is the mean outcome occupancy of the access mode in use. Substituting into Eq.~\eqref{eq:eps_opt},
 \begin{equation}
@@ -509,7 +523,7 @@ The number of update opportunities is in turn set by the window. Every outcome o
     C \;=\; \frac{|Y_0|\sqrt{\bar{L}}}{\nu},
     \label{eq:eps_window}
 \end{equation}
-which prescribes $c_\mathrm{idle}^*=c_\mathrm{coll}^*=\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$. The constant also separates the two access modes. Since basic access and RTS/CTS protection differ through $L_\mathrm{solo}$ and $L_\mathrm{col}$, their constants relate as $C_\mathrm{RTS}/C_\mathrm{basic}\approx\sqrt{\bar{L}_\mathrm{RTS}/\bar{L}_\mathrm{basic}}$, so the mode whose outcomes hold the channel longer, and hence grants fewer updates per window, calls for a proportionally larger step. The argument is summarized as follows, and it should be read as a scaling law for the local finite-horizon model above, not as an exact optimality claim for the full time-varying system.
+which prescribes $c^*=e^{C/\sqrt{W_\mathrm{eff}}}$. The constant also separates the two access modes. Since basic access and RTS/CTS protection differ through $L_\mathrm{solo}$ and $L_\mathrm{col}$, their constants relate as $C_\mathrm{RTS}/C_\mathrm{basic}\approx\sqrt{\bar{L}_\mathrm{RTS}/\bar{L}_\mathrm{basic}}$, so the mode whose outcomes hold the channel longer, and hence grants fewer updates per window, calls for a proportionally larger step. The argument is summarized as follows, and it should be read as a scaling law for the local finite-horizon model above, not as an exact optimality claim for the full time-varying system.
 
 \begin{proposition}
 Consider the finite-horizon adaptation $X_{k+1}=X_k+\epsilon H_k$ with a locally stable equilibrium $x^*$, a locally quadratic utility, and bounded outcome noise of variance $\nu^2$. If a visit contains $K$ effective update opportunities and both the transient and the fluctuation loss of Eq.~\eqref{eq:regret} are accumulated, the loss-minimizing constant step satisfies
@@ -519,9 +533,9 @@ Consider the finite-horizon adaptation $X_{k+1}=X_k+\epsilon H_k$ with a locally
 hence $\epsilon^*_K=\Theta(K^{-1/2})$. If moreover $K=W_\mathrm{eff}/\bar{L}+o(W_\mathrm{eff})$, then $\epsilon^*=C/\sqrt{W_\mathrm{eff}}+o\bigl(W_\mathrm{eff}^{-1/2}\bigr)$ with $C$ as in Eq.~\eqref{eq:eps_window}.
 \end{proposition}
 
-Two remarks bound the claim. First, Phase~(a) sets $X_0=-\ln W_\mathrm{eff}$, so the offset $|Y_0|=|\ln(W_\mathrm{eff}\,\tau^*)|$ retains a slow logarithmic dependence on the window, and $C$ behaves as a constant only over ranges of $W_\mathrm{eff}$ in which this variation is small enough to be absorbed. Eq.~\eqref{eq:eps_window} is therefore an asymptotic inverse-square-root scaling under the local finite-horizon approximation, not an exact equality. Second, the scaling presumes the cumulative criterion above; a criterion that graded only the terminal state would favor a smaller step of order $\ln K/K$. Within these bounds, Eq.~\eqref{eq:eps_window} delivers the same message as the initialization of Phase~(a). Both design knobs of PACE are set from the window alone, the starting probability at $1/W_\mathrm{eff}$ and the adaptation step at $\Theta(1/\sqrt{W_\mathrm{eff}})$, with faster adaptation in shorter visits.
+Two remarks bound the claim. First, Phase~(a) sets $X_0=-\ln W_\mathrm{eff}$, so the offset $|Y_0|=|\ln(W_\mathrm{eff}\,\tau^*)|$ retains a slow logarithmic dependence on the window, and $C$ behaves as a constant only over ranges of $W_\mathrm{eff}$ in which this variation is small enough to be absorbed. Eq.~\eqref{eq:eps_window} is therefore an asymptotic inverse-square-root scaling under the local finite-horizon approximation, not an exact equality. Second, the scaling presumes the cumulative criterion above. A criterion that graded only the terminal state would favor a smaller step of order $\ln K/K$. Within these bounds, Eq.~\eqref{eq:eps_window} delivers the same message as the initialization of Phase~(a). Both design knobs of PACE are set from the window alone, the starting probability at $1/W_\mathrm{eff}$ and the adaptation step at $\Theta(1/\sqrt{W_\mathrm{eff}})$, with faster adaptation in shorter visits.
 
-The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. 
+The scaling is moreover directly implementable, because $W_\mathrm{eff}$ is not merely observable but signaled. The OBSS frame that triggers the switch announces its remaining duration in its preamble, from which every visitor already computes $W_\mathrm{eff}$ through Eq.~\eqref{eq:weff}, so a factor of the form $e^{C/\sqrt{W_\mathrm{eff}}}$ is a runtime value obtained at the start of each visit rather than a constant fixed at deployment. 
 
 We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrated once at a reference window to maximize the objective of Eq.~\eqref{eq:objective} at $\alpha=0.5$, and refer to the fixed-factor configuration as \emph{PACE-static}. The names describe only how the step size is chosen. Both variants adapt $\tau_i$ on every observed slot, and both draw on the same local information as the initialization of Phase~(a). Section~\ref{subsec:eval_duration} compares the two across the window range, where a single fixed factor turns out to be too small for a short visit and too large for a long one.
 
@@ -530,56 +544,57 @@ We call this variant \emph{PACE-dynamic}, with the single constant $C$ calibrate
 
 \begin{table}[t]
 \centering
-\caption{Simulation parameters. Visitors run the scheme under test, natives always run standard DCF; RTS/CTS costs assume a $24$~Mbps control rate.}
+\caption{Simulation parameters. Visitors run the scheme under test, natives always run standard DCF. RTS/CTS costs assume a $24$~Mbps control rate. Bold marks the default value of a swept parameter.}
 \label{tab:sim_params}
 \begin{tabular}{ll}
 \hline
 \textbf{Parameter} & \textbf{Value} \\
 \hline
-Visitor STAs $\Nvis$ & $\{5, 10, 20, 50\}$ \\
+Visitor STAs $\Nvis$ & $\{5, 10, \mathbf{20}, 50\}$ \\
 Native STAs $\Nnat$ & $10$ \\
 Slot time $\sigma$ / SIFS / DIFS  & $9$ / $16$ / $34~\mu$s \\
-Effective window $W_\mathrm{eff}$ & $420$ slots ($3.78$~ms) \\
+Effective window $W_\mathrm{eff}$ (slots) & $\{100,200,\mathbf{420},840,1680\}$ \\
 Visitor PPDU duration            & $\mathcal{U}[225, 900]~\mu$s \\
 Native PPDU duration             & $450~\mu$s \\
 Initial probability $\tau_0$     & $1/W_\mathrm{eff}$ \\
-MIMD factors $c_\mathrm{coll},c_\mathrm{idle}$ (PACE-static) & $1.5$ \\
-Step-size constant $C$ (PACE-dynamic) & $10.16$ \\
+Adaptation factor $c$ (PACE-static) & $1.5$ \\
+Adaptation factor $c$ (PACE-dynamic) & $e^{C/\sqrt{W_\mathrm{eff}}}$, $C=10.16$ \\
 $\mathrm{CW}_{\min}$ / $\mathrm{CW}_{\max}$ for BEB & $15$ / $1023$ \\
-RTS/CTS $L_\mathrm{hs}$ / $L_\mathrm{col}$ & $88$ / $106~\mu$s \\
+RTS/CTS $L_\mathrm{hs}$ / $L_\mathrm{col}$ & $10$ / $12$ slots ($88$ / $106~\mu$s) \\
+Proportionality weight $\alpha$ & $\{0, \mathbf{0.5}, 1\}$ \\
 Transitions / sequences / seeds & $50$ / $20$ / $5$ \\
 \hline
 \end{tabular}
 \end{table}
 
-We evaluate PACE in the slotted NPCA contention model under IEEE~802.11 orthogonal frequency division multiplexing (OFDM) timing. Table~\ref{tab:sim_params} summarizes the parameters. A visit spans $W_\mathrm{eff}=420$ slots of $\sigma=9~\mu$s, which corresponds to $3.78$~ms, and is contended by $\Nvis\in\{5,10,20,50\}$ visitor STAs running the scheme under test alongside $\Nnat=10$ native STAs that always run standard DCF. Visitor PPDU durations are drawn uniformly from $225$--$900~\mu$s and native frames last $450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with $\tau_0=1/W_\mathrm{eff}$. Unless stated otherwise, PACE denotes PACE-static with the fixed factors $c_\mathrm{coll}=c_\mathrm{idle}=1.5$; PACE-dynamic, which recomputes the factors per visit as $c=\exp\bigl(C/\sqrt{W_\mathrm{eff}}\,\bigr)$ with $C=10.16$ calibrated at the reference window, where it yields $c=1.64$, enters the comparison in Section~\ref{subsec:eval_duration}, in which the window varies.
+We evaluate PACE in the slotted NPCA contention model under IEEE~802.11 orthogonal frequency division multiplexing (OFDM) timing. Table~\ref{tab:sim_params} summarizes the parameters. A visit spans $W_\mathrm{eff}=420$ slots of $\sigma=9~\mu$s, which corresponds to $3.78$~ms, and is contended by $\Nvis\in\{5,10,20,50\}$ visitor STAs running the scheme under test alongside $\Nnat=10$ native STAs that always run standard DCF. Visitor PPDU durations are drawn uniformly from $225$--$900~\mu$s and native frames last $450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with $\tau_0=1/W_\mathrm{eff}$. Unless stated otherwise, PACE denotes PACE-static with the fixed factor $c=1.5$. PACE-dynamic, which recomputes the factor per visit as $c=e^{C/\sqrt{W_\mathrm{eff}}}$ with $C=10.16$ calibrated at the reference window, where it yields $c=1.64$, enters the comparison in Section~\ref{subsec:eval_duration}, in which the window varies.
 
 We compare PACE against two references. The first is the standard-compliant NPCA baseline, which contends with carrier sense multiple access with collision avoidance (CSMA/CA) under $\mathrm{CW}_{\min}=15$ and binary exponential backoff (BEB) as Draft~1.2 specifies~\cite{ieee80211bn}. Since the draft gates only the switching decision through the NPCA Minimum Duration Threshold and leaves the unfittable-frame case unspecified, we grant the baseline the stronger conformant behavior, a deferring implementation that withholds frames exceeding the remaining window through the same locally computable test as PACE's Phase~(b).
 % The alternative conformant reading, transmitting anyway and being cut off at NPCA-timer expiry, performs strictly worse (e.g., total useful airtime $0.12$ versus $0.16$ at $\Nvis=50$ under basic access, and $0.40$ versus $0.64$ for $0.9$-ms visits under RTS/CTS), so adopting the deferring baseline is the conservative choice for our comparison.
 
-The second is a genie-aided \emph{fair-share} reference (FS) that transmits at $\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the viable set. FS is not an airtime optimum but the attempt-fair operating point that PACE is designed to track.
+The second is a genie-aided \emph{fair-share} reference (FS) that transmits at $\tau^*(t)=1/|\mathcal{V}(t)|$ with perfect knowledge of the viable set. FS marks the attempt-fair operating point that PACE is designed to track.
 
-Native STAs keep their standard DCF parameters in every scheme and contend without any fit restriction; a native frame that straddles the window end completes, with its in-window portion credited to the window utilization. Both access modes of Section~\ref{subsec:npca_window} are evaluated, basic access charging a collision the longest colliding frame of Eq.~\eqref{eq:lmax}, and mandatory RTS/CTS with the standard-derived costs $L_\mathrm{hs}=88~\mu$s and $L_\mathrm{col}=106~\mu$s. Each data point averages the steady half of $50$ consecutive NPCA transitions over $20$ sequences and five seeds. Performance is reported as the total useful airtime of the channel normalized by $W_\mathrm{eff}$, its split between visitors and natives, and the visitor airtime proportionality index defined in Section~\ref{subsec:eval_fairness}; the two axes are those of the objective $J$ of Eq.~\eqref{eq:objective}.
+Native STAs keep their standard DCF parameters in every scheme and contend without any fit restriction. A native frame that straddles the window end completes, with its in-window portion credited to the window utilization. Both access modes of Section~\ref{subsec:npca_window} are evaluated, basic access charging a collision the longest colliding frame of Eq.~\eqref{eq:lmax}, and mandatory RTS/CTS with the standard-derived costs $L_\mathrm{hs}=10$ and $L_\mathrm{col}=12$ slots ($88$ and $106~\mu$s). Each data point averages the steady half of $50$ consecutive NPCA transitions over $20$ sequences and five seeds. Performance is reported as the total useful airtime of the channel normalized by $W_\mathrm{eff}$, its split between visitors and natives, and the visitor airtime proportionality index defined in Section~\ref{subsec:eval_fairness}. The two axes are those of the objective $J$ of Eq.~\eqref{eq:objective}.
 
 \subsection{Why PACE: Channel Airtime under Mixed Contention}
 \label{subsec:eval_whypace}
 
 \begin{figure}[t]
     \centering
-    \begin{subfigure}[b]{0.49\columnwidth}
+    \begin{subfigure}[b]{\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figure/fig1q-1.pdf}
         \caption{Basic access.}
         \label{fig:why_pace_basic}
     \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\columnwidth}
+    \vspace{0.2em}
+    \begin{subfigure}[b]{\columnwidth}
         \centering
         \includegraphics[width=\linewidth]{figure/fig1q-2.pdf}
         \caption{RTS/CTS.}
         \label{fig:why_pace_rts}
     \end{subfigure}
-    \caption{Total useful airtime (visitor and native combined) versus the
+    \caption{Total useful airtime, visitor and native combined, versus the
     number of visitor STAs $\Nvis$ for standard-compliant NPCA (CSMA/CA
     visitors), PACE-static, and the fair-share reference (FS), in the mixed
     native/visitor channel with $\Nnat=10$ native DCF stations. The legend
@@ -587,13 +602,13 @@ Native STAs keep their standard DCF parameters in every scheme and contend witho
     \label{fig:why_pace}
 \end{figure}
 
-The design objective of PACE is not visitor throughput per se, but to keep the shared NPCA channel efficient and fair; the FS policy embodies that objective, and the evaluation therefore reports the total useful airtime of the channel.
+The design objective of PACE is not visitor throughput per se, but to keep the shared NPCA channel efficient and fair. The FS policy embodies that objective, and the evaluation therefore reports the total useful airtime of the channel.
 
-Fig.~\ref{fig:why_pace} compares $\Nvis\in\{5,\dots,50\}$ visitor STAs operating either standard CSMA/CA or PACE exactly as specified in Algorithm~\ref{alg:pace}, every visit starts cold from $\tau_0=1/W_\mathrm{eff}$, sharing the channel with $\Nnat=10$ native DCF stations, using IEEE~802.11 OFDM timing. Under basic access in~Fig.~\ref{fig:why_pace_basic}, the channel under standard-compliant visitors degrades monotonically as the visitor population grows. When tens of STAs draw their backoff from the same fixed $\mathrm{CW}_{\min}=15$ window, several counters reach zero in the same slot, and the resulting collision occupies the channel for the full duration of the longest colliding frame. Over an unbounded horizon this would be a transient, but the adjustment BEB needs grows with the contending population while the milliseconds available for it stay fixed, so an ever larger fraction of the window is spent on collisions before BEB has adjusted. The standard procedure thus degrades not only the visitors' own throughput but the total useful airtime of the shared channel, which falls to $0.14$ at $\Nvis=50$.
+Fig.~\ref{fig:why_pace} compares $\Nvis\in\{5,10,20,50\}$ visitor STAs operating either standard CSMA/CA or PACE exactly as specified in Algorithm~\ref{alg:pace}, every visit starts cold from $\tau_0=1/W_\mathrm{eff}$, sharing the channel with $\Nnat=10$ native DCF stations, using IEEE~802.11 OFDM timing. Under basic access in~Fig.~\ref{fig:why_pace_basic}, the channel under standard-compliant visitors degrades monotonically as the visitor population grows. When tens of STAs draw their backoff from the same fixed $\mathrm{CW}_{\min}=15$ window, several counters reach zero in the same slot, and the resulting collision occupies the channel for the full duration of the longest colliding frame. Over an unbounded horizon this would be a transient, but the adjustment BEB needs grows with the contending population while the milliseconds available for it stay fixed, so an ever larger fraction of the window is spent on collisions before BEB has adjusted. The standard procedure thus degrades not only the visitors' own throughput but the total useful airtime of the shared channel, which falls to $0.14$ at $\Nvis=50$.
 
 PACE instead sustains a total airtime of $0.56$--$0.62$ across the entire range, above FS at every point, and reaches $4.1\times$ the standard procedure at $\Nvis=50$. At $\Nvis=5$ the conservative initialization leaves most of the channel to the natives, and as the visitor load grows the idle-driven increase raises the visitors' share while self-exclusion releases slots that can no longer carry a full frame. PACE exceeds FS under this access mode because FS enforces the per-STA fair attempt rate at the cost of collisions that basic access charges at full frame length, whereas PACE's gradual increase avoids them.
 
-Under RTS/CTS-protected access, shown in Fig.~\ref{fig:why_pace_rts}, a collision costs the constant $L_\mathrm{col}$ of Eq.~\eqref{eq:coll_rts}, which is $106~\mu$s, instead of a full frame, at the price of the handshake overhead $L_\mathrm{hs}$ of $88~\mu$s on every success. Since a collision now occupies the channel only briefly, the fair-share policy is also airtime-efficient, and PACE tracks it within $3\%$ over the whole range, holding $0.71$--$0.72$, while the channel under standard visitors declines from $0.70$ to $0.44$. The handshake bounds the duration of a collision, but it mitigates neither the frozen-backoff idling nor the synchronized collisions, so PACE retains $61\%$ more channel airtime at $\Nvis=50$.
+Under RTS/CTS-protected access, shown in Fig.~\ref{fig:why_pace_rts}, a collision costs the constant $L_\mathrm{col}$ of Eq.~\eqref{eq:coll_rts}, $12$ slots ($106~\mu$s), instead of a full frame, at the price of the handshake overhead $L_\mathrm{hs}$ of $10$ slots ($88~\mu$s) on every success. Since a collision now occupies the channel only briefly, the fair-share policy is also airtime-efficient, and PACE tracks it within $3\%$ over the whole range, holding $0.71$--$0.72$, while the channel under standard visitors declines from $0.70$ to $0.44$. The handshake bounds the duration of a collision, but it mitigates neither the frozen-backoff idling nor the synchronized collisions, so PACE retains $61\%$ more channel airtime at $\Nvis=50$.
 
 \subsection{Fairness between Natives and Visitors}
 \label{subsec:eval_fairness}
@@ -604,17 +619,16 @@ Under RTS/CTS-protected access, shown in Fig.~\ref{fig:why_pace_rts}, a collisio
     \caption{Visitor airtime proportionality
     $\rho=\bigl(\text{visitor airtime share}\bigr)/\bigl(\Nvis/(\Nvis+\Nnat)\bigr)$
     versus the number of visitor STAs $\Nvis$, in the same setting as
-    Fig.~\ref{fig:why_pace}. $\rho=1$ is the proportional-fair reference;
-    $\rho>1$ means the visitors occupy more than their population share.
-    Basic access; the RTS/CTS values are quoted in the text.}
+    Fig.~\ref{fig:why_pace}. $\rho=1$ is the proportional-fair reference. $\rho>1$ means the visitors occupy more than their population share.
+    Basic access, with the RTS/CTS values quoted in the text.}
     \label{fig:fairness}
 \end{figure}
 
-Total airtime alone does not reveal who receives it. Fig.~\ref{fig:fairness} reports the proportionality index $\rho$ of Eq.~\eqref{eq:objective} in the identical setting as Fig.~\ref{fig:why_pace}. FS itself starts at $\rho=1.6$ for $\Nvis=5$ and falls to about $0.95$ at $\Nvis=50$; even a per-STA fair attempt rate over-serves the visitors at low demand, because the natives' DCF decrements its backoff only in idle slots and attempts less often inside a busy window. The FS curve therefore marks the practically fair operating line.
+Total airtime alone does not reveal who receives it. Fig.~\ref{fig:fairness} reports the proportionality index $\rho$ of Eq.~\eqref{eq:objective} in the identical setting as Fig.~\ref{fig:why_pace}. FS itself starts at $\rho=1.6$ for $\Nvis=5$ and falls to about $0.95$ at $\Nvis=50$. Even a per-STA fair attempt rate over-serves the visitors at low demand, because the natives' DCF decrements its backoff only in idle slots and attempts less often inside a busy window. The FS curve therefore marks the practically fair operating line.
 
 Against this reference the two schemes separate clearly. The standard-compliant visitors hold $\rho\approx 0.9$--$1.0$, but this is a proportional share of a channel whose total airtime their collisions have already reduced at large $\Nvis$. PACE operates below unity throughout, holding $\rho$ at $0.55$--$0.61$ under basic access and $0.65$--$0.73$ under RTS/CTS, so the visitors settle at roughly two thirds of their proportional share regardless of their population.
 
-The visitors are guests on the neighboring BSS's primary channel, so an NPCA scheme should exploit idle capacity without displacing native traffic; PACE attains the highest total airtime in Fig.~\ref{fig:why_pace} while leaving the natives' share intact, its gain coming from slots that contention had been wasting.
+The visitors are guests on the neighboring BSS's primary channel, so an NPCA scheme should exploit idle capacity without displacing native traffic. PACE attains the highest total airtime in Fig.~\ref{fig:why_pace} while leaving the natives' share intact, its gain coming from slots that contention had been wasting.
 
 \subsection{Weighting Efficiency against Proportionality}
 \label{subsec:eval_objective}
@@ -625,38 +639,45 @@ The visitors are guests on the neighboring BSS's primary channel, so an NPCA sch
     \caption{The combined objective of Eq.~\eqref{eq:objective} versus the
     number of visitor STAs, in the setting of Fig.~\ref{fig:why_pace}, for
     proportionality weights $\alpha\in\{0,\,0.5,\,1\}$, under basic
-    access; RTS/CTS behaves analogously and its values are quoted in the
+    access. RTS/CTS behaves analogously and its values are quoted in the
     text.}
     \label{fig:objective}
 \end{figure*}
 
-The two preceding views combine on one axis in
-Fig.~\ref{fig:objective}, which evaluates the objective of
-Eq.~\eqref{eq:objective} across the visitor sweep for three settings of
-the weight $\alpha$, no single value being canonical. At $\alpha=0$ the objective reduces to log airtime
-and PACE sits at or above FS at every population under basic access,
+Fig.~\ref{fig:objective} asks whether the comparison of the two
+preceding views depends on how their axes are weighted, evaluating the
+objective of Eq.~\eqref{eq:objective} across the visitor sweep for
+three settings of $\alpha$, no single value being canonical. At
+$\alpha=0$ the score reduces to log airtime and reproduces
+Fig.~\ref{fig:why_pace}, with PACE at or above FS under basic access
 and within $0.02$ of it under RTS/CTS. Raising $\alpha$ rewards
 proximity to the proportional line, which is FS's defining property.
-Once proportionality dominates the score, FS is bound to lead, since
-it assigns every viable STA the identical optimal probability by
-construction; at $\alpha=1$ it moves ahead of PACE from $\Nvis=10$
-onward, yet by at most $0.26$, and PACE stays within about $0.1$ of
-FS at the calibration weight $\alpha=0.5$. The reorderings are
-confined to light load under heavy weights. At $\alpha=1$ the standard
-baseline scores best of the three up to $\Nvis=10$; a lightly loaded
-channel loses little airtime to its collisions and its share sits near
-proportional, whereas FS structurally over-serves ($\rho\approx1.6$)
-and PACE under-serves. From $\Nvis=20$ onward, where contention
-actually stresses the window, no weight changes the ranking. PACE and
-FS remain close while the standard baseline falls behind, by $0.3$ to
-$1.4$ at $\Nvis=50$, its collapse in $T$ dominating any
-proportionality credit. The calibration weight $\alpha=0.5$ of
+Wherever contention actually stresses the window, from $\Nvis=20$
+onward, no weight changes the ranking. PACE and FS remain close while
+the standard baseline falls behind by $0.3$ to $1.4$ at $\Nvis=50$,
+its collapse in airtime too deep for any proportionality credit to
+repay. PACE's lead is therefore not an artifact of the metric.
+Reorderings appear only at light load under heavy weights, and they
+trace to design biases rather than to contention performance. A
+lightly loaded channel loses little airtime to collisions, so all
+three schemes earn nearly the same $T$ and the proportionality term
+decides. There the standard baseline sits near the proportional line
+as a byproduct of weak contention, FS structurally over-serves with
+$\rho\approx1.6$, and PACE deliberately under-serves, which is why the
+baseline briefly scores best up to $\Nvis=10$ at $\alpha=1$. The
+deficits also scale differently, FS never gaining more than $0.26$
+over PACE at $\alpha=1$ while the baseline's shortfall grows with the
+population, so the worst case of the adaptive schemes is bounded and
+that of the standard procedure is not. The
+calibration weight $\alpha=0.5$ of
 Section~\ref{subsec:factor_scaling} thus sits in the middle of the
-range in which the comparison is insensitive to the weight. What the small FS margin buys should also be priced. FS transmits at
+range in which the comparison is insensitive to the weight.
+
+What the small FS margin buys should also be priced. FS transmits at
 $\tau^*(t)$ with per-slot genie knowledge of the viable set, which
 presupposes both populations and every contender's frame fit, and
 enforcing its uniform probability would take a central notification to
-every STA entering the NPCA transition; PACE reaches these scores from
+every STA entering the NPCA transition. PACE reaches these scores from
 local feedback alone, knowing neither $\Nvis$ nor $\Nnat$ and notified
 by no one. Near-parity with the genie at every weight is therefore the
 substantive result of the figure.
@@ -696,11 +717,11 @@ substantive result of the figure.
     \caption{Impact of the visiting duration ($W_\mathrm{eff}$ of
     $100$--$1680$ slots, $0.9$--$15.1$~ms) for the standard procedure,
     PACE-static, PACE-dynamic, and FS, with $\Nvis=20$ visitor STAs and
-    $\Nnat=10$ natives; all other parameters as in
+    $\Nnat=10$ natives. All other parameters as in
     Table~\ref{tab:sim_params}. Panels (a) and (b) report the total
     useful airtime, panels (c) and (d) the visitor airtime
     proportionality $\rho$, with the dashed line marking the
-    proportional share $\rho=1$; the legend of (a) applies to all
+    proportional share $\rho=1$. The legend of (a) applies to all
     panels.}
     \label{fig:duration}
 \end{figure*}
@@ -717,7 +738,7 @@ both variants appear, PACE-dynamic recomputing its factor per visit from
 $2.76$ at the shortest window down to $1.28$ at the longest.
 
 Under basic access, shown in Fig.~\ref{fig:duration_basic}, the standard
-visitors hold the channel at $0.26$--$0.37$; however long the visit,
+visitors hold the channel at $0.26$--$0.37$. No matter how long the visit,
 $\mathrm{CW}_{\min}=15$ stays mismatched to the $30$-station contention,
 and the synchronized collision cascades consume a roughly constant
 fraction of whatever window is available. Both PACE variants deliver
@@ -731,7 +752,7 @@ $0.55$--$0.57$ and stays above FS at every duration.
 
 Figs.~\ref{fig:duration_rho_basic} and~\ref{fig:duration_rho_rts} show what these totals cost in fairness.
 PACE-static spans $\rho$ of $0.37$--$0.93$ under basic access and
-$0.36$--$1.07$ under RTS/CTS; the same fixed factor leaves the visitors
+$0.36$--$1.07$ under RTS/CTS. The same fixed factor leaves the visitors
 near a third of their share in a $0.9$-ms visit and pushes them past
 the proportional line in the longest protected ones, and its higher
 short-window total in Fig.~\ref{fig:duration_basic} is earned by
@@ -786,7 +807,7 @@ set.
 
 The standard-compliant visitor enters at $1/(\mathrm{CW}_{\min}{+}1)=1/16$,
 roughly twice the target, and its measured rate then remains near the
-target without estimating it; the aggregate rate, however, conceals
+target without estimating it. The aggregate rate, however, conceals
 the failure mechanism. The countdown is deterministic and freezes during every busy
 period, so multiple backoff counters expire together once the medium
 becomes idle, and attempts at the same average rate collide far more
@@ -801,12 +822,12 @@ draws. It enters at
 $\tau_0=1/W_\mathrm{eff}$, deliberately below the target, and the
 idle-driven multiplicative increase together with solo-copy propagation
 raises the measured rate toward the target from below over the
-course of the visit; being genuinely probabilistic, its attempts
+course of the visit. Being genuinely probabilistic, its attempts
 stay uncorrelated, and they collide at essentially the rate of the FS
 reference (Table~\ref{tab:attempts}). Approaching the
 target from below is the safe direction established in
 Section~\ref{subsec:init}. The same qualitative picture holds
-in both access modes; under RTS/CTS the convergence is tighter because
+in both access modes. Under RTS/CTS the convergence is tighter because
 each corrective feedback event costs at most the constant
 $L_\mathrm{col}$ rather than a full frame.
 
@@ -846,9 +867,9 @@ $L_\mathrm{col}$ rather than a full frame.
     PACE-static keeps the fixed factor $c=1.5$ at every window, while
     PACE-dynamic recomputes it per visit, $c=2.05$ at the short window
     and $c=1.28$ at the long one. Measured curves are drawn while more
-    than two visitor frames on average still fit the remaining window;
-    under RTS/CTS the handshake must also fit, so this point arrives
-    slightly earlier. The legend of (b) applies to all panels.}
+    than two visitor frames on average still fit the remaining window.
+    Under RTS/CTS the handshake must also fit, so this point arrives
+    slightly earlier.}
     \label{fig:tracking_windows}
 \end{figure*}
 
@@ -871,7 +892,7 @@ Fig.~\ref{fig:duration}.
 
 \begin{table}[t]
 \centering
-\caption{Per-Attempt Outcome of Visitor Transmissions\\(setting of Fig.~\ref{fig:tracking}, steady state)}
+\caption{Per-Attempt Outcome of Visitor Transmissions\\in the Setting of Fig.~\ref{fig:tracking}, Steady State}
 \label{tab:attempts}
 \begin{tabular}{llccc}
 \hline
@@ -893,15 +914,15 @@ RTS/CTS & Standard & $14\%$ & $86\%$ & $7.3$ \\
 Table~\ref{tab:attempts} classifies every visitor transmission attempt
 in the setting of Fig.~\ref{fig:tracking} and summarizes the
 contention efficiency of each scheme. Only $14$--$16\%$ of the
-standard visitors' transmission attempts succeed; the rest are
+standard visitors' transmission attempts succeed. The rest are
 synchronized collisions, so the standard procedure transmits six to
 seven times to deliver a single frame. PACE completes $40$--$44\%$ of
 its attempts and delivers a frame in about two and a half
 transmissions, which is essentially the per-attempt outcome of FS
-itself; PACE-dynamic, whose per-visit factor at this window is the
+itself. PACE-dynamic, whose per-visit factor at this window is the
 slightly more aggressive $1.64$, sits a few points lower at
 $35$--$40\%$ while delivering the same airtime. A high success ratio alone could be achieved by transmitting rarely, so
-the result is meaningful only alongside Fig.~\ref{fig:why_pace}; PACE
+the result is meaningful only alongside Fig.~\ref{fig:why_pace}. PACE
 attains the highest total airtime of the three while spending about as
 many transmissions per delivered frame as FS. The scheme does not beat
 the fair operating point, it reaches it without being told where it is.
@@ -912,21 +933,20 @@ the fair operating point, it reaches it without being told where it is.
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{figure/fig5-1.pdf}
-    \caption{Ablation study in the setting of Fig.~\ref{fig:why_pace},
-    under basic access, with the RTS/CTS values quoted in the text:
-    total useful airtime for full PACE-static, PACE without PPDU-aware
-    self-exclusion, PACE without the one-probe initialization, and the standard-compliant baseline.}
+    \caption{Ablation study. Total useful airtime in the setting of
+    Fig.~\ref{fig:why_pace} under basic access, with the RTS/CTS
+    values quoted in the text.}
     \label{fig:ablation}
 \end{figure}
 
 PACE adds two mechanisms to the MIMD adaptation rule, the one-probe
 initialization of Phase~(a) guarding the beginning of the visit and
-the self-exclusion of Phase~(b) guarding its end;
+the self-exclusion of Phase~(b) guarding its end.
 Fig.~\ref{fig:ablation} removes each in turn in the setting of
 Fig.~\ref{fig:why_pace}. The third design choice, the adaptation step,
 distinguishes itself only when the window varies, so its ablation is
 the static-to-dynamic comparison of
-Section~\ref{subsec:eval_duration}; the runs here use PACE-static.
+Section~\ref{subsec:eval_duration}. The runs here use PACE-static.
 
 Replacing the initialization with the knowledge-free choice
 $\tau_0\sim\mathcal{U}(0,1)$, a natural prior when no population
@@ -937,15 +957,14 @@ each collision is charged the longest colliding frame, and the
 multiplicative decrease is too slow to bring $\tau$ to the operating
 point of order $10^{-2}$ before the window ends. Under RTS/CTS the
 totals of $0.42$--$0.15$ also remain below the standard baseline,
-because a second failure mechanism operates in addition to the initial
-collisions. Visitors drawn near $\tau\approx 1$ transmit in almost
-every slot, so solo successes, the events that propagate a common
-operating point through the copy rule of~\eqref{eq:mimd}, rarely
-occur, and the population cannot converge to a lower $\tau$. The same
-experiment shows a fairness deficit as well; at $\Nvis=5$ under
-RTS/CTS the visitors occupy most of the useful airtime while the ten
-natives obtain almost none. The conservative initialization is
-therefore a precondition for PACE rather than an optimization.
+where a second failure mechanism adds to the initial collisions. Visitors drawn near $\tau\approx 1$ transmit in almost
+every slot, so the solo successes that propagate a common operating
+point through the copy rule of~\eqref{eq:mimd} rarely occur, and the
+population cannot converge to a lower $\tau$. The same experiment
+shows a fairness deficit as well, the visitors at $\Nvis=5$ under
+RTS/CTS occupying most of the useful airtime while the ten natives
+obtain almost none. The conservative initialization is therefore a
+precondition for PACE rather than an optimization.
 
 Removing self-exclusion causes a smaller but systematic loss that
 grows with the visitor population. Total airtime decreases by
@@ -966,7 +985,7 @@ This paper presented PACE, a probabilistic adaptive contention control
 scheme for non-primary channel access in IEEE~802.11bn. Inside the
 bounded NPCA visit the fair operating point
 $\tau^*(t)=1/|\mathcal{V}(t)|$ rises toward the deadline, whereas BEB
-lowers its attempt rate after every collision; PACE replaces the
+lowers its attempt rate after every collision, and PACE replaces the
 countdown with a per-slot probability governed by the one-probe
 initialization $\tau_0=1/W_\mathrm{eff}$, PPDU-aware self-exclusion,
 and MIMD adaptation with solo-copy consensus, requiring neither
@@ -978,12 +997,12 @@ standard-compliant baseline by up to $61\%$ there and by up to
 $4.1\times$ under basic access, and holds the visitors' airtime at or
 below their proportional share across $5$--$50$ visiting stations,
 each delivered frame costing about a third of the attempts the
-standard procedure requires; across $0.9$--$15.1$~ms visits the
+standard procedure requires. Across $0.9$--$15.1$~ms visits the
 window-scaled PACE-dynamic preserves the proportionality bound where
-a fixed factor drifts past it. An ablation confirmed that the
+a fixed factor drifts past it, and an ablation confirmed that the
 initialization and self-exclusion are both necessary. Future work
-includes a cost-aware decrease factor, partial-overlap topologies
-with spatial reuse, TXOP aggregation within a visit, and
+includes an asymmetric, cost-aware decrease factor, partial-overlap
+topologies with spatial reuse, TXOP aggregation within a visit, and
 warm-starting $\tau$ across repeated visits.
 
 \bibliographystyle{IEEEtran}
