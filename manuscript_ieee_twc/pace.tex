@@ -53,7 +53,8 @@ Korea. (e-mail: ywkyung@seoultech.ac.kr), Corresponding author: Y. Kyung}%
 \begin{abstract}
 While an overlapping basic service set (OBSS) transmission occupies the primary channel, adjacent non-primary channels sit idle, and IEEE 802.11bn introduces non-primary channel access (NPCA) to exploit these intervals. The standard contention mechanism is ill-suited to NPCA's bounded windows, however, as its collision-triggered backoff growth synchronizes stations into repeated collisions or pushes their counters beyond the remaining opportunity.
 We propose PACE, a probabilistic adaptive contention control scheme that lets stations track the time-varying fair-share transmission probability of the depleting window without central coordination, combining a deadline-scaled initialization, a distributed multiplicative feedback rule with solo-copy consensus, and a proactive self-exclusion of stations whose frame exceeds the remaining window.
-We evaluate PACE under IEEE 802.11 timing on a non-primary channel shared with native stations, against the standard-compliant baseline and a genie-aided fair-share reference. Across $5$--$50$ visiting stations, PACE keeps the total useful airtime within $3\%$ of the fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access, up to $61\%$ above the standard procedure and up to $4.1\times$ under basic access, while holding the visitors' airtime at or below their population-proportional share. These results establish probabilistic, deadline-aware contention as a design reference for non-primary channel access in next-generation Wi-Fi.
+A finite-horizon analysis further yields an inverse-square-root scaling of the adaptation step in the window length, placing every design parameter on the window alone.
+Under IEEE 802.11 timing on a channel shared with native stations, PACE keeps the total useful airtime within $3\%$ of a fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access, up to $61\%$ above the standard baseline and up to $4.1\times$ under basic access across $5$--$50$ visiting stations, while holding the visitors' airtime at or below their population-proportional share, the window-scaled step preserving this bound where a fixed one drifts past it.
 \end{abstract}
 
 
@@ -87,7 +88,7 @@ The main contributions of this paper are as follows.
 \begin{itemize}
   \item We characterize the fair-share transmission probability for finite-window NPCA, showing that it must continuously track the remaining window duration and the number of still-viable competing STAs, a deadline-driven, rising target that neither BEB nor existing infinite-horizon adaptive schemes follow.
   \item We propose PACE, a fully distributed algorithm that addresses both requirements simultaneously. A deadline-scaled initialization and MIMD feedback drive the transmission probability toward the time-varying target without inter-STA signaling or knowledge of the total STA count.
-  \item Through simulation in IEEE~802.11 standard timing on a channel shared with native DCF stations, we demonstrate that PACE keeps the total useful airtime within $3\%$ of a genie-aided fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access and up to $4.1\times$ above the standard-compliant baseline under basic access, holds the visitors' airtime at or below their population-proportional share, and attains a per-attempt success ratio close to three times the baseline's, matching the fair-share reference. An ablation study further shows that both the deadline-scaled initialization and the self-exclusion rule are necessary for these gains.
+  \item Through simulation in IEEE~802.11 standard timing on a channel shared with native DCF stations, we demonstrate that PACE keeps the total useful airtime within $3\%$ of a fair-share reference under request-to-send/clear-to-send (RTS/CTS)-protected access and up to $4.1\times$ above the standard-compliant baseline under basic access, holds the visitors' airtime at or below their population-proportional share, and attains a per-attempt success ratio close to three times the baseline's, matching the fair-share reference. An ablation study further shows that both the deadline-scaled initialization and the self-exclusion rule are necessary for these gains.
 \end{itemize}
 
 
@@ -557,8 +558,8 @@ Effective window $W_\mathrm{eff}$ (slots) & $\{100,200,\mathbf{420},840,1680\}$ 
 Visitor PPDU duration            & $\mathcal{U}[225, 900]~\mu$s \\
 Native PPDU duration             & $450~\mu$s \\
 Initial probability $\tau_0$     & $1/W_\mathrm{eff}$ \\
-Adaptation factor $c$ (PACE-static) & $1.5$ \\
-Adaptation factor $c$ (PACE-dynamic) & $e^{C/\sqrt{W_\mathrm{eff}}}$, $C=10.16$ \\
+Adaptation factor $c$ (\emph{PACE-static}) & $1.5$ \\
+Adaptation factor $c$ (\emph{PACE-dynamic}) & $e^{C/\sqrt{W_\mathrm{eff}}}$, $C=10.16$ \\
 $\mathrm{CW}_{\min}$ / $\mathrm{CW}_{\max}$ for BEB & $15$ / $1023$ \\
 RTS/CTS $L_\mathrm{hs}$ / $L_\mathrm{col}$ & $10$ / $12$ slots ($88$ / $106~\mu$s) \\
 Proportionality weight $\alpha$ & $\{0, \mathbf{0.5}, 1\}$ \\
@@ -567,7 +568,7 @@ Transitions / sequences / seeds & $50$ / $20$ / $5$ \\
 \end{tabular}
 \end{table}
 
-We evaluate PACE in the slotted NPCA contention model under IEEE~802.11 orthogonal frequency division multiplexing (OFDM) timing. Table~\ref{tab:sim_params} summarizes the parameters. A visit spans $W_\mathrm{eff}=420$ slots of $\sigma=9~\mu$s, which corresponds to $3.78$~ms, and is contended by $\Nvis\in\{5,10,20,50\}$ visitor STAs running the scheme under test alongside $\Nnat=10$ native STAs that always run standard DCF. Visitor PPDU durations are drawn uniformly from $225$--$900~\mu$s and native frames last $450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with $\tau_0=1/W_\mathrm{eff}$. Unless stated otherwise, PACE denotes PACE-static with the fixed factor $c=1.5$. PACE-dynamic, which recomputes the factor per visit as $c=e^{C/\sqrt{W_\mathrm{eff}}}$ with $C=10.16$ calibrated at the reference window, where it yields $c=1.64$, enters the comparison in Section~\ref{subsec:eval_duration}, in which the window varies.
+We evaluate PACE in the slotted NPCA contention model under IEEE~802.11 orthogonal frequency division multiplexing (OFDM) timing. Table~\ref{tab:sim_params} summarizes the parameters. A visit spans $W_\mathrm{eff}=420$ slots of $\sigma=9~\mu$s, which corresponds to $3.78$~ms, and is contended by $\Nvis\in\{5,10,20,50\}$ visitor STAs running the scheme under test alongside $\Nnat=10$ native STAs that always run standard DCF. Visitor PPDU durations are drawn uniformly from $225$--$900~\mu$s and native frames last $450~\mu$s. PACE follows Algorithm~\ref{alg:pace} with $\tau_0=1/W_\mathrm{eff}$. Unless stated otherwise, PACE denotes \emph{PACE-static} with the fixed factor $c=1.5$. \emph{PACE-dynamic}, which recomputes the factor per visit as $c=e^{C/\sqrt{W_\mathrm{eff}}}$ with $C=10.16$ calibrated at the reference window, where it yields $c=1.64$, enters the comparison in Section~\ref{subsec:eval_duration}, in which the window varies.
 
 We compare PACE against two references. The first is the standard-compliant NPCA baseline, which contends with carrier sense multiple access with collision avoidance (CSMA/CA) under $\mathrm{CW}_{\min}=15$ and binary exponential backoff (BEB) as Draft~1.2 specifies~\cite{ieee80211bn}. Since the draft gates only the switching decision through the NPCA Minimum Duration Threshold and leaves the unfittable-frame case unspecified, we grant the baseline the stronger conformant behavior, a deferring implementation that withholds frames exceeding the remaining window through the same locally computable test as PACE's Phase~(b).
 % The alternative conformant reading, transmitting anyway and being cut off at NPCA-timer expiry, performs strictly worse (e.g., total useful airtime $0.12$ versus $0.16$ at $\Nvis=50$ under basic access, and $0.40$ versus $0.64$ for $0.9$-ms visits under RTS/CTS), so adopting the deferring baseline is the conservative choice for our comparison.
@@ -596,7 +597,7 @@ Native STAs keep their standard DCF parameters in every scheme and contend witho
     \end{subfigure}
     \caption{Total useful airtime, visitor and native combined, versus the
     number of visitor STAs $\Nvis$ for standard-compliant NPCA (CSMA/CA
-    visitors), PACE-static, and the fair-share reference (FS), in the mixed
+    visitors), \emph{PACE-static}, and the fair-share reference (FS), in the mixed
     native/visitor channel with $\Nnat=10$ native DCF stations. The legend
     of (a) applies to both panels.}
     \label{fig:why_pace}
@@ -674,12 +675,12 @@ Section~\ref{subsec:factor_scaling} thus sits in the middle of the
 range in which the comparison is insensitive to the weight.
 
 What the small FS margin buys should also be priced. FS transmits at
-$\tau^*(t)$ with per-slot genie knowledge of the viable set, which
+$\tau^*(t)$ with per-slot knowledge of the viable set, which
 presupposes both populations and every contender's frame fit, and
 enforcing its uniform probability would take a central notification to
 every STA entering the NPCA transition. PACE reaches these scores from
 local feedback alone, knowing neither $\Nvis$ nor $\Nnat$ and notified
-by no one. Near-parity with the genie at every weight is therefore the
+by no one. Near-parity with FS at every weight is therefore the
 substantive result of the figure.
 
 \subsection{Impact of Visiting Duration}
@@ -716,7 +717,7 @@ substantive result of the figure.
     \end{subfigure}
     \caption{Impact of the visiting duration ($W_\mathrm{eff}$ of
     $100$--$1680$ slots, $0.9$--$15.1$~ms) for the standard procedure,
-    PACE-static, PACE-dynamic, and FS, with $\Nvis=20$ visitor STAs and
+    \emph{PACE-static}, \emph{PACE-dynamic}, and FS, with $\Nvis=20$ visitor STAs and
     $\Nnat=10$ natives. All other parameters as in
     Table~\ref{tab:sim_params}. Panels (a) and (b) report the total
     useful airtime, panels (c) and (d) the visitor airtime
@@ -734,7 +735,7 @@ duration from $0.9$ to $15.1$~ms, which corresponds to $1.6$ to $27$ mean
 visitor frames, at
 $\Nvis=20$ visitors and $\Nnat=10$ natives. This sweep is where the
 window scaling of Section~\ref{subsec:factor_scaling} faces its test, so
-both variants appear, PACE-dynamic recomputing its factor per visit from
+both variants appear, \emph{PACE-dynamic} recomputing its factor per visit from
 $2.76$ at the shortest window down to $1.28$ at the longest.
 
 Under basic access, shown in Fig.~\ref{fig:duration_basic}, the standard
@@ -743,20 +744,20 @@ $\mathrm{CW}_{\min}=15$ stays mismatched to the $30$-station contention,
 and the synchronized collision cascades consume a roughly constant
 fraction of whatever window is available. Both PACE variants deliver
 $1.5\times$ to $2.1\times$ the standard procedure, but they part at the
-ends of the sweep. PACE-static declines from $0.61$ at $0.9$~ms to $0.50$ at
+ends of the sweep. \emph{PACE-static} declines from $0.61$ at $0.9$~ms to $0.50$ at
 $15.1$~ms and slips below the FS line at the longest visits ($0.50$
 against $0.53$), since a factor calibrated at the reference window keeps
 raising the probability past the fair-share target once the visit lasts
-long enough for the overshoot to accumulate. PACE-dynamic holds
+long enough for the overshoot to accumulate. \emph{PACE-dynamic} holds
 $0.55$--$0.57$ and stays above FS at every duration.
 
 Figs.~\ref{fig:duration_rho_basic} and~\ref{fig:duration_rho_rts} show what these totals cost in fairness.
-PACE-static spans $\rho$ of $0.37$--$0.93$ under basic access and
+\emph{PACE-static} spans $\rho$ of $0.37$--$0.93$ under basic access and
 $0.36$--$1.07$ under RTS/CTS. The same fixed factor leaves the visitors
 near a third of their share in a $0.9$-ms visit and pushes them past
 the proportional line in the longest protected ones, and its higher
 short-window total in Fig.~\ref{fig:duration_basic} is earned by
-under-serving its own visitors. PACE-dynamic compresses the swing to
+under-serving its own visitors. \emph{PACE-dynamic} compresses the swing to
 $0.49$--$0.78$ and $0.51$--$0.92$ and stays below proportionality
 throughout. A single coefficient thus errs in opposite directions at
 the two ends of the range, exactly the transient and fluctuation
@@ -765,15 +766,15 @@ inverse-square-root rule corrects both without additional signaling.
 
 Under mandatory RTS/CTS, shown in Fig.~\ref{fig:duration_rts}, the
 airtime differences narrow because the handshake caps the collision
-cost. The standard visitors stay $8$--$18\%$ below PACE-static
+cost. The standard visitors stay $8$--$18\%$ below \emph{PACE-static}
 throughout, at $0.59$--$0.66$, and the margin does not close as the
 window grows, since the losses caused by the backoff recur under
 saturation, where every completed exchange re-enters contention with a
 reset contention window. The two PACE variants track FS closely and
 nearly coincide in total airtime, with the long-window edge going to
-PACE-dynamic ($0.73$ against $0.72$, FS at $0.75$), so under this access
+\emph{PACE-dynamic} ($0.73$ against $0.72$, FS at $0.75$), so under this access
 mode the value of the window scaling lies less in airtime than in
-Fig.~\ref{fig:duration_rho_rts}, where PACE-dynamic keeps the visitors
+Fig.~\ref{fig:duration_rho_rts}, where \emph{PACE-dynamic} keeps the visitors
 below the proportional line that the fixed factor crosses. At short durations both variants leave the visitors a smaller share than
 the standard visitors do, but the slots PACE declines to contest carry
 native traffic, keeping the total above the standard procedure at every
@@ -782,25 +783,14 @@ duration.
 \subsection{Tracking the Time-Varying Fair-Share Target}
 \label{subsec:eval_tracking}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figure/fig4-1.pdf}
-    \caption{Within-visit transmission dynamics in the reference setting
-    of Fig.~\ref{fig:why_pace} ($\Nvis=20$, $\Nnat=10$,
-    $W_\mathrm{eff}=420$ slots, $3.78$~ms), under basic access. The
-    analytic FS target
-    $\tau^*(t)=1/|\mathcal{V}(t)|$ and the measured per-slot
-    transmission rate of viable visitors under PACE-static,
-    PACE-dynamic, and the standard procedure, averaged over $500$
-    visits.}
-    \label{fig:tracking}
-\end{figure}
-
 The aggregate results above follow from the within-visit transmission
-behavior of each scheme, which Fig.~\ref{fig:tracking} reports. Since
+behavior of each scheme, which Fig.~\ref{fig:tracking_windows} reports
+at a short and a long window of the sweep of
+Fig.~\ref{fig:duration}. Since
 the standard visitor holds no per-slot probability, we plot for every
 scheme the measured fraction of viable visitors transmitting in each
-slot, against the analytic FS target. The target $\tau^*(t)$ stays near $1/(\Nvis{+}\Nnat)=1/30$
+slot, against the analytic FS target
+$\tau^*(t)=1/|\mathcal{V}(t)|$. The target $\tau^*(t)$ stays near $1/(\Nvis{+}\Nnat)=1/30$
 for most of the visit and then rises steeply in the final slots, as
 PPDU-aware self-exclusion drains the viable
 set. 
@@ -863,9 +853,9 @@ $L_\mathrm{col}$ rather than a full frame.
     \caption{Within-visit transmission dynamics at a short and a long
     window of the sweep of Fig.~\ref{fig:duration} ($W_\mathrm{eff}$ of
     $200$ and $1680$ slots, $1.8$ and $15.1$~ms, $\Nvis=20$,
-    $\Nnat=10$), for both access modes.
-    PACE-static keeps the fixed factor $c=1.5$ at every window, while
-    PACE-dynamic recomputes it per visit, $c=2.05$ at the short window
+    $\Nnat=10$), for both access modes, averaged over $500$ visits.
+    \emph{PACE-static} keeps the fixed factor $c=1.5$ at every window, while
+    \emph{PACE-dynamic} recomputes it per visit, $c=2.05$ at the short window
     and $c=1.28$ at the long one. Measured curves are drawn while more
     than two visitor frames on average still fit the remaining window.
     Under RTS/CTS the handshake must also fit, so this point arrives
@@ -873,11 +863,10 @@ $L_\mathrm{col}$ rather than a full frame.
     \label{fig:tracking_windows}
 \end{figure*}
 
-Fig.~\ref{fig:tracking} is drawn at the reference window, where the
-factor PACE-dynamic computes, $1.64$, differs little from the fixed
-$1.5$ and the two variants trace nearly the same path. The distinction
-appears away from the reference window, which
-Fig.~\ref{fig:tracking_windows} redraws at a short and a long visit. In
+At the reference window the factor \emph{PACE-dynamic} computes,
+$1.64$, differs little from the fixed $1.5$ and the two variants trace
+nearly the same path, so Fig.~\ref{fig:tracking_windows} draws the two
+ends of the sweep, where the distinction appears. In
 a $1.8$-ms visit the fixed
 factor never lifts the rate to the target before the window closes,
 which is the transient loss of Section~\ref{subsec:factor_scaling} made
@@ -892,34 +881,34 @@ Fig.~\ref{fig:duration}.
 
 \begin{table}[t]
 \centering
-\caption{Per-Attempt Outcome of Visitor Transmissions\\in the Setting of Fig.~\ref{fig:tracking}, Steady State}
+\caption{Per-Attempt Outcome of Visitor Transmissions\\at the Reference Window ($W_\mathrm{eff}=420$, $\Nvis=20$), Steady State}
 \label{tab:attempts}
 \begin{tabular}{llccc}
 \hline
 \textbf{Access} & \textbf{Scheme} & \textbf{Succ.} & \textbf{Coll.} & \textbf{Att./frame} \\
 \hline
 basic   & Standard & $16\%$ & $84\%$ & $6.5$ \\
-        & PACE-static   & $44\%$ & $56\%$ & $2.3$ \\
-        & PACE-dynamic  & $40\%$ & $60\%$ & $2.5$ \\
+        & \emph{PACE-static}   & $44\%$ & $56\%$ & $2.3$ \\
+        & \emph{PACE-dynamic}  & $40\%$ & $60\%$ & $2.5$ \\
         & FS            & $40\%$ & $60\%$ & $2.5$ \\
 \hline
 RTS/CTS & Standard & $14\%$ & $86\%$ & $7.3$ \\
-        & PACE-static   & $40\%$ & $60\%$ & $2.5$ \\
-        & PACE-dynamic  & $35\%$ & $65\%$ & $2.8$ \\
+        & \emph{PACE-static}   & $40\%$ & $60\%$ & $2.5$ \\
+        & \emph{PACE-dynamic}  & $35\%$ & $65\%$ & $2.8$ \\
         & FS            & $41\%$ & $59\%$ & $2.4$ \\
 \hline
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:attempts} classifies every visitor transmission attempt
-in the setting of Fig.~\ref{fig:tracking} and summarizes the
+in the reference setting of Fig.~\ref{fig:why_pace} at $\Nvis=20$ and summarizes the
 contention efficiency of each scheme. Only $14$--$16\%$ of the
 standard visitors' transmission attempts succeed. The rest are
 synchronized collisions, so the standard procedure transmits six to
 seven times to deliver a single frame. PACE completes $40$--$44\%$ of
 its attempts and delivers a frame in about two and a half
 transmissions, which is essentially the per-attempt outcome of FS
-itself. PACE-dynamic, whose per-visit factor at this window is the
+itself. \emph{PACE-dynamic}, whose per-visit factor at this window is the
 slightly more aggressive $1.64$, sits a few points lower at
 $35$--$40\%$ while delivering the same airtime. A high success ratio alone could be achieved by transmitting rarely, so
 the result is meaningful only alongside Fig.~\ref{fig:why_pace}. PACE
@@ -946,7 +935,7 @@ Fig.~\ref{fig:ablation} removes each in turn in the setting of
 Fig.~\ref{fig:why_pace}. The third design choice, the adaptation step,
 distinguishes itself only when the window varies, so its ablation is
 the static-to-dynamic comparison of
-Section~\ref{subsec:eval_duration}. The runs here use PACE-static.
+Section~\ref{subsec:eval_duration}. The runs here use \emph{PACE-static}.
 
 Replacing the initialization with the knowledge-free choice
 $\tau_0\sim\mathcal{U}(0,1)$, a natural prior when no population
@@ -991,16 +980,22 @@ initialization $\tau_0=1/W_\mathrm{eff}$, PPDU-aware self-exclusion,
 and MIMD adaptation with solo-copy consensus, requiring neither
 central coordination nor knowledge of the contending population.
 Under IEEE~802.11 timing with native DCF stations, PACE keeps the
-total useful airtime within $3\%$ of a genie-aided fair-share
+total useful airtime within $3\%$ of the fair-share
 reference under RTS/CTS-protected access, exceeds the
 standard-compliant baseline by up to $61\%$ there and by up to
 $4.1\times$ under basic access, and holds the visitors' airtime at or
 below their proportional share across $5$--$50$ visiting stations,
 each delivered frame costing about a third of the attempts the
-standard procedure requires. Across $0.9$--$15.1$~ms visits the
-window-scaled PACE-dynamic preserves the proportionality bound where
-a fixed factor drifts past it, and an ablation confirmed that the
-initialization and self-exclusion are both necessary. Future work
+standard procedure requires. The window-scaled \emph{PACE-dynamic}
+completes the design principle underlying the scheme. Its per-visit
+factor $e^{C/\sqrt{W_\mathrm{eff}}}$ places both design knobs, the
+starting probability and the adaptation step, on the single quantity
+the NPCA procedure already signals, so the deadline is the only
+parameter a visitor ever needs and the channel feedback supplies the
+rest. Across $0.9$--$15.1$~ms visits this preserves the
+proportionality bound where a fixed factor drifts past it, and an
+ablation confirmed that the initialization and self-exclusion are
+both necessary. Future work
 includes an asymmetric, cost-aware decrease factor, partial-overlap
 topologies with spatial reuse, TXOP aggregation within a visit, and
 warm-starting $\tau$ across repeated visits.

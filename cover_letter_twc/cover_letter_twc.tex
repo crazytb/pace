@@ -1,0 +1,64 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1.1in]{geometry}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\pagestyle{empty}
+
+\begin{document}
+
+{\Large\bfseries Cover Letter}
+
+\vspace{1em}
+
+Dear Editor,
+
+I would like to submit a manuscript titled ``PACE: Probabilistic Adaptive
+Contention Control for Non-Primary Channel Access in IEEE 802.11bn'' by
+Taewon Song and Yeunwoong Kyung for consideration in the IEEE Transactions
+on Wireless Communications.
+
+In this manuscript, we propose PACE, a distributed probabilistic contention
+control scheme for non-primary channel access (NPCA) that lets stations
+track the time-varying fair-share transmission probability of a depleting
+transmission window without central coordination. The core problem is that
+the IEEE 802.11bn draft has stations reuse binary exponential backoff on
+the non-primary channel, yet that rule was designed for open-ended
+contention: within a bounded window, the doubled backoff frequently
+exceeds the time remaining, so stations fall silent while the channel
+idles. PACE addresses this by combining a deadline-scaled initialization,
+a multiplicative feedback rule in which stations copy the successful
+sender's probability on solo receptions, and a self-exclusion rule that
+silences stations whose frame no longer fits the remaining window. A
+finite-horizon stochastic approximation analysis of the feedback rule
+yields an inverse-square-root scaling law for the adaptation step in the
+window length, and the resulting window-scaled variant, PACE-dynamic,
+derives every design parameter of the scheme from the one quantity the
+NPCA procedure already signals. Under IEEE 802.11 standard timing on a
+channel shared with native stations, PACE keeps the total useful airtime
+within 3\% of a fair-share reference under RTS/CTS-protected access,
+exceeds the standard-compliant NPCA baseline by up to 61\% there and by up
+to 4.1 times under basic access, and holds the visiting stations' airtime
+at or below their population-proportional share, with PACE-dynamic
+preserving this proportionality across visit durations where a fixed
+coefficient drifts past it. An ablation study confirms that the
+constituent mechanisms are necessary for these gains.
+
+We believe this work fits the scope of the IEEE Transactions on Wireless
+Communications in the design and analysis of wireless access protocols:
+the analytical contribution characterizes distributed contention control
+as a finite-horizon stochastic approximation over the bounded NPCA window,
+and the protocol contribution is standard-compatible channel access for
+next-generation Wi-Fi in dense overlapping-BSS deployments.
+
+Both authors have reviewed and approved the manuscript. This manuscript
+has not been published in any journal and is not under consideration for
+publication elsewhere.
+
+Sincerely yours,
+
+Yeunwoong Kyung\\
+Department of Electronic Engineering, Seoul National University of Science
+and Technology\\
+\href{mailto:ywkyung@seoultech.ac.kr}{ywkyung@seoultech.ac.kr}
+
+\end{document}

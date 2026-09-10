@@ -17,13 +17,13 @@ IEEE 802.11bn **NPCA(Non-Primary Channel Access)** 저널 논문용 시뮬레이
 > **매 세션 시작 시 · 매 compact 직후 반드시 수행할 것.**
 > 이 블록은 진행 상태를 담지 않는다. 상태는 아래 지침서 안에만 있다.
 
-**지침서 (단일 진실 공급원)**: `manuscript_ieee_twc/PACE_TWC_ANALYSIS.md`  
+**지침서 (단일 진실 공급원)**: `manuscript_ieee_twc_backup/PACE_TWC_ANALYSIS.md`  
 **진행 상태**: 같은 파일 **§10 수용 기준 체크리스트** (`[ ]`/`[x]`)  
 **진행 로그**: 같은 파일 **§12** (최신 항목이 맨 위)
 
 ### 작업 재개 절차
 
-1. `manuscript_ieee_twc/PACE_TWC_ANALYSIS.md`를 **읽는다**. §12 로그 맨 위 = 마지막 중단 지점, §10 체크리스트 = 남은 일.
+1. `manuscript_ieee_twc_backup/PACE_TWC_ANALYSIS.md`를 **읽는다**. §12 로그 맨 위 = 마지막 중단 지점, §10 체크리스트 = 남은 일.
 2. §7 작업 순서를 지킨다. **RTS/CTS 케이스 먼저** (`L_col=12` 슬롯 상수라 정확히 풀림), basic access는 순서통계량이 들어가므로 확장으로.
 3. §7 "하지 말 것" 3항목을 지킨다. 균질 근사는 검증 완료(CV 0.4~1.3%), 다차원 정확 체인은 여전히 금지.
 4. 항목 하나를 끝낼 때마다 **§10 체크박스를 `[x]`로 바꾸고 §12에 한 줄 추가**한다. 이것을 미루면 다음 compact에서 진도가 사라진다.
